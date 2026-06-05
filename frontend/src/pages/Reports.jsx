@@ -67,14 +67,14 @@ export default function Reports() {
       {/* Period Selector */}
       <div className="card p-4">
         <div className="flex flex-wrap gap-4 items-end">
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="label">Period</label>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg overflow-x-auto">
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setPeriod(opt.value)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                     period === opt.value ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -306,7 +306,7 @@ export default function Reports() {
 
           {/* Category Table */}
           {expenseByCategory?.length > 0 && (
-            <div className="card p-0 overflow-hidden">
+            <div className="card p-0 overflow-hidden overflow-x-auto">
               <div className="px-5 py-4 border-b border-slate-100">
                 <h3 className="font-semibold text-slate-700">Category Breakdown</h3>
               </div>

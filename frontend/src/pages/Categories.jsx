@@ -138,7 +138,7 @@ export default function Categories() {
                 {cat.subCategories?.length === 0 ? (
                   <p className="text-xs text-slate-400 py-2">No sub-categories yet.</p>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {cat.subCategories?.map((sub) => (
                       <div key={sub._id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-100">
                         <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">{sub.name}</span>
@@ -165,12 +165,12 @@ export default function Categories() {
         <form onSubmit={saveCat} className="space-y-4">
           {catError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{catError}</p>}
           <div>
-            <label className="label">Name *</label>
-            <input type="text" className="input" value={catFormData.name} onChange={(e) => setCatFormData({ ...catFormData, name: e.target.value })} required placeholder="e.g. Food & Dining" />
+            <label htmlFor="cat-name" className="label">Name *</label>
+            <input id="cat-name" type="text" className="input" value={catFormData.name} onChange={(e) => setCatFormData({ ...catFormData, name: e.target.value })} required placeholder="e.g. Food & Dining" />
           </div>
           <div>
-            <label className="label">Description</label>
-            <input type="text" className="input" value={catFormData.description} onChange={(e) => setCatFormData({ ...catFormData, description: e.target.value })} placeholder="Brief description" />
+            <label htmlFor="cat-desc" className="label">Description</label>
+            <input id="cat-desc" type="text" className="input" value={catFormData.description} onChange={(e) => setCatFormData({ ...catFormData, description: e.target.value })} placeholder="Brief description" />
           </div>
           <div>
             <label className="label">Color</label>
@@ -186,12 +186,16 @@ export default function Categories() {
               ))}
             </div>
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={() => setCatModal(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>
-              {saving ? 'Saving...' : editingCat ? 'Update' : 'Add Category'}
-            </button>
-          </div>
+          {(() => {
+            const idleLabel = editingCat ? 'Update' : 'Add Category';
+            const submitLabel = saving ? 'Saving...' : idleLabel;
+            return (
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setCatModal(false)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" className="btn-primary flex-1" disabled={saving}>{submitLabel}</button>
+              </div>
+            );
+          })()}
         </form>
       </Modal>
 
@@ -200,19 +204,23 @@ export default function Categories() {
         <form onSubmit={saveSub} className="space-y-4">
           {subError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{subError}</p>}
           <div>
-            <label className="label">Name *</label>
-            <input type="text" className="input" value={subFormData.name} onChange={(e) => setSubFormData({ ...subFormData, name: e.target.value })} required placeholder="e.g. Groceries" />
+            <label htmlFor="sub-name" className="label">Name *</label>
+            <input id="sub-name" type="text" className="input" value={subFormData.name} onChange={(e) => setSubFormData({ ...subFormData, name: e.target.value })} required placeholder="e.g. Groceries" />
           </div>
           <div>
-            <label className="label">Description</label>
-            <input type="text" className="input" value={subFormData.description} onChange={(e) => setSubFormData({ ...subFormData, description: e.target.value })} placeholder="Brief description" />
+            <label htmlFor="sub-desc" className="label">Description</label>
+            <input id="sub-desc" type="text" className="input" value={subFormData.description} onChange={(e) => setSubFormData({ ...subFormData, description: e.target.value })} placeholder="Brief description" />
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={() => setSubModal(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>
-              {saving ? 'Saving...' : editingSub ? 'Update' : 'Add'}
-            </button>
-          </div>
+          {(() => {
+            const idleLabel = editingSub ? 'Update' : 'Add';
+            const submitLabel = saving ? 'Saving...' : idleLabel;
+            return (
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setSubModal(false)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" className="btn-primary flex-1" disabled={saving}>{submitLabel}</button>
+              </div>
+            );
+          })()}
         </form>
       </Modal>
     </div>

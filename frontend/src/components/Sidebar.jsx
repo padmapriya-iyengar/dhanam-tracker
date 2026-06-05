@@ -1,4 +1,4 @@
-import { BarChart2, Building2, CreditCard, Home, Lightbulb, ShoppingCart, Tag, TrendingUp, Users } from 'lucide-react';
+import { BarChart2, Building2, CreditCard, Home, Lightbulb, ShoppingCart, Tag, TrendingUp, Users, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
@@ -13,57 +13,76 @@ const navItems = [
   { to: '/members', icon: Users, label: 'Members' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   return (
-    <aside className="w-60 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 left-0 z-30">
-      <div className="p-5 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Banknote */}
-              <rect x="1" y="2.5" width="11" height="7" rx="1.2" stroke="white" strokeWidth="1.4"/>
-              <circle cx="6.5" cy="6" r="1.6" stroke="white" strokeWidth="1.2"/>
-              {/* Coin stack */}
-              <ellipse cx="14" cy="14.2" rx="3" ry="1.1" stroke="white" strokeWidth="1.3"/>
-              <ellipse cx="14" cy="12.6" rx="3" ry="1.1" stroke="white" strokeWidth="1.3"/>
-              <line x1="11" y1="12.6" x2="11" y2="14.2" stroke="white" strokeWidth="1.3"/>
-              <line x1="17" y1="12.6" x2="17" y2="14.2" stroke="white" strokeWidth="1.3"/>
-            </svg>
-          </div>
-          <div>
-            <p className="font-bold text-slate-800 text-base leading-tight">Dhanam</p>
-            <p className="text-xs text-slate-400">Family Finance</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-              }`
-            }
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-100 flex flex-col
+          transition-transform duration-200 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      >
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="2.5" width="11" height="7" rx="1.2" stroke="white" strokeWidth="1.4"/>
+                <circle cx="6.5" cy="6" r="1.6" stroke="white" strokeWidth="1.2"/>
+                <ellipse cx="14" cy="14.2" rx="3" ry="1.1" stroke="white" strokeWidth="1.3"/>
+                <ellipse cx="14" cy="12.6" rx="3" ry="1.1" stroke="white" strokeWidth="1.3"/>
+                <line x1="11" y1="12.6" x2="11" y2="14.2" stroke="white" strokeWidth="1.3"/>
+                <line x1="17" y1="12.6" x2="17" y2="14.2" stroke="white" strokeWidth="1.3"/>
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-base leading-tight">Dhanam</p>
+              <p className="text-xs text-slate-400">Family Finance</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg"
           >
-            {({ isActive }) => (
-              <>
-                <Icon size={18} className={isActive ? 'text-indigo-600' : 'text-slate-400'} />
-                {label}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+            <X size={18} />
+          </button>
+        </div>
 
-      <div className="p-4 border-t border-slate-100">
-        <p className="text-xs text-slate-400 text-center">Dhanam Tracker v1.0</p>
-      </div>
-    </aside>
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {navItems.map(({ to, icon: Icon, label, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={18} className={isActive ? 'text-indigo-600' : 'text-slate-400'} />
+                  {label}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-slate-100">
+          <p className="text-xs text-slate-400 text-center">Dhanam Tracker v1.0</p>
+        </div>
+      </aside>
+    </>
   );
 }

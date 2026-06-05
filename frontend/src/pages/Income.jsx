@@ -142,7 +142,7 @@ export default function Income() {
           <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Income</button>
         </div>
       ) : (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">

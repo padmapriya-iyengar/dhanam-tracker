@@ -96,17 +96,17 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="text-sm text-slate-500 mt-0.5">{format(now, 'MMMM yyyy')} overview</p>
         </div>
-        <div className="flex gap-2">
-          <Link to="/income" className="btn-secondary">
+        <div className="flex gap-2 flex-shrink-0">
+          <Link to="/income" className="btn-secondary hidden sm:inline-flex">
             <TrendingUp size={15} /> Add Income
           </Link>
           <Link to="/expenses" className="btn-primary">
-            <Plus size={15} /> Add Expense
+            <Plus size={15} /> <span className="hidden sm:inline">Add Expense</span><span className="sm:hidden">Expense</span>
           </Link>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${balances.length}, 1fr)` }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {balances.map((b) => (
             <div key={b.memberId} className="bg-white rounded-xl border border-indigo-100 p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -207,7 +207,7 @@ export default function Dashboard() {
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {savingsAccounts.map((acc) => (
               <div key={acc._id} className="rounded-xl border border-slate-100 p-3 hover:border-emerald-200 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
@@ -248,7 +248,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {ccSummary.map((card) => (
               <div key={card._id} className="rounded-xl border border-slate-100 p-3 hover:border-violet-200 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
