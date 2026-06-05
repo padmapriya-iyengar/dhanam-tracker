@@ -12,15 +12,15 @@ export default function StatCard({ title, value, subtitle, change, changeLabel, 
   const isPositive = parseFloat(change) >= 0;
 
   return (
-    <div className="card flex items-start gap-4">
+    <div className="card flex items-start gap-3">
       {Icon && (
-        <div className={`p-2.5 rounded-xl ${colorMap[color]}`}>
+        <div className={`hidden sm:flex p-2.5 rounded-xl flex-shrink-0 ${colorMap[color]}`}>
           <Icon size={20} />
         </div>
       )}
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{title}</p>
-        <p className="text-2xl font-bold text-slate-800 mt-0.5 truncate">{value}</p>
+        <p className="text-lg sm:text-2xl font-bold text-slate-800 mt-0.5 leading-tight">{value}</p>
         {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
         {change !== undefined && (
           <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>

@@ -69,18 +69,20 @@ export default function Reports() {
         <div className="flex flex-wrap gap-4 items-end">
           <div className="w-full sm:w-auto">
             <label className="label">Period</label>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg overflow-x-auto">
-              {PERIOD_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPeriod(opt.value)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    period === opt.value ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-max min-w-full sm:w-auto">
+                {PERIOD_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setPeriod(opt.value)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      period === opt.value ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -191,7 +193,7 @@ export default function Reports() {
           </div>
 
           {/* Previous Period Comparison */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="card">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">vs Previous Period</p>
               <div className="space-y-3">
