@@ -213,7 +213,53 @@ export default function Expenses() {
       )}
       {!loading && records.length > 0 && (
         <>
-          <div className="card p-0 overflow-hidden overflow-x-auto">
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-2">
+            {records.map((rec) => {
+              const isCreditCard = rec.paymentMethod === 'credit_card';
+              return (
+                <div key={rec._id} className="card p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: rec.categoryId?.color }} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-700">{rec.categoryId?.name}</p>
+                        {rec.subCategoryId && <p className="text-xs text-slate-400">{rec.subCategoryId.name}</p>}
+                        {rec.description && <p className="text-sm text-slate-500 mt-0.5 truncate">{rec.description}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
+                      <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
+                      <span>{format(new Date(rec.date), 'dd MMM yyyy')}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: rec.memberId?.color }} />
+                        {rec.memberId?.name}
+                      </span>
+                      {isCreditCard ? (
+                        <span className="flex items-center gap-1 text-violet-600">
+                          <CreditCard size={10} /> {rec.creditCardId?.bankName || 'Credit Card'}
+                        </span>
+                      ) : (
+                        <span>{PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod}</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold flex-shrink-0" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
+                      {fmt(rec.amount)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block card p-0 overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">

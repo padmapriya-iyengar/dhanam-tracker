@@ -142,51 +142,90 @@ export default function Income() {
           <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Income</button>
         </div>
       ) : (
-        <div className="card p-0 overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                {['Date', 'Member', 'Source', 'Description', 'Account', 'Amount', ''].map((h) => (
-                  <th key={h} className="text-left py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((rec) => (
-                <tr key={rec._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{format(new Date(rec.date), 'dd MMM yyyy')}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ background: rec.memberId?.color }} />
-                      <span className="text-slate-700 font-medium">{rec.memberId?.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="badge bg-emerald-50 text-emerald-700">{rec.source}</span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-500">{rec.description || '—'}</td>
-                  <td className="py-3 px-4">
-                    {rec.savingsAccountId ? (
-                      <div className="flex items-center gap-1.5">
-                        <Building2 size={13} className="text-slate-400" />
-                        <span className="text-xs text-slate-600">{rec.savingsAccountId.name}</span>
+        <>
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-2">
+            {records.map((rec) => (
+              <div key={rec._id} className="card p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: rec.memberId?.color }} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-700">{rec.memberId?.name}</span>
+                        <span className="badge bg-emerald-50 text-emerald-700 text-xs">{rec.source}</span>
                       </div>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-right font-semibold text-emerald-600 whitespace-nowrap">{fmt(rec.amount)}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      {rec.description && <p className="text-xs text-slate-500 mt-0.5 truncate">{rec.description}</p>}
                     </div>
-                  </td>
+                  </div>
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
+                    <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                  <div className="text-xs text-slate-400 space-y-0.5">
+                    <p>{format(new Date(rec.date), 'dd MMM yyyy')}</p>
+                    {rec.savingsAccountId && (
+                      <div className="flex items-center gap-1">
+                        <Building2 size={10} />
+                        <span>{rec.savingsAccountId.name}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-emerald-600">{fmt(rec.amount)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block card p-0 overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  {['Date', 'Member', 'Source', 'Description', 'Account', 'Amount', ''].map((h) => (
+                    <th key={h} className="text-left py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {records.map((rec) => (
+                  <tr key={rec._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{format(new Date(rec.date), 'dd MMM yyyy')}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: rec.memberId?.color }} />
+                        <span className="text-slate-700 font-medium">{rec.memberId?.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="badge bg-emerald-50 text-emerald-700">{rec.source}</span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-500">{rec.description || '—'}</td>
+                    <td className="py-3 px-4">
+                      {rec.savingsAccountId ? (
+                        <div className="flex items-center gap-1.5">
+                          <Building2 size={13} className="text-slate-400" />
+                          <span className="text-xs text-slate-600">{rec.savingsAccountId.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right font-semibold text-emerald-600 whitespace-nowrap">{fmt(rec.amount)}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1 justify-end">
+                        <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Add/Edit Modal */}
