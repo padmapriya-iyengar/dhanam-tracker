@@ -146,45 +146,45 @@ export default function Expenses() {
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters</span>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3">
           <div>
             <label htmlFor="filter-month" className="label">Month</label>
-            <select id="filter-month" className="input w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)}>
+            <select id="filter-month" className="input w-full sm:w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)}>
               {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-year" className="label">Year</label>
-            <select id="filter-year" className="input w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)}>
+            <select id="filter-year" className="input w-full sm:w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)}>
               {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y}>{y}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-member" className="label">Member</label>
-            <select id="filter-member" className="input w-36" value={filterMember} onChange={(e) => setFilterMember(e.target.value)}>
+            <select id="filter-member" className="input w-full sm:w-36" value={filterMember} onChange={(e) => setFilterMember(e.target.value)}>
               <option value="">All Members</option>
               {members.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-category" className="label">Category</label>
-            <select id="filter-category" className="input w-44" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <select id="filter-category" className="input w-full sm:w-44" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
               <option value="">All Categories</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <label htmlFor="filter-payment" className="label">Payment</label>
-            <select id="filter-payment" className="input w-40" value={filterPayment}
+            <select id="filter-payment" className="input w-full sm:w-40" value={filterPayment}
               onChange={(e) => { setFilterPayment(e.target.value); setFilterCreditCard(''); }}>
               <option value="">All Methods</option>
               {PAYMENT_METHODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           {filterPayment === 'credit_card' && (
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label htmlFor="filter-credit-card" className="label">Credit Card</label>
-              <select id="filter-credit-card" className="input w-48" value={filterCreditCard} onChange={(e) => setFilterCreditCard(e.target.value)}>
+              <select id="filter-credit-card" className="input w-full sm:w-48" value={filterCreditCard} onChange={(e) => setFilterCreditCard(e.target.value)}>
                 <option value="">All Cards</option>
                 {allCreditCards.map((c) => (
                   <option key={c._id} value={c._id}>
