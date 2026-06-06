@@ -13,7 +13,7 @@ import Savings from './pages/Savings';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppProvider>
         <Routes>
           <Route path="/" element={<Layout />}>

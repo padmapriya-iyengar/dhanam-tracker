@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { CreditCard, Edit2, Filter, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import DirhamSymbol from '../components/DirhamSymbol';
@@ -394,7 +395,7 @@ export default function Expenses() {
               {allCreditCards.length === 0 ? (
                 <p className="text-xs text-violet-500">
                   No credit cards found.{' '}
-                  <a href="/credit-cards" className="underline font-medium">Add one on the Credit Cards page</a>.
+                  <Link to="/credit-cards" className="underline font-medium">Add one on the Credit Cards page</Link>.
                 </p>
               ) : (
                 <select id="exp-credit-card" className="input" value={form.creditCardId}
