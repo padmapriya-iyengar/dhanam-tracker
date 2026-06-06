@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { fmt, reportsApi } from '../services/api';
 
 const PERIOD_OPTIONS = [
@@ -186,9 +187,9 @@ export default function Reports() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <StatCard title="Total Income" value={fmt(summary.totalIncome)} icon={TrendingUp} color="green" change={summary.incomeChange} />
-            <StatCard title="Total Expenses" value={fmt(summary.totalExpense)} icon={BarChart2} color="red" change={summary.expenseChange} />
-            <StatCard title="Net Savings" value={fmt(summary.savings)} icon={Wallet} color={summary.savings >= 0 ? 'green' : 'red'} />
+            <StatCard title="Total Income" value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.totalIncome)}</>} icon={TrendingUp} color="green" change={summary.incomeChange} />
+            <StatCard title="Total Expenses" value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.totalExpense)}</>} icon={BarChart2} color="red" change={summary.expenseChange} />
+            <StatCard title="Net Savings" value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.savings)}</>} icon={Wallet} color={summary.savings >= 0 ? 'green' : 'red'} />
             <StatCard title="Savings Rate" value={`${summary.savingsRate}%`} icon={TrendingDown} color="indigo" />
           </div>
 
@@ -200,15 +201,15 @@ export default function Reports() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-600">Income</span>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-700">{fmt(summary.totalIncome)}</p>
-                    <p className="text-xs text-slate-400">prev: {fmt(summary.prevTotalIncome)}</p>
+                    <p className="text-sm font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.totalIncome)}</p>
+                    <p className="text-xs text-slate-400">prev: <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(summary.prevTotalIncome)}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-600">Expenses</span>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-700">{fmt(summary.totalExpense)}</p>
-                    <p className="text-xs text-slate-400">prev: {fmt(summary.prevTotalExpense)}</p>
+                    <p className="text-sm font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.totalExpense)}</p>
+                    <p className="text-xs text-slate-400">prev: <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(summary.prevTotalExpense)}</p>
                   </div>
                 </div>
               </div>
@@ -224,7 +225,7 @@ export default function Reports() {
                       <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
                       <span className="text-sm text-slate-600">{m.name} — Income</span>
                     </div>
-                    <span className="text-sm font-semibold text-emerald-600">{fmt(m.total)}</span>
+                    <span className="text-sm font-semibold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(m.total)}</span>
                   </div>
                 ))}
                 {expenseByMember?.map((m, i) => (
@@ -233,7 +234,7 @@ export default function Reports() {
                       <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
                       <span className="text-sm text-slate-600">{m.name} — Expenses</span>
                     </div>
-                    <span className="text-sm font-semibold text-rose-600">{fmt(m.total)}</span>
+                    <span className="text-sm font-semibold text-rose-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(m.total)}</span>
                   </div>
                 ))}
               </div>
@@ -250,7 +251,7 @@ export default function Reports() {
                   <BarChart data={expenseByCategory} layout="vertical" barSize={16}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false}
-                      tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`} />
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={110} />
                     <Tooltip formatter={(v) => fmt(v)} />
                     <Bar dataKey="total" name="Amount" radius={[0, 4, 4, 0]}>
@@ -280,7 +281,7 @@ export default function Reports() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v) => fmt(v)} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Area type="monotone" dataKey="income" name="Income" stroke="#10b981" fill="url(#incG)" strokeWidth={2} dot={false} />
@@ -298,7 +299,7 @@ export default function Reports() {
                 <LineChart data={dailyTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="_id" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v) => fmt(v)} />
                   <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#6366f1" strokeWidth={2} dot={false} />
                 </LineChart>
@@ -331,7 +332,7 @@ export default function Reports() {
                         </div>
                       </td>
                       <td className="py-3 px-5 text-right text-slate-500">{c.count}</td>
-                      <td className="py-3 px-5 text-right font-semibold text-slate-700">{fmt(c.total)}</td>
+                      <td className="py-3 px-5 text-right font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}</td>
                       <td className="py-3 px-5 text-right text-slate-500">
                         {summary.totalExpense > 0 ? ((c.total / summary.totalExpense) * 100).toFixed(1) : 0}%
                       </td>

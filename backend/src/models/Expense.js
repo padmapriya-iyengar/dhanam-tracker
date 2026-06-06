@@ -13,10 +13,11 @@ const expenseSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       // 'card' kept for backward-compat with existing records
-      enum: ['cash', 'card', 'debit_card', 'credit_card', 'upi', 'netbanking', 'other'],
+      enum: ['cash', 'card', 'debit_card', 'credit_card', 'upi', 'netbanking', 'savings', 'other'],
       default: 'upi',
     },
     creditCardId: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditCard', default: null },
+    savingsAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavingsAccount', default: null },
     notes: { type: String, trim: true },
   },
   { timestamps: true }

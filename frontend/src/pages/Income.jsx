@@ -3,6 +3,7 @@ import { Building2, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
 import { fmt, incomeApi, savingsApi } from '../services/api';
 
@@ -122,12 +123,12 @@ export default function Income() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="card bg-emerald-50 border-emerald-100">
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Total Income</p>
-            <p className="text-xl font-bold text-emerald-700 mt-1">{fmt(records.reduce((s, r) => s + r.amount, 0))}</p>
+            <p className="text-xl font-bold text-emerald-700 mt-1"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(records.reduce((s, r) => s + r.amount, 0))}</p>
           </div>
           {Object.entries(totalByMember).map(([name, amt]) => (
             <div key={name} className="card">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{name}</p>
-              <p className="text-xl font-bold text-slate-700 mt-1">{fmt(amt)}</p>
+              <p className="text-xl font-bold text-slate-700 mt-1"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(amt)}</p>
             </div>
           ))}
         </div>
@@ -173,7 +174,7 @@ export default function Income() {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm font-bold text-emerald-600">{fmt(rec.amount)}</p>
+                  <p className="text-sm font-bold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}</p>
                 </div>
               </div>
             ))}
@@ -213,7 +214,7 @@ export default function Income() {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-emerald-600 whitespace-nowrap">{fmt(rec.amount)}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-emerald-600 whitespace-nowrap"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1 justify-end">
                         <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
@@ -243,7 +244,7 @@ export default function Income() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="inc-amount" className="label">Amount (AED) *</label>
+              <label htmlFor="inc-amount" className="label">Amount (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
               <input id="inc-amount" type="number" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="1" placeholder="0" />
             </div>
             <div>
@@ -278,7 +279,7 @@ export default function Income() {
             {selectedAccount && (
               <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1">
                 <Building2 size={11} />
-                {fmt(form.amount || 0)} will be added to <strong>{selectedAccount.name}</strong>&apos;s balance
+                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)} will be added to <strong>{selectedAccount.name}</strong>&apos;s balance
               </p>
             )}
           </div>

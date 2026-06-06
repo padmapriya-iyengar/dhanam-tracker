@@ -64,6 +64,6 @@ export const balanceApi = {
 };
 
 export const fmt = (amount) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(amount);
+  new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(amount);
 
 export default api;

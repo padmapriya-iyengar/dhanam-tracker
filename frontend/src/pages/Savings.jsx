@@ -3,6 +3,7 @@ import { Building2, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
 import { fmt, savingsApi } from '../services/api';
 
@@ -112,7 +113,7 @@ export default function Savings() {
       {accounts.length > 0 && (
         <div className="card bg-gradient-to-r from-indigo-600 to-indigo-500 text-white border-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">Total Savings (All Accounts)</p>
-          <p className="text-3xl font-bold mt-1">{fmt(grandTotal)}</p>
+          <p className="text-3xl font-bold mt-1"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(grandTotal)}</p>
           <p className="text-xs text-indigo-200 mt-1">{accounts.length} account{accounts.length !== 1 ? 's' : ''} across {members.length} member{members.length !== 1 ? 's' : ''}</p>
         </div>
       )}
@@ -126,7 +127,7 @@ export default function Savings() {
               <h2 className="font-semibold text-slate-700">{member.name}</h2>
             </div>
             {memberAccounts.length > 0 && (
-              <span className="text-sm font-semibold text-slate-500">{fmt(total)}</span>
+              <span className="text-sm font-semibold text-slate-500"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(total)}</span>
             )}
           </div>
 
@@ -175,7 +176,7 @@ export default function Savings() {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-50">
-                    <p className="text-2xl font-bold text-slate-800">{fmt(acc.balance)}</p>
+                    <p className="text-2xl font-bold text-slate-800"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(acc.balance)}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       Updated {formatDistanceToNow(new Date(acc.balanceUpdatedAt), { addSuffix: true })}
                     </p>
@@ -239,7 +240,7 @@ export default function Savings() {
           </div>
 
           <div>
-            <label className="label">Current Balance (AED) *</label>
+            <label className="label">Current Balance (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
             <input type="number" className="input" value={form.balance}
               onChange={(e) => setForm({ ...form, balance: e.target.value })}
               required placeholder="0" step="0.01" />

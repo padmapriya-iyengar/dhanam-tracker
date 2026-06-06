@@ -1,6 +1,7 @@
 import { AlertCircle, Coins, Lightbulb, RefreshCw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { fmt, insightsApi } from '../services/api';
 
 export default function Insights() {
@@ -107,21 +108,21 @@ export default function Insights() {
                   <Coins size={14} className="text-emerald-600" />
                   <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Avg Monthly Income</p>
                 </div>
-                <p className="text-xl font-bold text-emerald-700">{fmt(Math.round(summary.avgMonthlyIncome))}</p>
+                <p className="text-xl font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(Math.round(summary.avgMonthlyIncome))}</p>
               </div>
               <div className="card bg-rose-50 border-rose-100">
                 <div className="flex items-center gap-2 mb-1">
                   <Coins size={14} className="text-rose-600" />
                   <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Avg Monthly Expense</p>
                 </div>
-                <p className="text-xl font-bold text-rose-700">{fmt(Math.round(summary.avgMonthlyExpense))}</p>
+                <p className="text-xl font-bold text-rose-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(Math.round(summary.avgMonthlyExpense))}</p>
               </div>
               <div className="card bg-indigo-50 border-indigo-100">
                 <div className="flex items-center gap-2 mb-1">
                   <Coins size={14} className="text-indigo-600" />
                   <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">3-Month Savings</p>
                 </div>
-                <p className="text-xl font-bold text-indigo-700">{fmt(summary.savings)}</p>
+                <p className="text-xl font-bold text-indigo-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary.savings)}</p>
               </div>
               <div className="card bg-amber-50 border-amber-100">
                 <div className="flex items-center gap-2 mb-1">

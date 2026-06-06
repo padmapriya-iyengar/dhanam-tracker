@@ -6,6 +6,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from 'recharts';
+import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import StatCard from '../components/StatCard';
@@ -115,21 +116,21 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           title="Total Income"
-          value={fmt(summary?.totalIncome || 0)}
+          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.totalIncome || 0)}</>}
           icon={TrendingUp}
           color="green"
           change={summary?.incomeChange}
         />
         <StatCard
           title="Total Expenses"
-          value={fmt(summary?.totalExpense || 0)}
+          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.totalExpense || 0)}</>}
           icon={ShoppingCart}
           color="red"
           change={summary?.expenseChange}
         />
         <StatCard
           title="Net Savings"
-          value={fmt(summary?.savings || 0)}
+          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.savings || 0)}</>}
           icon={Wallet}
           color={summary?.savings >= 0 ? 'green' : 'red'}
         />
@@ -168,16 +169,16 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xl font-bold text-indigo-700">{fmt(b.currentBalance)}</p>
+                  <p className="text-xl font-bold text-indigo-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.currentBalance)}</p>
                   <p className="text-xs text-slate-400">Current (today)</p>
                 </div>
                 <div className="flex gap-4 pt-1 border-t border-slate-50">
                   <div>
-                    <p className="text-sm font-semibold text-slate-600">{fmt(b.balanceLastMonth)}</p>
+                    <p className="text-sm font-semibold text-slate-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.balanceLastMonth)}</p>
                     <p className="text-xs text-slate-400">Carry-forward (last month)</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-400">{fmt(b.openingBalance)}</p>
+                    <p className="text-sm font-medium text-slate-400"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.openingBalance)}</p>
                     <p className="text-xs text-slate-400">Opening</p>
                   </div>
                 </div>
@@ -200,7 +201,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-emerald-700">
-                {fmt(savingsAccounts.reduce((s, a) => s + a.balance, 0))}
+                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(savingsAccounts.reduce((s, a) => s + a.balance, 0))}
               </span>
               <Link to="/savings" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
                 View all <ArrowRight size={13} />
@@ -219,7 +220,7 @@ export default function Dashboard() {
                     {acc.bankName && <p className="text-xs text-slate-400 truncate">{acc.bankName}</p>}
                   </div>
                 </div>
-                <p className="text-base font-bold text-emerald-700">{fmt(acc.balance)}</p>
+                <p className="text-base font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(acc.balance)}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: acc.memberId?.color }} />
                   <span className="text-xs text-slate-400">{acc.memberId?.name}</span>
@@ -260,7 +261,7 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-400 truncate">{card.name}</p>
                   </div>
                 </div>
-                <p className="text-base font-bold text-violet-700">{fmt(card.totalThisMonth)}</p>
+                <p className="text-base font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalThisMonth)}</p>
                 <div className="flex items-center justify-between mt-0.5">
                   <p className="text-xs text-slate-400">{card.countThisMonth} txn{card.countThisMonth !== 1 ? 's' : ''}</p>
                   <div className="flex items-center gap-1">
@@ -275,7 +276,7 @@ export default function Dashboard() {
             <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
               <p className="text-xs font-semibold text-violet-500 uppercase tracking-wide mb-2">Total</p>
               <p className="text-base font-bold text-violet-700">
-                {fmt(ccSummary.reduce((s, c) => s + c.totalThisMonth, 0))}
+                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(ccSummary.reduce((s, c) => s + c.totalThisMonth, 0))}
               </p>
               <p className="text-xs text-violet-400 mt-0.5">
                 {ccSummary.reduce((s, c) => s + c.countThisMonth, 0)} transactions
@@ -294,7 +295,7 @@ export default function Dashboard() {
             <BarChart data={trend} barSize={18}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v) => fmt(v)} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
@@ -326,7 +327,7 @@ export default function Dashboard() {
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c.color || COLORS[i % COLORS.length] }} />
                       <span className="text-slate-600 truncate max-w-[100px]">{c.name}</span>
                     </div>
-                    <span className="font-medium text-slate-700">{fmt(c.total)}</span>
+                    <span className="font-medium text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}</span>
                   </div>
                 ))}
               </div>
@@ -371,7 +372,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-rose-600">{fmt(exp.amount)}</span>
+                <span className="text-sm font-semibold text-rose-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(exp.amount)}</span>
               </div>
             ))}
           </div>
@@ -393,7 +394,7 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Opening Balance (AED)</label>
+                  <label className="label">Opening Balance (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />)</label>
                   <input
                     type="number"
                     className="input"

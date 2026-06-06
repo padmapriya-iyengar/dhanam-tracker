@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Expense = require('../models/Expense');
+const SavingsAccount = require('../models/SavingsAccount');
+
+async function adjustAccount(accountId, delta) {
+  if (!accountId) return;
+  await SavingsAccount.findByIdAndUpdate(accountId, {
+    $inc: { balance: delta },
+    balanceUpdatedAt: new Date(),
+  });
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -25,6 +34,7 @@ router.get('/', async (req, res) => {
         .populate('categoryId', 'name color icon')
         .populate('subCategoryId', 'name')
         .populate('creditCardId', 'name bankName color')
+        .populate('savingsAccountId', 'name bankName')
         .sort({ date: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -42,14 +52,20 @@ router.post('/', async (req, res) => {
     const date = new Date(req.body.date);
     const expense = new Expense({
       ...req.body,
+      savingsAccountId: req.body.savingsAccountId || null,
       month: date.getMonth() + 1,
       year: date.getFullYear(),
     });
     await expense.save();
+
+    // Deduct from savings account (expenses reduce balance)
+    await adjustAccount(expense.savingsAccountId, -expense.amount);
+
     const populated = await Expense.findById(expense._id)
       .populate('memberId', 'name color role')
       .populate('categoryId', 'name color icon')
-      .populate('subCategoryId', 'name');
+      .populate('subCategoryId', 'name')
+      .populate('savingsAccountId', 'name bankName');
     res.status(201).json(populated);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -58,17 +74,29 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const updates = { ...req.body };
+    const old = await Expense.findById(req.params.id);
+    if (!old) return res.status(404).json({ error: 'Expense not found' });
+
+    const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
     if (req.body.date) {
       const date = new Date(req.body.date);
       updates.month = date.getMonth() + 1;
       updates.year = date.getFullYear();
     }
+
+    const oldAccountId = old.savingsAccountId?.toString() || null;
+    const newAccountId = updates.savingsAccountId?.toString() || null;
+    const newAmount = parseFloat(req.body.amount) || old.amount;
+
+    // Reverse old account deduction, apply new account deduction
+    await adjustAccount(oldAccountId, old.amount);
+    await adjustAccount(newAccountId, -newAmount);
+
     const expense = await Expense.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role')
       .populate('categoryId', 'name color icon')
-      .populate('subCategoryId', 'name');
-    if (!expense) return res.status(404).json({ error: 'Expense not found' });
+      .populate('subCategoryId', 'name')
+      .populate('savingsAccountId', 'name bankName');
     res.json(expense);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -77,8 +105,12 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await Expense.findById(req.params.id);
     if (!expense) return res.status(404).json({ error: 'Expense not found' });
+
+    // Restore the deducted amount on delete
+    await adjustAccount(expense.savingsAccountId, expense.amount);
+    await Expense.findByIdAndDelete(req.params.id);
     res.json({ message: 'Expense deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

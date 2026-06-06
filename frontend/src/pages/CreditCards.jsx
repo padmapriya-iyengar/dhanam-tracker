@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
 import { creditCardsApi, fmt } from '../services/api';
 
@@ -131,12 +132,12 @@ export default function CreditCards() {
               <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-slate-400">This month</p>
-                  <p className="text-lg font-bold text-violet-700">{fmt(card.totalThisMonth)}</p>
+                  <p className="text-lg font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalThisMonth)}</p>
                   <p className="text-xs text-slate-400">{card.countThisMonth} txn{card.countThisMonth !== 1 ? 's' : ''}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">All time</p>
-                  <p className="text-lg font-semibold text-slate-600">{fmt(card.totalAllTime)}</p>
+                  <p className="text-lg font-semibold text-slate-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalAllTime)}</p>
                   <p className="text-xs text-slate-400">{card.countAllTime} txn{card.countAllTime !== 1 ? 's' : ''}</p>
                 </div>
               </div>
@@ -178,7 +179,7 @@ export default function CreditCards() {
               <BarChart data={chartData} barSize={20}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v) => fmt(v)} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {monthly?.cards.map((card, i) => (
@@ -226,13 +227,13 @@ export default function CreditCards() {
                       {card.monthlyTotals.map((amt, i) => (
                         <td key={i} className="py-3 px-4 text-right">
                           {amt > 0 ? (
-                            <span className="font-medium text-slate-700">{fmt(amt)}</span>
+                            <span className="font-medium text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(amt)}</span>
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
                       ))}
-                      <td className="py-3 px-4 text-right font-bold text-violet-700">{fmt(rowTotal)}</td>
+                      <td className="py-3 px-4 text-right font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rowTotal)}</td>
                     </tr>
                   );
                 })}
@@ -241,10 +242,10 @@ export default function CreditCards() {
                 <tr className="bg-slate-50 border-t border-slate-200">
                   <td className="py-3 px-4 font-bold text-slate-700 text-xs uppercase tracking-wide sticky left-0 bg-slate-50">Total</td>
                   {monthlyGrandTotals.map((t, i) => (
-                    <td key={i} className="py-3 px-4 text-right font-bold text-slate-700">{t > 0 ? fmt(t) : '—'}</td>
+                    <td key={i} className="py-3 px-4 text-right font-bold text-slate-700">{t > 0 ? <><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(t)}</> : '—'}</td>
                   ))}
                   <td className="py-3 px-4 text-right font-bold text-violet-700">
-                    {fmt(monthlyGrandTotals.reduce((s, v) => s + v, 0))}
+                    <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(monthlyGrandTotals.reduce((s, v) => s + v, 0))}
                   </td>
                 </tr>
               </tfoot>

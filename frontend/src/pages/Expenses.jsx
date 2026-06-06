@@ -3,19 +3,21 @@ import { CreditCard, Edit2, Filter, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
-import { creditCardsApi, expensesApi, fmt } from '../services/api';
+import { creditCardsApi, expensesApi, fmt, savingsApi } from '../services/api';
 
 const PAYMENT_METHODS = [
   { value: 'upi', label: 'UPI' },
   { value: 'debit_card', label: 'Debit Card' },
   { value: 'credit_card', label: 'Credit Card' },
+  { value: 'savings', label: 'Savings' },
   { value: 'cash', label: 'Cash' },
   { value: 'netbanking', label: 'Net Banking' },
   { value: 'other', label: 'Other' },
 ];
 
-const PAYMENT_LABELS = { upi: 'UPI', debit_card: 'Debit Card', credit_card: 'Credit Card', cash: 'Cash', netbanking: 'Net Banking', other: 'Other', card: 'Card' };
+const PAYMENT_LABELS = { upi: 'UPI', debit_card: 'Debit Card', credit_card: 'Credit Card', savings: 'Savings', cash: 'Cash', netbanking: 'Net Banking', other: 'Other', card: 'Card' };
 
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
@@ -25,7 +27,7 @@ const months = Array.from({ length: 12 }, (_, i) => ({
 const emptyForm = {
   memberId: '', amount: '', categoryId: '', subCategoryId: '',
   description: '', date: format(new Date(), 'yyyy-MM-dd'),
-  paymentMethod: 'upi', creditCardId: '', notes: '',
+  paymentMethod: 'upi', creditCardId: '', savingsAccountId: '', notes: '',
 };
 
 export default function Expenses() {
@@ -48,12 +50,18 @@ export default function Expenses() {
   const [filterCreditCard, setFilterCreditCard] = useState('');
   // All credit cards; filtered to member when adding expense
   const [allCreditCards, setAllCreditCards] = useState([]);
+  const [savingsAccounts, setSavingsAccounts] = useState([]);
 
   const subCategories = categories.find((c) => c._id === form.categoryId)?.subCategories || [];
 
   const loadCreditCards = async () => {
     const { data } = await creditCardsApi.getAll();
     setAllCreditCards(data);
+  };
+
+  const loadSavingsAccounts = async () => {
+    const { data } = await savingsApi.getAll();
+    setSavingsAccounts(data);
   };
 
   const load = async (p = 1) => {
@@ -71,7 +79,7 @@ export default function Expenses() {
     setLoading(false);
   };
 
-  useEffect(() => { loadCreditCards(); }, []);
+  useEffect(() => { loadCreditCards(); loadSavingsAccounts(); }, []);
   useEffect(() => { load(1); }, [filterMonth, filterYear, filterMember, filterCategory, filterPayment, filterCreditCard]);
 
   const openAdd = () => {
@@ -92,6 +100,7 @@ export default function Expenses() {
       date: format(new Date(rec.date), 'yyyy-MM-dd'),
       paymentMethod: rec.paymentMethod,
       creditCardId: rec.creditCardId?._id || '',
+      savingsAccountId: rec.savingsAccountId?._id || '',
       notes: rec.notes || '',
     });
     setSaveError('');
@@ -105,6 +114,7 @@ export default function Expenses() {
     const payload = { ...form };
     if (!payload.subCategoryId) delete payload.subCategoryId;
     if (payload.paymentMethod !== 'credit_card') delete payload.creditCardId;
+    if (!payload.savingsAccountId) delete payload.savingsAccountId;
     try {
       if (editing) await expensesApi.update(editing, payload);
       else await expensesApi.create(payload);
@@ -128,7 +138,7 @@ export default function Expenses() {
   };
 
   const handlePaymentChange = (paymentMethod) => {
-    setForm((f) => ({ ...f, paymentMethod, creditCardId: '' }));
+    setForm((f) => ({ ...f, paymentMethod, creditCardId: '', savingsAccountId: '' }));
   };
 
   return (
@@ -200,7 +210,7 @@ export default function Expenses() {
       {!loading && records.length > 0 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-sm text-slate-500">{total} expenses found</p>
-          <p className="text-sm font-semibold text-rose-600">Total: {fmt(records.reduce((s, r) => s + r.amount, 0))}</p>
+          <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(records.reduce((s, r) => s + r.amount, 0))}</p>
         </div>
       )}
 
@@ -250,7 +260,7 @@ export default function Expenses() {
                       )}
                     </div>
                     <p className="text-sm font-bold flex-shrink-0" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
-                      {fmt(rec.amount)}
+                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
                     </p>
                   </div>
                 </div>
@@ -301,7 +311,7 @@ export default function Expenses() {
                       )}
                     </td>
                     <td className="py-3 px-4 font-semibold whitespace-nowrap" style={{ color: rec.paymentMethod === 'credit_card' ? '#7c3aed' : '#f43f5e' }}>
-                      {fmt(rec.amount)}
+                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1 justify-end">
@@ -365,7 +375,7 @@ export default function Expenses() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="exp-amount" className="label">Amount (AED) *</label>
+              <label htmlFor="exp-amount" className="label">Amount (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
               <input id="exp-amount" type="number" className="input" value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="0.01" step="0.01" placeholder="0" />
             </div>
@@ -398,6 +408,34 @@ export default function Expenses() {
                 </select>
               )}
               <p className="text-xs text-violet-400">Credit card expenses do not reduce your account balance.</p>
+            </div>
+          )}
+
+          {/* Savings account selector — only when savings payment method is selected */}
+          {form.paymentMethod === 'savings' && (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 space-y-2">
+              <label htmlFor="exp-savings-account" className="label text-emerald-700">Savings Account *</label>
+              {savingsAccounts.length === 0 ? (
+                <p className="text-xs text-emerald-600">No savings accounts found. Add one on the Savings page.</p>
+              ) : (
+                <select id="exp-savings-account" className="input" value={form.savingsAccountId}
+                  onChange={(e) => setForm({ ...form, savingsAccountId: e.target.value })} required>
+                  <option value="">Select account</option>
+                  {savingsAccounts.map((a) => (
+                    <option key={a._id} value={a._id}>
+                      {a.name}{a.bankName ? ` — ${a.bankName}` : ''} ({a.memberId?.name})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {form.savingsAccountId && (() => {
+                const acc = savingsAccounts.find((a) => a._id === form.savingsAccountId);
+                return acc ? (
+                  <p className="text-xs text-rose-600 flex items-center gap-1">
+                    <DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />{fmt(form.amount || 0)} will be deducted from <strong>{acc.name}</strong>
+                  </p>
+                ) : null;
+              })()}
             </div>
           )}
 
