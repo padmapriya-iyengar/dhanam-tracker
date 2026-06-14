@@ -127,6 +127,9 @@ router.get('/', async (req, res) => {
       getAggregate(Income, { start: prevStart, end: prevEnd }),
       Expense.aggregate([
         { $match: { date: { $gte: start, $lte: end } } },
+        { $lookup: { from: 'categories', localField: 'categoryId', foreignField: '_id', as: 'category' } },
+        { $unwind: '$category' },
+        { $match: { 'category.name': { $ne: 'Finance & Loans' } } },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },

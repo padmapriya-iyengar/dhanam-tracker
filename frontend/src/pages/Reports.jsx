@@ -3,7 +3,7 @@ import { BarChart2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line,
-  LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  LineChart, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
@@ -292,56 +292,97 @@ export default function Reports() {
           </div>
 
           {/* Daily Trend (if available) */}
-          {dailyTrend?.length > 1 && (
-            <div className="card">
-              <h3 className="font-semibold text-slate-700 mb-4">Daily Spending This Period</h3>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={dailyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="_id" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => fmt(v)} />
-                  <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#6366f1" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {dailyTrend?.length > 1 && (() => {
+            const avgSpend = Math.round(dailyTrend.reduce((s, d) => s + d.expenses, 0) / dailyTrend.length);
+            return (
+              <div className="card">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <h3 className="font-semibold text-slate-700">Daily Spending This Period</h3>
+                  <span className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2 py-0.5 whitespace-nowrap">
+                    Excl. Finance &amp; Loans
+                  </span>
+                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={dailyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="_id" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <ReferenceLine
+                      y={avgSpend}
+                      stroke="#f97316"
+                      strokeDasharray="4 3"
+                      strokeWidth={1.5}
+                      label={{
+                        value: `Avg: AED ${fmt(avgSpend)}`,
+                        position: 'insideTopRight',
+                        fontSize: 10,
+                        fill: '#f97316',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#6366f1" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Total spent this period</span>
+                  <span className="font-semibold text-slate-700 text-sm">
+                    <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />
+                    {fmt(dailyTrend.reduce((s, d) => s + d.expenses, 0))}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Category Table */}
-          {expenseByCategory?.length > 0 && (
-            <div className="card p-0 overflow-hidden overflow-x-auto">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-700">Category Breakdown</h3>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="text-left py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Category</th>
-                    <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Transactions</th>
-                    <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Amount</th>
-                    <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">% of Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenseByCategory.map((c, i) => (
-                    <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="py-3 px-5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ background: c.color || COLORS[i % COLORS.length] }} />
-                          <span className="text-slate-700 font-medium">{c.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-5 text-right text-slate-500">{c.count}</td>
-                      <td className="py-3 px-5 text-right font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}</td>
-                      <td className="py-3 px-5 text-right text-slate-500">
-                        {summary.totalExpense > 0 ? ((c.total / summary.totalExpense) * 100).toFixed(1) : 0}%
-                      </td>
+          {expenseByCategory?.length > 0 && (() => {
+            const breakdownCategories = expenseByCategory.filter((c) => c.name !== 'Finance & Loans');
+            const breakdownTotal = breakdownCategories.reduce((s, c) => s + c.total, 0);
+            return breakdownCategories.length > 0 && (
+              <div className="card p-0 overflow-hidden overflow-x-auto">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-slate-700">Category Breakdown</h3>
+                  <span className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2 py-0.5 whitespace-nowrap">Excl. Finance &amp; Loans</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50">
+                      <th className="text-left py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Category</th>
+                      <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Transactions</th>
+                      <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Amount</th>
+                      <th className="text-right py-3 px-5 font-semibold text-slate-500 text-xs uppercase tracking-wide">% of Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {breakdownCategories.map((c, i) => (
+                      <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
+                        <td className="py-3 px-5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ background: c.color || COLORS[i % COLORS.length] }} />
+                            <span className="text-slate-700 font-medium">{c.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-5 text-right text-slate-500">{c.count}</td>
+                        <td className="py-3 px-5 text-right font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}</td>
+                        <td className="py-3 px-5 text-right text-slate-500">
+                          {breakdownTotal > 0 ? ((c.total / breakdownTotal) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 border-t-2 border-slate-200">
+                      <td className="py-3 px-5 font-semibold text-slate-700">Total</td>
+                      <td className="py-3 px-5 text-right font-semibold text-slate-700">{breakdownCategories.reduce((s, c) => s + c.count, 0)}</td>
+                      <td className="py-3 px-5 text-right font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(breakdownTotal)}</td>
+                      <td className="py-3 px-5 text-right font-semibold text-slate-700">100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
