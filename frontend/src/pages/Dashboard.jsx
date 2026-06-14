@@ -10,6 +10,7 @@ import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import StatCard from '../components/StatCard';
+import CategoryGoalsWidget from '../components/CategoryGoalsWidget';
 import { balanceApi, creditCardsApi, expensesApi, fmt, reportsApi, savingsApi } from '../services/api';
 
 const COLORS = ['#6366f1', '#f97316', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444'];
@@ -94,6 +95,7 @@ export default function Dashboard() {
 
   const { summary, expenseByCategory } = report || {};
   const topCategories = expenseByCategory?.slice(0, 5) || [];
+  const allCategories = expenseByCategory || [];
 
   return (
     <div className="space-y-6">
@@ -337,6 +339,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Category Goals */}
+      <CategoryGoalsWidget expenseByCategory={allCategories} />
 
       {/* Recent Transactions */}
       <div className="card">

@@ -63,6 +63,11 @@ export const balanceApi = {
   update: (memberId, data) => api.put(`/balance/${memberId}`, data),
 };
 
+export const categoryGoalsApi = {
+  getAll: () => api.get('/category-goals'),
+  update: (categoryId, goal) => api.put(`/category-goals/${categoryId}`, { goal }),
+};
+
 export const fmt = (amount) =>
   new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(amount);
 

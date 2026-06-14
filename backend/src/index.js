@@ -19,6 +19,7 @@ app.use('/api/insights', require('./routes/insights'));
 app.use('/api/balance', require('./routes/balance'));
 app.use('/api/savings', require('./routes/savings'));
 app.use('/api/credit-cards', require('./routes/credit-cards'));
+app.use('/api/category-goals', require('./routes/category-goals'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
