@@ -2,9 +2,16 @@ import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import LoadingSpinner from './LoadingSpinner';
+import { useApp } from '../context/AppContext';
+import Login from '../pages/Login';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { currentUser, loading } = useApp();
+
+  if (loading) return <LoadingSpinner />;
+  if (!currentUser) return <Login />;
 
   return (
     <div className="min-h-screen bg-slate-50">

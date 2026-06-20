@@ -75,10 +75,10 @@ function getWeekNumber(d) {
   return Math.ceil((((d - oneJan) / 86400000) + oneJan.getDay() + 1) / 7);
 }
 
-async function getAggregate(model, dateRange) {
+async function getAggregate(model, userId, dateRange) {
   const { start, end } = dateRange;
   const total = await model.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: null, total: { $sum: '$amount' } } },
   ]);
   return total[0]?.total || 0;
@@ -100,7 +100,7 @@ router.get('/', async (req, res) => {
       dailyTrend,
     ] = await Promise.all([
       Expense.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
+        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
         { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
@@ -108,25 +108,25 @@ router.get('/', async (req, res) => {
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
+        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
         { $group: { _id: '$memberId', total: { $sum: '$amount' } } },
         { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
         { $unwind: '$member' },
         { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1 } },
       ]),
       Income.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
+        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
         { $group: { _id: '$memberId', total: { $sum: '$amount' } } },
         { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
         { $unwind: '$member' },
         { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1 } },
       ]),
-      getAggregate(Expense, { start, end }),
-      getAggregate(Income, { start, end }),
-      getAggregate(Expense, { start: prevStart, end: prevEnd }),
-      getAggregate(Income, { start: prevStart, end: prevEnd }),
+      getAggregate(Expense, req.user._id, { start, end }),
+      getAggregate(Income, req.user._id, { start, end }),
+      getAggregate(Expense, req.user._id, { start: prevStart, end: prevEnd }),
+      getAggregate(Income, req.user._id, { start: prevStart, end: prevEnd }),
       Expense.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
+        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
         { $lookup: { from: 'categories', localField: 'categoryId', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $match: { 'category.name': { $ne: 'Finance & Loans' } } },
@@ -177,12 +177,12 @@ router.get('/trend', async (req, res) => {
 
     const [expenseTrend, incomeTrend] = await Promise.all([
       Expense.aggregate([
-        { $match: { date: { $gte: start } } },
+        { $match: { userId: req.user._id, date: { $gte: start } } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       Income.aggregate([
-        { $match: { date: { $gte: start } } },
+        { $match: { userId: req.user._id, date: { $gte: start } } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),

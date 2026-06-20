@@ -1,0 +1,19 @@
+
+> dhanam-tracker-frontend@1.0.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m870[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m3000[22m/dhanam-tracker/[39m
+[2m9:47:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/CreditCards.jsx, /src/context/AppContext.jsx, /src/pages/Users.jsx, /src/pages/Categories.jsx, /src/pages/Insights.jsx, /src/pages/Expenses.jsx, /src/pages/Members.jsx, /src/pages/Dashboard.jsx, /src/pages/Savings.jsx, /src/pages/Income.jsx, /src/pages/Reports.jsx, /src/components/CategoryGoalsWidget.jsx[22m
+[2m9:47:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AppContext.jsx, /src/index.css[22m
+[2m9:47:17 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AppContext.jsx[22m Could not Fast Refresh ("useApp" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:47:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css, /src/pages/CreditCards.jsx, /src/pages/Users.jsx, /src/pages/Categories.jsx, /src/components/Layout.jsx, /src/pages/Expenses.jsx, /src/pages/Members.jsx, /src/pages/Savings.jsx, /src/pages/Income.jsx, /src/components/Sidebar.jsx[22m
+[2m9:47:21 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Layout.jsx, /src/index.css[22m
+[2m9:47:22 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Sidebar.jsx, /src/index.css[22m
+[2m9:48:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AppContext.jsx, /src/index.css[22m
+[2m9:48:18 PM[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AppContext.jsx[22m Could not Fast Refresh ("useApp" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:48:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css, /src/pages/CreditCards.jsx, /src/pages/Users.jsx, /src/pages/Categories.jsx, /src/components/Layout.jsx, /src/pages/Expenses.jsx, /src/pages/Members.jsx, /src/pages/Savings.jsx, /src/pages/Income.jsx, /src/components/Sidebar.jsx, /src/pages/Login.jsx[22m
+[2m9:48:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Sidebar.jsx, /src/index.css[22m
+[2m9:48:41 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Users.jsx, /src/index.css[22m

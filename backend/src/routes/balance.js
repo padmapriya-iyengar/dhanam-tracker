@@ -8,8 +8,8 @@ const Member = require('../models/Member');
 // Credit card expenses are excluded from balance deductions — they're a separate liability
 const DEBIT_METHODS = ['cash', 'card', 'debit_card', 'upi', 'netbanking', 'other'];
 
-async function sumForMember(Model, memberId, dateLte, onlyDebit = false) {
-  const match = { memberId: memberId, date: { $lte: dateLte } };
+async function sumForMember(Model, userId, memberId, dateLte, onlyDebit = false) {
+  const match = { userId, memberId: memberId, date: { $lte: dateLte } };
   if (onlyDebit) match.paymentMethod = { $in: DEBIT_METHODS };
   const result = await Model.aggregate([
     { $match: match },
@@ -24,18 +24,18 @@ router.get('/', async (req, res) => {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const members = await Member.find({ isActive: true });
+    const members = await Member.find({ userId: req.user._id, isActive: true });
 
     const results = await Promise.all(
       members.map(async (member) => {
-        const doc = await Balance.findOne({ memberId: member._id });
+        const doc = await Balance.findOne({ userId: req.user._id, memberId: member._id });
         const openingBalance = doc?.openingBalance ?? 0;
 
         const [incomeLastMonth, expenseLastMonth, incomeToday, expenseToday] = await Promise.all([
-          sumForMember(Income, member._id, lastMonthEnd),
-          sumForMember(Expense, member._id, lastMonthEnd, true),
-          sumForMember(Income, member._id, todayEnd),
-          sumForMember(Expense, member._id, todayEnd, true),
+          sumForMember(Income, req.user._id, member._id, lastMonthEnd),
+          sumForMember(Expense, req.user._id, member._id, lastMonthEnd, true),
+          sumForMember(Income, req.user._id, member._id, todayEnd),
+          sumForMember(Expense, req.user._id, member._id, todayEnd, true),
         ]);
 
         return {
@@ -61,8 +61,8 @@ router.put('/:memberId', async (req, res) => {
   try {
     const { openingBalance, notes } = req.body;
     const doc = await Balance.findOneAndUpdate(
-      { memberId: req.params.memberId },
-      { openingBalance, notes },
+      { userId: req.user._id, memberId: req.params.memberId },
+      { userId: req.user._id, memberId: req.params.memberId, openingBalance, notes },
       { upsert: true, new: true, runValidators: true }
     );
     res.json(doc);

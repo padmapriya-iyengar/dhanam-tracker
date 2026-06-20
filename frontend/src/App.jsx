@@ -10,6 +10,7 @@ import Insights from './pages/Insights';
 import Members from './pages/Members';
 import Reports from './pages/Reports';
 import Savings from './pages/Savings';
+import Users from './pages/Users';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="savings" element={<Savings />} />
             <Route path="credit-cards" element={<CreditCards />} />
             <Route path="members" element={<Members />} />
+            <Route path="users" element={<Users />} />
           </Route>
         </Routes>
       </AppProvider>

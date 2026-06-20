@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const expenseSchema = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
     amount: { type: Number, required: true, min: 0 },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
@@ -25,7 +26,7 @@ const expenseSchema = new mongoose.Schema(
 
 expenseSchema.index({ date: -1 });
 expenseSchema.index({ month: 1, year: 1 });
-expenseSchema.index({ memberId: 1 });
+expenseSchema.index({ userId: 1, memberId: 1 });
 expenseSchema.index({ categoryId: 1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);

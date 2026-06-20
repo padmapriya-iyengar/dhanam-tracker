@@ -7,6 +7,7 @@ const ATLAS_URI = process.env.MONGODB_URI;
 // Mongoose default pluralised collection names for each model
 const COLLECTIONS = [
   'members',
+  'users',
   'categories',
   'subcategories',
   'incomes',

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Member = require('./models/Member');
 const Category = require('./models/Category');
 const SubCategory = require('./models/SubCategory');
+const { ensureDefaultUser } = require('./middleware/currentUser');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dhanam-tracker';
 
@@ -101,10 +102,11 @@ const defaultMembers = [
 async function seed() {
   await mongoose.connect(MONGODB_URI);
   console.log('Connected to MongoDB');
+  const user = await ensureDefaultUser();
 
   // Seed members (upsert by role so re-running updates names)
   for (const m of defaultMembers) {
-    await Member.findOneAndUpdate({ role: m.role }, m, { upsert: true, new: true });
+    await Member.findOneAndUpdate({ userId: user._id, role: m.role }, { ...m, userId: user._id }, { upsert: true, new: true });
     console.log(`Upserted member: ${m.name}`);
   }
 

@@ -1,0 +1,112 @@
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?period=monthly&month=6&year=2026[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports/trend?months=6[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/expenses?page=1&limit=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credit-cards/summary[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/savings[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/balance[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?period=monthly&month=6&year=2026[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports/trend?months=6[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/expenses?page=1&limit=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credit-cards/summary[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/savings[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/balance[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/category-goals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/category-goals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports/trend?months=6[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?period=monthly&month=6&year=2026[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/expenses?page=1&limit=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credit-cards/summary[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/savings[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/balance[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports/trend?months=6[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?period=monthly&month=6&year=2026[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/expenses?page=1&limit=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credit-cards/summary[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/savings[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/balance[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/category-goals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:48:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/category-goals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)

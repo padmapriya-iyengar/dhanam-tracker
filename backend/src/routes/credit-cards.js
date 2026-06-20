@@ -17,10 +17,10 @@ router.get('/monthly', async (req, res) => {
     }
 
     const startDate = new Date(now.getFullYear(), now.getMonth() - monthCount + 1, 1);
-    const cards = await CreditCard.find({ isActive: true }).populate('memberId', 'name color');
+    const cards = await CreditCard.find({ userId: req.user._id, isActive: true }).populate('memberId', 'name color');
 
     const aggResult = await Expense.aggregate([
-      { $match: { paymentMethod: 'credit_card', date: { $gte: startDate } } },
+      { $match: { userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: startDate } } },
       { $group: { _id: { creditCardId: '$creditCardId', month: '$month', year: '$year' }, total: { $sum: '$amount' }, count: { $sum: 1 } } },
     ]);
 
@@ -49,7 +49,7 @@ router.get('/monthly', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { memberId } = req.query;
-    const filter = { isActive: true };
+    const filter = { userId: req.user._id, isActive: true };
     if (memberId) filter.memberId = memberId;
     const cards = await CreditCard.find(filter)
       .populate('memberId', 'name color role')
@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
 // Total spent per card (all time and current month)
 router.get('/summary', async (req, res) => {
   try {
-    const cards = await CreditCard.find({ isActive: true }).populate('memberId', 'name color');
+    const cards = await CreditCard.find({ userId: req.user._id, isActive: true }).populate('memberId', 'name color');
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -73,11 +73,11 @@ router.get('/summary', async (req, res) => {
       cards.map(async (card) => {
         const [allTime, thisMonth] = await Promise.all([
           Expense.aggregate([
-            { $match: { creditCardId: card._id, paymentMethod: 'credit_card' } },
+            { $match: { userId: req.user._id, creditCardId: card._id, paymentMethod: 'credit_card' } },
             { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
           ]),
           Expense.aggregate([
-            { $match: { creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: monthStart, $lte: monthEnd } } },
+            { $match: { userId: req.user._id, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: monthStart, $lte: monthEnd } } },
             { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
           ]),
         ]);
@@ -99,7 +99,7 @@ router.get('/summary', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const card = new CreditCard(req.body);
+    const card = new CreditCard({ ...req.body, userId: req.user._id });
     await card.save();
     const populated = await card.populate('memberId', 'name color role');
     res.status(201).json(populated);
@@ -110,7 +110,9 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const card = await CreditCard.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+    const updates = { ...req.body };
+    delete updates.userId;
+    const card = await CreditCard.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role');
     if (!card) return res.status(404).json({ error: 'Card not found' });
     res.json(card);
@@ -121,7 +123,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    await CreditCard.findByIdAndUpdate(req.params.id, { isActive: false });
+    await CreditCard.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { isActive: false });
     res.json({ message: 'Card deactivated' });
   } catch (err) {
     res.status(500).json({ error: err.message });

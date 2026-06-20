@@ -2,6 +2,31 @@ import axios from 'axios';
 
 const api = axios.create({ baseURL: `${import.meta.env.BASE_URL}api` });
 
+export const getAuthToken = () => localStorage.getItem('dhanam.authToken') || '';
+
+export const setAuthToken = (token) => {
+  if (token) localStorage.setItem('dhanam.authToken', token);
+  else localStorage.removeItem('dhanam.authToken');
+};
+
+api.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export const authApi = {
+  login: (data) => api.post('/auth/login', data),
+  me: () => api.get('/auth/me'),
+};
+
+export const usersApi = {
+  getAll: () => api.get('/users'),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+};
+
 export const membersApi = {
   getAll: () => api.get('/members'),
   create: (data) => api.post('/members', data),

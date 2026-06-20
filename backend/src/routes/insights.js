@@ -16,9 +16,9 @@ router.post('/', async (req, res) => {
     const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
 
     const [members, expenseByCategory, monthlyTrend, incomeData, topExpenses] = await Promise.all([
-      Member.find({ isActive: true }),
+      Member.find({ userId: req.user._id, isActive: true }),
       Expense.aggregate([
-        { $match: { date: { $gte: threeMonthsAgo } } },
+        { $match: { userId: req.user._id, date: { $gte: threeMonthsAgo } } },
         { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
@@ -26,17 +26,17 @@ router.post('/', async (req, res) => {
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: { date: { $gte: threeMonthsAgo } } },
+        { $match: { userId: req.user._id, date: { $gte: threeMonthsAgo } } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       Income.aggregate([
-        { $match: { date: { $gte: threeMonthsAgo } } },
+        { $match: { userId: req.user._id, date: { $gte: threeMonthsAgo } } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       Expense.aggregate([
-        { $match: { date: { $gte: threeMonthsAgo } } },
+        { $match: { userId: req.user._id, date: { $gte: threeMonthsAgo } } },
         { $sort: { amount: -1 } },
         { $limit: 5 },
         { $lookup: { from: 'categories', localField: 'categoryId', foreignField: '_id', as: 'category' } },

@@ -1,5 +1,6 @@
-import { BarChart2, Building2, CreditCard, Home, Lightbulb, ShoppingCart, Tag, TrendingUp, Users, X } from 'lucide-react';
+import { BarChart2, Building2, CreditCard, Home, Lightbulb, LogOut, ShoppingCart, Tag, TrendingUp, UserCog, Users, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard', end: true },
@@ -11,9 +12,13 @@ const navItems = [
   { to: '/savings', icon: Building2, label: 'Savings' },
   { to: '/credit-cards', icon: CreditCard, label: 'Credit Cards' },
   { to: '/members', icon: Users, label: 'Members' },
+  { to: '/users', icon: UserCog, label: 'Users' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
+  const { currentUser, logout } = useApp();
+  const visibleNavItems = currentUser?.isDemo ? navItems.filter((item) => item.to !== '/users') : navItems;
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -55,7 +60,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, label, end }) => (
+          {visibleNavItems.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -80,6 +85,20 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         <div className="p-4 border-t border-slate-100">
+          {currentUser && (
+            <div className="mb-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ background: currentUser.color }}>
+                {currentUser.name?.[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-700 truncate">{currentUser.name}</p>
+                <p className="text-xs text-slate-400 truncate">{currentUser.isDemo ? 'Demo data' : 'Private data'}</p>
+              </div>
+              <button onClick={logout} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Log out">
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
           <p className="text-xs text-slate-400 text-center">Dhanam Tracker v1.0</p>
         </div>
       </aside>

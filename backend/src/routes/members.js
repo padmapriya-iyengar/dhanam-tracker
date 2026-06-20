@@ -4,7 +4,7 @@ const Member = require('../models/Member');
 
 router.get('/', async (req, res) => {
   try {
-    const members = await Member.find({ isActive: true }).sort({ createdAt: 1 });
+    const members = await Member.find({ userId: req.user._id, isActive: true }).sort({ createdAt: 1 });
     res.json(members);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const member = new Member(req.body);
+    const member = new Member({ ...req.body, userId: req.user._id });
     await member.save();
     res.status(201).json(member);
   } catch (err) {
@@ -23,7 +23,13 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const member = await Member.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updates = { ...req.body };
+    delete updates.userId;
+    const member = await Member.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      updates,
+      { new: true, runValidators: true }
+    );
     if (!member) return res.status(404).json({ error: 'Member not found' });
     res.json(member);
   } catch (err) {
@@ -33,7 +39,11 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const member = await Member.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+    const member = await Member.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { isActive: false },
+      { new: true }
+    );
     if (!member) return res.status(404).json({ error: 'Member not found' });
     res.json({ message: 'Member deactivated' });
   } catch (err) {

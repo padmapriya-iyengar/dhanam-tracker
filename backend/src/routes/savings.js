@@ -4,7 +4,7 @@ const SavingsAccount = require('../models/SavingsAccount');
 
 router.get('/', async (req, res) => {
   try {
-    const accounts = await SavingsAccount.find()
+    const accounts = await SavingsAccount.find({ userId: req.user._id })
       .populate('memberId', 'name color role')
       .sort({ memberId: 1, createdAt: 1 });
     res.json(accounts);
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const account = new SavingsAccount({ ...req.body, balanceUpdatedAt: new Date() });
+    const account = new SavingsAccount({ ...req.body, userId: req.user._id, balanceUpdatedAt: new Date() });
     await account.save();
     const populated = await account.populate('memberId', 'name color role');
     res.status(201).json(populated);
@@ -27,9 +27,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const updates = { ...req.body };
+    delete updates.userId;
     // Track when balance was explicitly changed
     if (req.body.balance !== undefined) updates.balanceUpdatedAt = new Date();
-    const account = await SavingsAccount.findByIdAndUpdate(req.params.id, updates, {
+    const account = await SavingsAccount.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, {
       new: true,
       runValidators: true,
     }).populate('memberId', 'name color role');
@@ -42,7 +43,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const account = await SavingsAccount.findByIdAndDelete(req.params.id);
+    const account = await SavingsAccount.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     if (!account) return res.status(404).json({ error: 'Account not found' });
     res.json({ message: 'Account deleted' });
   } catch (err) {
