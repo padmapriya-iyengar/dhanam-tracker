@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
-const SavingsAccount = require('../models/SavingsAccount');
 
-async function adjustAccount(userId, accountId, delta) {
-  if (!accountId) return;
-  await SavingsAccount.findOneAndUpdate({ _id: accountId, userId }, {
-    $inc: { balance: delta },
-    balanceUpdatedAt: new Date(),
+function shouldAffectCurrentBalance(paymentMethod) {
+  return paymentMethod === 'current_account';
+}
+
+function aggregateFilterFrom(filter) {
+  const aggregateFilter = { ...filter };
+  ['memberId', 'categoryId', 'creditCardId', 'savingsAccountId'].forEach((field) => {
+    if (aggregateFilter[field]) {
+      aggregateFilter[field] = new mongoose.Types.ObjectId(aggregateFilter[field]);
+    }
   });
+  return aggregateFilter;
 }
 
 router.get('/', async (req, res) => {
@@ -28,7 +34,7 @@ router.get('/', async (req, res) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const [records, total] = await Promise.all([
+    const [records, total, totals] = await Promise.all([
       Expense.find(filter)
         .populate('memberId', 'name color role')
         .populate('categoryId', 'name color icon')
@@ -39,9 +45,19 @@ router.get('/', async (req, res) => {
         .skip(skip)
         .limit(parseInt(limit)),
       Expense.countDocuments(filter),
+      Expense.aggregate([
+        { $match: aggregateFilterFrom(filter) },
+        { $group: { _id: null, amount: { $sum: '$amount' } } },
+      ]),
     ]);
 
-    res.json({ records, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+    res.json({
+      records,
+      total,
+      totalAmount: totals[0]?.amount || 0,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -54,13 +70,11 @@ router.post('/', async (req, res) => {
       ...req.body,
       userId: req.user._id,
       savingsAccountId: req.body.savingsAccountId || null,
+      affectsCurrentBalance: shouldAffectCurrentBalance(req.body.paymentMethod),
       month: date.getMonth() + 1,
       year: date.getFullYear(),
     });
     await expense.save();
-
-    // Deduct from savings account (expenses reduce balance)
-    await adjustAccount(req.user._id, expense.savingsAccountId, -expense.amount);
 
     const populated = await Expense.findById(expense._id)
       .populate('memberId', 'name color role')
@@ -80,19 +94,14 @@ router.put('/:id', async (req, res) => {
 
     const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
     delete updates.userId;
+    if (req.body.paymentMethod) {
+      updates.affectsCurrentBalance = shouldAffectCurrentBalance(req.body.paymentMethod);
+    }
     if (req.body.date) {
       const date = new Date(req.body.date);
       updates.month = date.getMonth() + 1;
       updates.year = date.getFullYear();
     }
-
-    const oldAccountId = old.savingsAccountId?.toString() || null;
-    const newAccountId = updates.savingsAccountId?.toString() || null;
-    const newAmount = parseFloat(req.body.amount) || old.amount;
-
-    // Reverse old account deduction, apply new account deduction
-    await adjustAccount(req.user._id, oldAccountId, old.amount);
-    await adjustAccount(req.user._id, newAccountId, -newAmount);
 
     const expense = await Expense.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role')
@@ -110,8 +119,6 @@ router.delete('/:id', async (req, res) => {
     const expense = await Expense.findOne({ _id: req.params.id, userId: req.user._id });
     if (!expense) return res.status(404).json({ error: 'Expense not found' });
 
-    // Restore the deducted amount on delete
-    await adjustAccount(req.user._id, expense.savingsAccountId, expense.amount);
     await Expense.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     res.json({ message: 'Expense deleted' });
   } catch (err) {

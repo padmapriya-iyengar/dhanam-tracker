@@ -1,4 +1,5 @@
-import { CreditCard, Edit2, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CreditCard, Edit2, Plus, Save, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend,
@@ -12,7 +13,13 @@ import { creditCardsApi, fmt } from '../services/api';
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444'];
 const MONTH_OPTIONS = [3, 6, 12];
-const emptyForm = { name: '', bankName: '', memberId: '', lastFourDigits: '', color: '#6366f1' };
+const emptyForm = {
+  name: '', bankName: '', memberId: '', lastFourDigits: '',
+  cycleStartDay: 15, cycleEndDay: 14, paymentDueDay: 5, color: '#6366f1',
+};
+const emptyStatementForm = {
+  openingBalance: '', fees: '', interest: '', refunds: '', statementAmount: '', notes: '',
+};
 
 export default function CreditCards() {
   const { members } = useApp();
@@ -25,6 +32,12 @@ export default function CreditCards() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [cycles, setCycles] = useState([]);
+  const [selectedCardId, setSelectedCardId] = useState('');
+  const [selectedCycleIndex, setSelectedCycleIndex] = useState(0);
+  const [reconciliation, setReconciliation] = useState(null);
+  const [statementForm, setStatementForm] = useState(emptyStatementForm);
+  const [statementSaving, setStatementSaving] = useState(false);
 
   const load = async (months = monthCount) => {
     setLoading(true);
@@ -34,10 +47,41 @@ export default function CreditCards() {
     ]);
     setSummary(s.data);
     setMonthly(m.data);
+    if (!selectedCardId && s.data[0]?._id) setSelectedCardId(s.data[0]._id);
     setLoading(false);
   };
 
   useEffect(() => { load(monthCount); }, [monthCount]);
+
+  const loadCycles = async (cardId = selectedCardId) => {
+    if (!cardId) return;
+    setReconciliation(null);
+    const { data } = await creditCardsApi.getCycles({ cardId, count: 8 });
+    setCycles(data[0]?.cycles || []);
+    setSelectedCycleIndex(0);
+  };
+
+  const loadReconciliation = async () => {
+    const cycle = cycles[selectedCycleIndex];
+    if (!selectedCardId || !cycle) return;
+    const { data } = await creditCardsApi.getReconciliation({
+      cardId: selectedCardId,
+      cycleStart: cycle.cycleStart,
+      cycleEnd: cycle.cycleEnd,
+    });
+    setReconciliation(data);
+    setStatementForm({
+      openingBalance: data.statement?.openingBalance ?? '',
+      fees: data.statement?.fees ?? '',
+      interest: data.statement?.interest ?? '',
+      refunds: data.statement?.refunds ?? '',
+      statementAmount: data.statement?.statementAmount ?? '',
+      notes: data.statement?.notes || '',
+    });
+  };
+
+  useEffect(() => { loadCycles(selectedCardId); }, [selectedCardId]);
+  useEffect(() => { loadReconciliation(); }, [selectedCardId, selectedCycleIndex, cycles]);
 
   const openAdd = () => {
     setEditing(null);
@@ -48,7 +92,16 @@ export default function CreditCards() {
 
   const openEdit = (card) => {
     setEditing(card._id);
-    setForm({ name: card.name, bankName: card.bankName, memberId: card.memberId._id, lastFourDigits: card.lastFourDigits || '', color: card.color });
+    setForm({
+      name: card.name,
+      bankName: card.bankName,
+      memberId: card.memberId._id,
+      lastFourDigits: card.lastFourDigits || '',
+      cycleStartDay: card.cycleStartDay || ((card.cycleEndDay || card.statementDay || 14) === 31 ? 1 : (card.cycleEndDay || card.statementDay || 14) + 1),
+      cycleEndDay: card.cycleEndDay || card.statementDay || 14,
+      paymentDueDay: card.paymentDueDay || 5,
+      color: card.color,
+    });
     setSaveError('');
     setModalOpen(true);
   };
@@ -75,6 +128,23 @@ export default function CreditCards() {
     await load(monthCount);
   };
 
+  const saveStatement = async (e) => {
+    e.preventDefault();
+    if (!reconciliation) return;
+    setStatementSaving(true);
+    try {
+      await creditCardsApi.saveStatement({
+        ...statementForm,
+        creditCardId: selectedCardId,
+        cycleStart: reconciliation.cycle.cycleStart,
+        cycleEnd: reconciliation.cycle.cycleEnd,
+      });
+      await loadReconciliation();
+    } finally {
+      setStatementSaving(false);
+    }
+  };
+
   // Build chart data: one entry per month, one bar per card
   const chartData = monthly?.months.map((m, i) => {
     const entry = { label: m.label };
@@ -90,6 +160,9 @@ export default function CreditCards() {
   ) || [];
 
   const grandTotal = summary.reduce((s, c) => s + c.totalThisMonth, 0);
+  const outstandingTotal = summary.reduce((s, c) => s + c.outstandingAllTime, 0);
+  const selectedCycle = cycles[selectedCycleIndex];
+  const reconciliationDifference = Math.abs(reconciliation?.difference || 0);
 
   if (loading) return <LoadingSpinner />;
 
@@ -122,6 +195,7 @@ export default function CreditCards() {
                       <span className="text-xs text-slate-400">{card.memberId?.name}</span>
                       {card.lastFourDigits && <span className="text-xs text-slate-400 font-mono">••••&nbsp;{card.lastFourDigits}</span>}
                     </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Cycle {card.cycleStartDay || ((card.cycleEndDay || card.statementDay || 14) === 31 ? 1 : (card.cycleEndDay || card.statementDay || 14) + 1)}-{card.cycleEndDay || card.statementDay || 14} · Due {card.paymentDueDay || 5}</p>
                   </div>
                 </div>
                 <div className="flex gap-0.5">
@@ -129,16 +203,21 @@ export default function CreditCards() {
                   <button onClick={() => handleDelete(card._id)} className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-2 gap-3">
+              <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-3 gap-3">
                 <div>
-                  <p className="text-xs text-slate-400">This month</p>
+                  <p className="text-xs text-slate-400">Spend</p>
                   <p className="text-lg font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalThisMonth)}</p>
                   <p className="text-xs text-slate-400">{card.countThisMonth} txn{card.countThisMonth !== 1 ? 's' : ''}</p>
                 </div>
                 <div>
+                  <p className="text-xs text-slate-400">Paid</p>
+                  <p className="text-lg font-semibold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.paymentsAllTime || 0)}</p>
+                  <p className="text-xs text-slate-400">Transfers</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Outstanding</p>
+                  <p className="text-lg font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.outstandingAllTime || 0)}</p>
                   <p className="text-xs text-slate-400">All time</p>
-                  <p className="text-lg font-semibold text-slate-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalAllTime)}</p>
-                  <p className="text-xs text-slate-400">{card.countAllTime} txn{card.countAllTime !== 1 ? 's' : ''}</p>
                 </div>
               </div>
             </div>
@@ -159,6 +238,7 @@ export default function CreditCards() {
         <>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-700">Monthly Breakdown by Card</h2>
+            <span className="text-sm font-semibold text-slate-500">Outstanding: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(outstandingTotal)}</span>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
               {MONTH_OPTIONS.map((m) => (
                 <button
@@ -254,6 +334,169 @@ export default function CreditCards() {
         </>
       )}
 
+      {summary.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="font-semibold text-slate-700">Credit Card Reconciliation</h2>
+              <p className="text-sm text-slate-500">Compare each bank statement cycle with recorded card expenses.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0 md:min-w-[520px]">
+              <div>
+                <label htmlFor="recon-card" className="label">Card</label>
+                <select id="recon-card" className="input" value={selectedCardId} onChange={(e) => setSelectedCardId(e.target.value)}>
+                  {summary.map((card) => (
+                    <option key={card._id} value={card._id}>
+                      {card.bankName} - {card.name}{card.lastFourDigits ? ` ${card.lastFourDigits}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="recon-cycle" className="label">Statement Period</label>
+                <select id="recon-cycle" className="input" value={selectedCycleIndex} onChange={(e) => setSelectedCycleIndex(+e.target.value)}>
+                  {cycles.map((cycle, index) => (
+                    <option key={cycle.cycleStart} value={index}>{cycle.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {reconciliation && selectedCycle && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-3">
+              <div className="card">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                      <CalendarDays size={15} />
+                      <span>{reconciliation.cycle.label}</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-800 mt-1">
+                      {reconciliation.card.bankName} - {reconciliation.card.name}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Due {format(new Date(reconciliation.cycle.dueDate), 'dd MMM yyyy')} · {reconciliation.count} recorded txn{reconciliation.count !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  {reconciliationDifference > 0.5 && (
+                    <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-sm">
+                      <AlertTriangle size={15} />
+                      Possible missing transactions
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-400">Recorded Purchases</p>
+                    <p className="text-xl font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(reconciliation.purchases)}</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-400">Payments</p>
+                    <p className="text-xl font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(reconciliation.payments || 0)}</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-400">Calculated Closing</p>
+                    <p className="text-xl font-bold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(reconciliation.calculatedClosing)}</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-400">Statement Amount</p>
+                    <p className="text-xl font-bold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(reconciliation.statement.statementAmount || 0)}</p>
+                  </div>
+                  <div className={`rounded-lg p-3 ${reconciliationDifference > 0.5 ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+                    <p className="text-xs text-slate-500">Difference</p>
+                    <p className={`text-xl font-bold ${reconciliationDifference > 0.5 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(reconciliation.difference)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left py-2 font-semibold text-slate-500 text-xs uppercase">Date</th>
+                        <th className="text-left py-2 font-semibold text-slate-500 text-xs uppercase">Type</th>
+                        <th className="text-left py-2 font-semibold text-slate-500 text-xs uppercase">Category</th>
+                        <th className="text-left py-2 font-semibold text-slate-500 text-xs uppercase">Description</th>
+                        <th className="text-right py-2 font-semibold text-slate-500 text-xs uppercase">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(reconciliation.transactions || reconciliation.expenses).map((txn) => {
+                        const isPayment = txn.type === 'payment';
+                        return (
+                          <tr key={`${txn.type || 'expense'}-${txn._id}`} className="border-b border-slate-50">
+                            <td className="py-2 text-slate-500 whitespace-nowrap">{format(new Date(txn.date), 'dd MMM yyyy')}</td>
+                            <td className="py-2">
+                              <span className={`badge ${isPayment ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>
+                                {isPayment ? 'Payment' : 'Purchase'}
+                              </span>
+                            </td>
+                            <td className="py-2 text-slate-700">{txn.label || txn.categoryId?.name || 'Uncategorized'}</td>
+                            <td className="py-2 text-slate-500 max-w-[220px] truncate">{txn.description || '-'}</td>
+                            <td className={`py-2 text-right font-semibold ${isPayment ? 'text-emerald-700' : 'text-violet-700'}`}>
+                              {isPayment ? '-' : ''}
+                              <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(txn.amount)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {(reconciliation.transactions || reconciliation.expenses).length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-sm text-slate-400">No recorded card transactions in this cycle.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <form onSubmit={saveStatement} className="card space-y-3">
+                <h3 className="font-semibold text-slate-700 text-sm">Statement Numbers</h3>
+                {[
+                  ['openingBalance', 'Opening Balance'],
+                  ['fees', 'Fees'],
+                  ['interest', 'Interest'],
+                  ['refunds', 'Refunds'],
+                  ['statementAmount', 'Closing / Statement Amount'],
+                ].map(([key, label]) => (
+                  <div key={key}>
+                    <label htmlFor={`stmt-${key}`} className="label">{label}</label>
+                    <input
+                      id={`stmt-${key}`}
+                      type="number"
+                      className="input"
+                      value={statementForm[key]}
+                      onChange={(e) => setStatementForm({ ...statementForm, [key]: e.target.value })}
+                      step="0.01"
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label htmlFor="stmt-notes" className="label">Notes</label>
+                  <textarea
+                    id="stmt-notes"
+                    className="input resize-none"
+                    rows={2}
+                    value={statementForm.notes}
+                    onChange={(e) => setStatementForm({ ...statementForm, notes: e.target.value })}
+                  />
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                  Opening + purchases + fees + interest - refunds - payments = calculated closing.
+                </div>
+                <button type="submit" className="btn-primary w-full justify-center" disabled={statementSaving}>
+                  <Save size={15} /> {statementSaving ? 'Saving...' : 'Save Statement'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Add / Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Credit Card' : 'Add Credit Card'} size="sm">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -285,6 +528,26 @@ export default function CreditCards() {
                 onChange={(e) => setForm({ ...form, lastFourDigits: e.target.value.replace(/\D/g, '').slice(0, 4) })}
                 placeholder="1234" maxLength={4} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="cc-cycle-start-day" className="label">Cycle Start Day</label>
+              <input id="cc-cycle-start-day" type="number" className="input" value={form.cycleStartDay}
+                onChange={(e) => setForm({ ...form, cycleStartDay: e.target.value })}
+                min={1} max={31} />
+            </div>
+            <div>
+              <label htmlFor="cc-cycle-end-day" className="label">Cycle End Day</label>
+              <input id="cc-cycle-end-day" type="number" className="input" value={form.cycleEndDay}
+                onChange={(e) => setForm({ ...form, cycleEndDay: e.target.value })}
+                min={1} max={31} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="cc-due-day" className="label">Payment Due Day</label>
+            <input id="cc-due-day" type="number" className="input" value={form.paymentDueDay}
+              onChange={(e) => setForm({ ...form, paymentDueDay: e.target.value })}
+              min={1} max={31} />
           </div>
           <div>
             <label className="label">Color</label>

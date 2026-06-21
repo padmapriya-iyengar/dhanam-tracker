@@ -9,16 +9,24 @@ import { useApp } from '../context/AppContext';
 import { creditCardsApi, expensesApi, fmt, savingsApi } from '../services/api';
 
 const PAYMENT_METHODS = [
-  { value: 'upi', label: 'UPI' },
-  { value: 'debit_card', label: 'Debit Card' },
+  { value: 'current_account', label: 'Current Account' },
   { value: 'credit_card', label: 'Credit Card' },
   { value: 'savings', label: 'Savings' },
   { value: 'cash', label: 'Cash' },
-  { value: 'netbanking', label: 'Net Banking' },
   { value: 'other', label: 'Other' },
 ];
 
-const PAYMENT_LABELS = { upi: 'UPI', debit_card: 'Debit Card', credit_card: 'Credit Card', savings: 'Savings', cash: 'Cash', netbanking: 'Net Banking', other: 'Other', card: 'Card' };
+const PAYMENT_LABELS = {
+  current_account: 'Current Account',
+  upi: 'Current Account',
+  debit_card: 'Current Account',
+  credit_card: 'Credit Card',
+  savings: 'Savings',
+  cash: 'Cash',
+  netbanking: 'Current Account',
+  other: 'Other',
+  card: 'Card',
+};
 
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
@@ -28,13 +36,14 @@ const months = Array.from({ length: 12 }, (_, i) => ({
 const emptyForm = {
   memberId: '', amount: '', categoryId: '', subCategoryId: '',
   description: '', date: format(new Date(), 'yyyy-MM-dd'),
-  paymentMethod: 'upi', creditCardId: '', savingsAccountId: '', notes: '',
+  paymentMethod: 'current_account', creditCardId: '', savingsAccountId: '', notes: '',
 };
 
 export default function Expenses() {
   const { members, categories } = useApp();
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -75,6 +84,7 @@ export default function Expenses() {
     const { data } = await expensesApi.getAll(params);
     setRecords(data.records);
     setTotal(data.total);
+    setTotalAmount(data.totalAmount ?? data.records.reduce((s, r) => s + r.amount, 0));
     setPages(data.pages);
     setPage(p);
     setLoading(false);
@@ -211,7 +221,7 @@ export default function Expenses() {
       {!loading && records.length > 0 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-sm text-slate-500">{total} expenses found</p>
-          <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(records.reduce((s, r) => s + r.amount, 0))}</p>
+          <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</p>
         </div>
       )}
 

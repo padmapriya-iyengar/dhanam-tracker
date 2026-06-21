@@ -1,15 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Income = require('../models/Income');
-const SavingsAccount = require('../models/SavingsAccount');
-
-async function adjustAccount(userId, accountId, delta) {
-  if (!accountId) return;
-  await SavingsAccount.findOneAndUpdate({ _id: accountId, userId }, {
-    $inc: { balance: delta },
-    balanceUpdatedAt: new Date(),
-  });
-}
 
 router.get('/', async (req, res) => {
   try {
@@ -48,8 +39,6 @@ router.post('/', async (req, res) => {
     });
     await income.save();
 
-    await adjustAccount(req.user._id, income.savingsAccountId, income.amount);
-
     const populated = await Income.findById(income._id)
       .populate('memberId', 'name color role')
       .populate('savingsAccountId', 'name bankName');
@@ -72,15 +61,6 @@ router.put('/:id', async (req, res) => {
       updates.year = date.getFullYear();
     }
 
-    const oldAccountId = old.savingsAccountId?.toString() || null;
-    const newAccountId = updates.savingsAccountId?.toString() || null;
-    const newAmount = parseFloat(req.body.amount) || old.amount;
-
-    // Reverse old account effect
-    await adjustAccount(req.user._id, oldAccountId, -old.amount);
-    // Apply new account effect
-    await adjustAccount(req.user._id, newAccountId, newAmount);
-
     const income = await Income.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role')
       .populate('savingsAccountId', 'name bankName');
@@ -95,7 +75,6 @@ router.delete('/:id', async (req, res) => {
     const income = await Income.findOne({ _id: req.params.id, userId: req.user._id });
     if (!income) return res.status(404).json({ error: 'Income record not found' });
 
-    await adjustAccount(req.user._id, income.savingsAccountId, -income.amount);
     await Income.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     res.json({ message: 'Income record deleted' });
   } catch (err) {

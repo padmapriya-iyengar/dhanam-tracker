@@ -71,9 +71,19 @@ export const creditCardsApi = {
   getAll: (params) => api.get('/credit-cards', { params }),
   getSummary: () => api.get('/credit-cards/summary'),
   getMonthly: (months) => api.get('/credit-cards/monthly', { params: { months } }),
+  getCycles: (params) => api.get('/credit-cards/cycles', { params }),
+  getReconciliation: (params) => api.get('/credit-cards/reconciliation', { params }),
+  saveStatement: (data) => api.put('/credit-cards/statements', data),
   create: (data) => api.post('/credit-cards', data),
   update: (id, data) => api.put(`/credit-cards/${id}`, data),
   delete: (id) => api.delete(`/credit-cards/${id}`),
+};
+
+export const transfersApi = {
+  getAll: (params) => api.get('/transfers', { params }),
+  create: (data) => api.post('/transfers', data),
+  update: (id, data) => api.put(`/transfers/${id}`, data),
+  delete: (id) => api.delete(`/transfers/${id}`),
 };
 
 export const savingsApi = {

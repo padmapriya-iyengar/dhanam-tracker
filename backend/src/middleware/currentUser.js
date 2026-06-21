@@ -93,17 +93,86 @@ async function ensureDemoUser() {
 
 async function backfillExistingDataToDefaultUser() {
   const user = await ensureDefaultUser();
+  const Expense = require('../models/Expense');
+  const Income = require('../models/Income');
+  const SavingsAccount = require('../models/SavingsAccount');
+  const Transfer = require('../models/Transfer');
   const models = [
     require('../models/Member'),
-    require('../models/Income'),
-    require('../models/Expense'),
+    Income,
+    Expense,
     require('../models/Balance'),
-    require('../models/SavingsAccount'),
+    SavingsAccount,
     require('../models/CreditCard'),
+    require('../models/Transfer'),
   ];
 
   await Promise.all(models.map((Model) => Model.updateMany({ userId: { $exists: false } }, { userId: user._id })));
+  await Expense.updateMany(
+    { paymentMethod: { $in: ['debit_card', 'netbanking', 'upi'] } },
+    { paymentMethod: 'current_account' }
+  );
+  await Expense.updateMany(
+    { paymentMethod: 'current_account', affectsCurrentBalance: { $exists: false } },
+    { affectsCurrentBalance: false }
+  );
+  await migrateSavingsOpeningBalances(user._id, { Income, Expense, SavingsAccount, Transfer });
   return user;
+}
+
+async function savingsLedgerEffect(userId, accountId) {
+  const Income = require('../models/Income');
+  const Expense = require('../models/Expense');
+  const Transfer = require('../models/Transfer');
+  const [income, expenses, transfers] = await Promise.all([
+    Income.aggregate([
+      { $match: { userId, savingsAccountId: accountId } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    Expense.aggregate([
+      { $match: { userId, savingsAccountId: accountId, paymentMethod: 'savings' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    Transfer.aggregate([
+      {
+        $match: {
+          userId,
+          $or: [
+            { fromAccountType: 'savings', fromSavingsAccountId: accountId },
+            { toAccountType: 'savings', toSavingsAccountId: accountId },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          outgoing: { $sum: { $cond: [{ $eq: ['$fromSavingsAccountId', accountId] }, '$amount', 0] } },
+          incoming: { $sum: { $cond: [{ $eq: ['$toSavingsAccountId', accountId] }, '$amount', 0] } },
+        },
+      },
+    ]),
+  ]);
+
+  return (income[0]?.total || 0)
+    - (expenses[0]?.total || 0)
+    + (transfers[0]?.incoming || 0)
+    - (transfers[0]?.outgoing || 0);
+}
+
+async function migrateSavingsOpeningBalances(userId, { SavingsAccount }) {
+  const accounts = await SavingsAccount.find({ userId, openingBalance: { $exists: false } });
+  await Promise.all(accounts.map(async (account) => {
+    const ledgerEffect = await savingsLedgerEffect(userId, account._id);
+    const storedBalance = account.balance ?? 0;
+    await SavingsAccount.updateOne(
+      { _id: account._id, userId },
+      {
+        openingBalance: storedBalance - ledgerEffect,
+        balance: storedBalance,
+        balanceUpdatedAt: account.balanceUpdatedAt || account.updatedAt || new Date(),
+      }
+    );
+  }));
 }
 
 async function currentUser(req, res, next) {

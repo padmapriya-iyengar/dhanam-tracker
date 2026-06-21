@@ -4,18 +4,57 @@ const Balance = require('../models/Balance');
 const Income = require('../models/Income');
 const Expense = require('../models/Expense');
 const Member = require('../models/Member');
+const Transfer = require('../models/Transfer');
 
 // Credit card expenses are excluded from balance deductions — they're a separate liability
-const DEBIT_METHODS = ['cash', 'card', 'debit_card', 'upi', 'netbanking', 'other'];
+const CURRENT_BALANCE_EXPENSE_METHODS = ['cash', 'card', 'current_account', 'debit_card', 'netbanking', 'upi', 'other'];
 
-async function sumForMember(Model, userId, memberId, dateLte, onlyDebit = false) {
+async function sumForMember(Model, userId, memberId, dateLte, options = {}) {
   const match = { userId, memberId: memberId, date: { $lte: dateLte } };
-  if (onlyDebit) match.paymentMethod = { $in: DEBIT_METHODS };
+  if (options.onlyDebit) {
+    match.paymentMethod = { $in: CURRENT_BALANCE_EXPENSE_METHODS };
+  }
+  if (options.currentAccountIncomeOnly) {
+    match.$or = [{ savingsAccountId: null }, { savingsAccountId: { $exists: false } }];
+  }
   const result = await Model.aggregate([
     { $match: match },
     { $group: { _id: null, total: { $sum: '$amount' } } },
   ]);
   return result[0]?.total || 0;
+}
+
+async function currentTransferEffect(userId, memberId, dateLte) {
+  const result = await Transfer.aggregate([
+    {
+      $match: {
+        userId,
+        date: { $lte: dateLte },
+        $or: [
+          { fromAccountType: 'current', fromMemberId: memberId },
+          { toAccountType: 'current', toMemberId: memberId },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        outgoing: {
+          $sum: {
+            $cond: [{ $eq: ['$fromMemberId', memberId] }, '$amount', 0],
+          },
+        },
+        incoming: {
+          $sum: {
+            $cond: [{ $eq: ['$toMemberId', memberId] }, '$amount', 0],
+          },
+        },
+      },
+    },
+  ]);
+
+  const totals = result[0];
+  return (totals?.incoming || 0) - (totals?.outgoing || 0);
 }
 
 router.get('/', async (req, res) => {
@@ -31,11 +70,13 @@ router.get('/', async (req, res) => {
         const doc = await Balance.findOne({ userId: req.user._id, memberId: member._id });
         const openingBalance = doc?.openingBalance ?? 0;
 
-        const [incomeLastMonth, expenseLastMonth, incomeToday, expenseToday] = await Promise.all([
-          sumForMember(Income, req.user._id, member._id, lastMonthEnd),
-          sumForMember(Expense, req.user._id, member._id, lastMonthEnd, true),
-          sumForMember(Income, req.user._id, member._id, todayEnd),
-          sumForMember(Expense, req.user._id, member._id, todayEnd, true),
+        const [incomeLastMonth, expenseLastMonth, transferLastMonth, incomeToday, expenseToday, transferToday] = await Promise.all([
+          sumForMember(Income, req.user._id, member._id, lastMonthEnd, { currentAccountIncomeOnly: true }),
+          sumForMember(Expense, req.user._id, member._id, lastMonthEnd, { onlyDebit: true }),
+          currentTransferEffect(req.user._id, member._id, lastMonthEnd),
+          sumForMember(Income, req.user._id, member._id, todayEnd, { currentAccountIncomeOnly: true }),
+          sumForMember(Expense, req.user._id, member._id, todayEnd, { onlyDebit: true }),
+          currentTransferEffect(req.user._id, member._id, todayEnd),
         ]);
 
         return {
@@ -44,8 +85,8 @@ router.get('/', async (req, res) => {
           memberColor: member.color,
           openingBalance,
           notes: doc?.notes ?? '',
-          balanceLastMonth: openingBalance + incomeLastMonth - expenseLastMonth,
-          currentBalance: openingBalance + incomeToday - expenseToday,
+          balanceLastMonth: openingBalance + incomeLastMonth - expenseLastMonth + transferLastMonth,
+          currentBalance: openingBalance + incomeToday - expenseToday + transferToday,
           asOf: lastMonthEnd,
         };
       })

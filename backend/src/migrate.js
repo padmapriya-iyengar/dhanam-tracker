@@ -15,6 +15,8 @@ const COLLECTIONS = [
   'balances',
   'savingsaccounts',
   'creditcards',
+  'creditcardstatements',
+  'transfers',
 ];
 
 async function migrate() {

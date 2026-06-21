@@ -1,4 +1,3 @@
-import { formatDistanceToNow } from 'date-fns';
 import { Building2, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,7 +18,7 @@ const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#f59e0b'
 
 const emptyForm = {
   name: '', bankName: '', accountType: 'savings',
-  balance: '', memberId: '', color: '#6366f1', notes: '',
+  openingBalance: '', memberId: '', color: '#6366f1', notes: '',
 };
 
 export default function Savings() {
@@ -53,7 +52,7 @@ export default function Savings() {
       name: acc.name,
       bankName: acc.bankName || '',
       accountType: acc.accountType,
-      balance: acc.balance,
+      openingBalance: acc.openingBalance ?? 0,
       memberId: acc.memberId._id,
       color: acc.color,
       notes: acc.notes || '',
@@ -178,7 +177,8 @@ export default function Savings() {
                   <div className="mt-4 pt-3 border-t border-slate-50">
                     <p className="text-2xl font-bold text-slate-800"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(acc.balance)}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Updated {formatDistanceToNow(new Date(acc.balanceUpdatedAt), { addSuffix: true })}
+                      Opening <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(acc.openingBalance || 0)}
+                      {' '}· Calculated live
                     </p>
                   </div>
 
@@ -240,9 +240,9 @@ export default function Savings() {
           </div>
 
           <div>
-            <label className="label">Current Balance (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
-            <input type="number" className="input" value={form.balance}
-              onChange={(e) => setForm({ ...form, balance: e.target.value })}
+              <label className="label">Opening Balance (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
+            <input type="number" className="input" value={form.openingBalance}
+              onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
               required placeholder="0" step="0.01" />
           </div>
 

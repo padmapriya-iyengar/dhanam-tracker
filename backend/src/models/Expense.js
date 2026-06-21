@@ -13,12 +13,13 @@ const expenseSchema = new mongoose.Schema(
     year: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      // 'card' kept for backward-compat with existing records
-      enum: ['cash', 'card', 'debit_card', 'credit_card', 'upi', 'netbanking', 'savings', 'other'],
-      default: 'upi',
+      // Legacy values are kept so old records remain readable until startup migration normalizes them.
+      enum: ['cash', 'card', 'current_account', 'debit_card', 'credit_card', 'upi', 'netbanking', 'savings', 'other'],
+      default: 'current_account',
     },
     creditCardId: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditCard', default: null },
     savingsAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavingsAccount', default: null },
+    affectsCurrentBalance: { type: Boolean, default: true },
     notes: { type: String, trim: true },
   },
   { timestamps: true }

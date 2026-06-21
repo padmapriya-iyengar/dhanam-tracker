@@ -1,4 +1,4 @@
-import { BarChart2, Building2, CreditCard, Home, Lightbulb, LogOut, ShoppingCart, Tag, TrendingUp, UserCog, Users, X } from 'lucide-react';
+import { ArrowRightLeft, BarChart2, Building2, CreditCard, Home, Lightbulb, LogOut, ShoppingCart, Tag, TrendingUp, UserCog, Users, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/insights', icon: Lightbulb, label: 'AI Insights' },
   { to: '/savings', icon: Building2, label: 'Savings' },
   { to: '/credit-cards', icon: CreditCard, label: 'Credit Cards' },
+  { to: '/transfers', icon: ArrowRightLeft, label: 'Transfers' },
   { to: '/members', icon: Users, label: 'Members' },
   { to: '/users', icon: UserCog, label: 'Users' },
 ];

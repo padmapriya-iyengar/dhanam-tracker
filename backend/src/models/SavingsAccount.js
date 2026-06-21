@@ -10,7 +10,9 @@ const savingsAccountSchema = new mongoose.Schema(
       enum: ['savings', 'current', 'fixed_deposit', 'investment', 'other'],
       default: 'savings',
     },
-    balance: { type: Number, required: true, default: 0 },
+    openingBalance: { type: Number, required: true, default: 0 },
+    // Legacy stored balance kept only for migration/backward compatibility. Current balance is calculated in routes.
+    balance: { type: Number, default: 0 },
     memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
     color: { type: String, default: '#6366f1' },
     notes: { type: String, trim: true },
