@@ -96,6 +96,9 @@ export default function Dashboard() {
   const { summary, expenseByCategory } = report || {};
   const topCategories = expenseByCategory?.slice(0, 5) || [];
   const allCategories = expenseByCategory || [];
+  const totalCurrentBalance = balances.reduce((sum, balance) => sum + (balance.currentBalance || 0), 0);
+  const totalSavingsBalance = savingsAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+  const totalAvailableSavings = totalCurrentBalance + totalSavingsBalance;
 
   return (
     <div className="space-y-6">
@@ -131,10 +134,10 @@ export default function Dashboard() {
           change={summary?.expenseChange}
         />
         <StatCard
-          title="Net Savings"
-          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.savings || 0)}</>}
+          title="Total Savings"
+          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAvailableSavings)}</>}
           icon={Wallet}
-          color={summary?.savings >= 0 ? 'green' : 'red'}
+          color={totalAvailableSavings >= 0 ? 'green' : 'red'}
         />
         <StatCard
           title="Savings Rate"

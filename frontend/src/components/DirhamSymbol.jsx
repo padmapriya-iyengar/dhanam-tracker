@@ -1,4 +1,17 @@
+import { useApp } from '../context/AppContext';
+
 export default function DirhamSymbol({ className = 'h-[0.9em] w-auto inline align-middle' }) {
+  const { currentUser } = useApp();
+  const currency = currentUser?.currency || 'AED';
+
+  if (currency === 'INR') {
+    return (
+      <span className={className} aria-label="INR" style={{ verticalAlign: '-0.05em' }}>
+        ₹
+      </span>
+    );
+  }
+
   return (
     <svg
       viewBox="0 0 1000 870"

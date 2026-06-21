@@ -1,6 +1,5 @@
 import { Lock, Wallet } from 'lucide-react';
 import { useState } from 'react';
-import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
 
 const demoCredentials = { email: 'demo@example.com', password: 'demo' };
@@ -82,7 +81,7 @@ export default function Login() {
         </div>
 
         <div className="mt-5 rounded-xl bg-slate-50 border border-slate-100 p-3 flex items-center justify-center text-xs text-slate-500">
-          AED values use <DirhamSymbol className="h-[0.9em] w-auto mx-1" /> formatting
+          Your currency follows the signed-in user profile
         </div>
       </div>
     </div>

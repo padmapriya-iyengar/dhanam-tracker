@@ -49,7 +49,7 @@ function parseToken(token) {
   }
 }
 
-async function ensureUser({ email, name, password, color = '#6366f1', isDemo = false }) {
+async function ensureUser({ email, name, password, color = '#6366f1', currency = 'AED', isDemo = false }) {
   const normalizedEmail = email.toLowerCase();
   let user = await User.findOne({ email: normalizedEmail });
   if (!user) {
@@ -57,6 +57,7 @@ async function ensureUser({ email, name, password, color = '#6366f1', isDemo = f
       name,
       email: normalizedEmail,
       color,
+      currency,
       isDemo,
       ...hashPassword(password),
     });
@@ -65,6 +66,7 @@ async function ensureUser({ email, name, password, color = '#6366f1', isDemo = f
 
   const updates = {};
   if (!user.passwordHash || !user.passwordSalt) Object.assign(updates, hashPassword(password));
+  if (!user.currency) updates.currency = currency;
   if (user.isDemo !== isDemo) updates.isDemo = isDemo;
   if (Object.keys(updates).length > 0) {
     user = await User.findByIdAndUpdate(user._id, updates, { new: true });

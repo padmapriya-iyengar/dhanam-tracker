@@ -27,6 +27,7 @@ export function AppProvider({ children }) {
 
       const { data: current } = await authApi.me();
       setCurrentUser(current);
+      localStorage.setItem('dhanam.currency', current.currency || 'AED');
       if (!current.isDemo) {
         const { data: userList } = await usersApi.getAll();
         setUsers(userList);
@@ -39,6 +40,7 @@ export function AppProvider({ children }) {
     load()
       .catch(() => {
         setAuthToken('');
+        localStorage.removeItem('dhanam.currency');
         setCurrentUser(null);
         setUsers([]);
         setMembers([]);
@@ -56,6 +58,7 @@ export function AppProvider({ children }) {
     const { data } = await authApi.login({ email, password });
     setAuthToken(data.token);
     setCurrentUser(data.user);
+    localStorage.setItem('dhanam.currency', data.user.currency || 'AED');
     if (!data.user.isDemo) {
       const { data: userList } = await usersApi.getAll();
       setUsers(userList);
@@ -67,6 +70,7 @@ export function AppProvider({ children }) {
 
   const logout = () => {
     setAuthToken('');
+    localStorage.removeItem('dhanam.currency');
     setCurrentUser(null);
     setUsers([]);
     setMembers([]);
@@ -75,6 +79,7 @@ export function AppProvider({ children }) {
 
   const refreshCurrentUser = (user) => {
     setCurrentUser(user);
+    localStorage.setItem('dhanam.currency', user.currency || 'AED');
   };
 
   return (

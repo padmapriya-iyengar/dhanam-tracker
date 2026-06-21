@@ -103,7 +103,12 @@ export const categoryGoalsApi = {
   update: (categoryId, goal) => api.put(`/category-goals/${categoryId}`, { goal }),
 };
 
-export const fmt = (amount) =>
-  new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(amount);
+export const getCurrencyCode = () => localStorage.getItem('dhanam.currency') || 'AED';
+
+export const fmt = (amount) => {
+  const currency = getCurrencyCode();
+  const locale = currency === 'INR' ? 'en-IN' : 'en-AE';
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount);
+};
 
 export default api;

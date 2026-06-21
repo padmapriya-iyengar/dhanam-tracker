@@ -5,7 +5,11 @@ import { useApp } from '../context/AppContext';
 import { usersApi } from '../services/api';
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444'];
-const emptyForm = { name: '', email: '', password: '', color: '#6366f1' };
+const CURRENCIES = [
+  { value: 'AED', label: 'AED - UAE Dirham' },
+  { value: 'INR', label: 'INR - Indian Rupee' },
+];
+const emptyForm = { name: '', email: '', password: '', color: '#6366f1', currency: 'AED' };
 
 export default function Users() {
   const { currentUser, logout, refreshCurrentUser, refreshUsers, users } = useApp();
@@ -24,7 +28,7 @@ export default function Users() {
 
   const openEdit = (user) => {
     setEditing(user._id);
-    setForm({ name: user.name, email: user.email, password: '', color: user.color || '#6366f1' });
+    setForm({ name: user.name, email: user.email, password: '', color: user.color || '#6366f1', currency: user.currency || 'AED' });
     setSaveError('');
     setModalOpen(true);
   };
@@ -36,11 +40,10 @@ export default function Users() {
     try {
       const payload = { ...form };
       if (editing && !payload.password) delete payload.password;
-      if (editing) await usersApi.update(editing, payload);
-      else await usersApi.create(payload);
+      const { data: savedUser } = editing ? await usersApi.update(editing, payload) : await usersApi.create(payload);
       setModalOpen(false);
       await refreshUsers();
-      if (editing === currentUser?._id) refreshCurrentUser({ ...currentUser, ...payload });
+      if (editing === currentUser?._id) refreshCurrentUser(savedUser);
     } catch (err) {
       setSaveError(err.response?.data?.error || err.message || 'Failed to save user');
     } finally {
@@ -91,6 +94,7 @@ export default function Users() {
                 {user._id === currentUser?._id && <span className="badge bg-indigo-50 text-indigo-600">Active</span>}
               </div>
               <p className="text-sm text-slate-500 truncate">{user.email}</p>
+              <p className="text-xs text-slate-400 truncate">{user.currency || 'AED'}</p>
             </div>
             <div className="flex flex-col gap-1">
               <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
@@ -125,6 +129,14 @@ export default function Users() {
               required={!editing}
               placeholder={editing ? 'Leave blank to keep existing password' : 'Set a password'}
             />
+          </div>
+          <div>
+            <label className="label">Currency</label>
+            <select className="input" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+              {CURRENCIES.map((currency) => (
+                <option key={currency.value} value={currency.value}>{currency.label}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Color</label>

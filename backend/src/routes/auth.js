@@ -20,6 +20,7 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         color: user.color,
+        currency: user.currency || 'AED',
         isDemo: user.isDemo,
       },
     });
@@ -34,6 +35,7 @@ router.get('/me', currentUser, async (req, res) => {
     name: req.user.name,
     email: req.user.email,
     color: req.user.color,
+    currency: req.user.currency || 'AED',
     isDemo: req.user.isDemo,
   });
 });

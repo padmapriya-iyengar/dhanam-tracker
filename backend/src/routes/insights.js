@@ -54,6 +54,10 @@ router.post('/', async (req, res) => {
     const totalExpense = expenseByCategory.reduce((s, c) => s + c.total, 0);
     const avgMonthlyIncome = totalIncome / 3;
     const avgMonthlyExpense = totalExpense / 3;
+    const currency = req.user.currency || 'AED';
+    const locale = currency === 'INR' ? 'en-IN' : 'en-AE';
+    const currencyName = currency === 'INR' ? 'Indian Rupee (INR)' : 'UAE Dirham (AED)';
+    const money = (amount) => `${currency} ${Number(amount || 0).toLocaleString(locale, { maximumFractionDigits: 0 })}`;
 
     const financialSummary = `
 ## Household Financial Summary (Last 3 Months)
@@ -61,21 +65,21 @@ router.post('/', async (req, res) => {
 **Family Members:** ${members.map((m) => m.name).join(' and ')}
 
 **Income:**
-${incomeData.map((m) => `- ${formatMonth(m._id.month, m._id.year)}: AED${m.total.toLocaleString()}`).join('\n')}
-- Average Monthly Income: AED${Math.round(avgMonthlyIncome).toLocaleString()}
+${incomeData.map((m) => `- ${formatMonth(m._id.month, m._id.year)}: ${money(m.total)}`).join('\n')}
+- Average Monthly Income: ${money(avgMonthlyIncome)}
 
 **Expenses by Category:**
-${expenseByCategory.map((c) => `- ${c.name}: AED${c.total.toLocaleString()} (${c.count} transactions)`).join('\n')}
+${expenseByCategory.map((c) => `- ${c.name}: ${money(c.total)} (${c.count} transactions)`).join('\n')}
 
 **Monthly Expense Trend:**
-${monthlyTrend.map((m) => `- ${formatMonth(m._id.month, m._id.year)}: AED${m.total.toLocaleString()}`).join('\n')}
-- Average Monthly Expense: AED${Math.round(avgMonthlyExpense).toLocaleString()}
+${monthlyTrend.map((m) => `- ${formatMonth(m._id.month, m._id.year)}: ${money(m.total)}`).join('\n')}
+- Average Monthly Expense: ${money(avgMonthlyExpense)}
 
-**Net Savings (3 months):** AED${(totalIncome - totalExpense).toLocaleString()}
+**Net Savings (3 months):** ${money(totalIncome - totalExpense)}
 **Average Savings Rate:** ${totalIncome > 0 ? ((((totalIncome - totalExpense) / totalIncome) * 100)).toFixed(1) : 0}%
 
 **Top Individual Expenses:**
-${topExpenses.map((e) => `- AED${e.amount.toLocaleString()} on ${e.category.name}${e.description ? ` (${e.description})` : ''} by ${e.member.name}`).join('\n')}
+${topExpenses.map((e) => `- ${money(e.amount)} on ${e.category.name}${e.description ? ` (${e.description})` : ''} by ${e.member.name}`).join('\n')}
 `;
 
     const client = new Anthropic({ apiKey });
@@ -86,7 +90,7 @@ ${topExpenses.map((e) => `- AED${e.amount.toLocaleString()} on ${e.category.name
       messages: [
         {
           role: 'user',
-          content: `You are a friendly personal finance advisor for a UAE household. Analyze this financial data and provide clear, actionable insights in a warm, encouraging tone. Use UAE Dirham (AED) in your analysis. Be specific with amounts and percentages.
+          content: `You are a friendly personal finance advisor. Analyze this financial data and provide clear, actionable insights in a warm, encouraging tone. Use ${currencyName} in your analysis. Be specific with amounts and percentages.
 
 ${financialSummary}
 

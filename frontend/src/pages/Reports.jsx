@@ -8,7 +8,7 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
 import DirhamSymbol from '../components/DirhamSymbol';
-import { fmt, reportsApi } from '../services/api';
+import { fmt, getCurrencyCode, reportsApi } from '../services/api';
 
 const PERIOD_OPTIONS = [
   { value: 'daily', label: 'Daily' },
@@ -314,7 +314,7 @@ export default function Reports() {
                       strokeDasharray="4 3"
                       strokeWidth={1.5}
                       label={{
-                        value: `Avg: AED ${fmt(avgSpend)}`,
+                        value: `Avg: ${getCurrencyCode()} ${fmt(avgSpend)}`,
                         position: 'insideTopRight',
                         fontSize: 10,
                         fill: '#f97316',
