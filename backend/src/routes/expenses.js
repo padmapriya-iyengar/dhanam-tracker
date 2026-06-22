@@ -9,7 +9,7 @@ function shouldAffectCurrentBalance(paymentMethod) {
 
 function aggregateFilterFrom(filter) {
   const aggregateFilter = { ...filter };
-  ['memberId', 'categoryId', 'creditCardId', 'savingsAccountId'].forEach((field) => {
+  ['memberId', 'categoryId', 'subCategoryId', 'creditCardId', 'savingsAccountId'].forEach((field) => {
     if (aggregateFilter[field]) {
       aggregateFilter[field] = new mongoose.Types.ObjectId(aggregateFilter[field]);
     }
@@ -19,18 +19,23 @@ function aggregateFilterFrom(filter) {
 
 router.get('/', async (req, res) => {
   try {
-    const { month, year, memberId, categoryId, paymentMethod, page = 1, limit = 50, startDate, endDate } = req.query;
+    const { month, year, memberId, categoryId, subCategoryId, paymentMethod, page = 1, limit = 50, startDate, endDate } = req.query;
     const filter = { userId: req.user._id };
-    if (month) filter.month = parseInt(month);
-    if (year) filter.year = parseInt(year);
+    if (!startDate && !endDate && month) filter.month = parseInt(month);
+    if (!startDate && !endDate && year) filter.year = parseInt(year);
     if (memberId) filter.memberId = memberId;
     if (categoryId) filter.categoryId = categoryId;
+    if (subCategoryId) filter.subCategoryId = subCategoryId;
     if (paymentMethod) filter.paymentMethod = paymentMethod;
     if (req.query.creditCardId) filter.creditCardId = req.query.creditCardId;
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) filter.date.$lte = new Date(endDate);
+      if (endDate) {
+        const inclusiveEnd = new Date(endDate);
+        inclusiveEnd.setHours(23, 59, 59, 999);
+        filter.date.$lte = inclusiveEnd;
+      }
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);

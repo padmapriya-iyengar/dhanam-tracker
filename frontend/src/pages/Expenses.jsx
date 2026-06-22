@@ -56,13 +56,20 @@ export default function Expenses() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterMember, setFilterMember] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterSubCategory, setFilterSubCategory] = useState('');
   const [filterPayment, setFilterPayment] = useState('');
   const [filterCreditCard, setFilterCreditCard] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   // All credit cards; filtered to member when adding expense
   const [allCreditCards, setAllCreditCards] = useState([]);
   const [savingsAccounts, setSavingsAccounts] = useState([]);
 
   const subCategories = categories.find((c) => c._id === form.categoryId)?.subCategories || [];
+  const filterSubCategories = filterCategory
+    ? categories.find((c) => c._id === filterCategory)?.subCategories || []
+    : categories.flatMap((c) => (c.subCategories || []).map((s) => ({ ...s, categoryName: c.name })));
+  const usingCustomDateRange = Boolean(filterStartDate || filterEndDate);
 
   const loadCreditCards = async () => {
     const { data } = await creditCardsApi.getAll();
@@ -76,9 +83,17 @@ export default function Expenses() {
 
   const load = async (p = 1) => {
     setLoading(true);
-    const params = { month: filterMonth, year: filterYear, page: p, limit: 15 };
+    const params = { page: p, limit: 15 };
+    if (usingCustomDateRange) {
+      if (filterStartDate) params.startDate = filterStartDate;
+      if (filterEndDate) params.endDate = filterEndDate;
+    } else {
+      params.month = filterMonth;
+      params.year = filterYear;
+    }
     if (filterMember) params.memberId = filterMember;
     if (filterCategory) params.categoryId = filterCategory;
+    if (filterSubCategory) params.subCategoryId = filterSubCategory;
     if (filterPayment) params.paymentMethod = filterPayment;
     if (filterPayment === 'credit_card' && filterCreditCard) params.creditCardId = filterCreditCard;
     const { data } = await expensesApi.getAll(params);
@@ -91,7 +106,7 @@ export default function Expenses() {
   };
 
   useEffect(() => { loadCreditCards(); loadSavingsAccounts(); }, []);
-  useEffect(() => { load(1); }, [filterMonth, filterYear, filterMember, filterCategory, filterPayment, filterCreditCard]);
+  useEffect(() => { load(1); }, [filterMonth, filterYear, filterMember, filterCategory, filterSubCategory, filterPayment, filterCreditCard, filterStartDate, filterEndDate]);
 
   const openAdd = () => {
     setEditing(null);
@@ -170,15 +185,23 @@ export default function Expenses() {
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3">
           <div>
             <label htmlFor="filter-month" className="label">Month</label>
-            <select id="filter-month" className="input w-full sm:w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)}>
+            <select id="filter-month" className="input w-full sm:w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)} disabled={usingCustomDateRange}>
               {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-year" className="label">Year</label>
-            <select id="filter-year" className="input w-full sm:w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)}>
+            <select id="filter-year" className="input w-full sm:w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)} disabled={usingCustomDateRange}>
               {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y}>{y}</option>)}
             </select>
+          </div>
+          <div>
+            <label htmlFor="filter-start-date" className="label">From Date</label>
+            <input id="filter-start-date" type="date" className="input w-full sm:w-40" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="filter-end-date" className="label">To Date</label>
+            <input id="filter-end-date" type="date" className="input w-full sm:w-40" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
           </div>
           <div>
             <label htmlFor="filter-member" className="label">Member</label>
@@ -189,9 +212,20 @@ export default function Expenses() {
           </div>
           <div>
             <label htmlFor="filter-category" className="label">Category</label>
-            <select id="filter-category" className="input w-full sm:w-44" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <select id="filter-category" className="input w-full sm:w-44" value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterSubCategory(''); }}>
               <option value="">All Categories</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <label htmlFor="filter-subcategory" className="label">Sub-Category</label>
+            <select id="filter-subcategory" className="input w-full sm:w-48" value={filterSubCategory} onChange={(e) => setFilterSubCategory(e.target.value)} disabled={!filterSubCategories.length}>
+              <option value="">All Sub-Categories</option>
+              {filterSubCategories.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.categoryName ? `${s.categoryName} - ${s.name}` : s.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="col-span-2 sm:col-span-1">
@@ -213,6 +247,21 @@ export default function Expenses() {
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          {(filterStartDate || filterEndDate || filterSubCategory) && (
+            <div className="col-span-2 sm:col-span-1 flex items-end">
+              <button
+                type="button"
+                className="btn-secondary w-full sm:w-auto py-2.5"
+                onClick={() => {
+                  setFilterStartDate('');
+                  setFilterEndDate('');
+                  setFilterSubCategory('');
+                }}
+              >
+                Clear Advanced
+              </button>
             </div>
           )}
         </div>

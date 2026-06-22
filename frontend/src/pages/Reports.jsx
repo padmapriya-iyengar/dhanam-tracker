@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { BarChart2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { BarChart2, ChevronDown, ChevronRight, SlidersHorizontal, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line,
@@ -8,6 +8,7 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
 import DirhamSymbol from '../components/DirhamSymbol';
+import { useApp } from '../context/AppContext';
 import { fmt, getCurrencyCode, reportsApi } from '../services/api';
 
 const PERIOD_OPTIONS = [
@@ -29,6 +30,7 @@ function getWeekNumber(d) {
 
 export default function Reports() {
   const now = new Date();
+  const { categories } = useApp();
   const [period, setPeriod] = useState('monthly');
   const [params, setParams] = useState({
     month: now.getMonth() + 1, year: now.getFullYear(), week: getWeekNumber(now),
@@ -36,6 +38,11 @@ export default function Reports() {
     date: format(now, 'yyyy-MM-dd'),
   });
   const [report, setReport] = useState(null);
+  const [customReport, setCustomReport] = useState(null);
+  const [customLoading, setCustomLoading] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState([]);
   const [trend, setTrend] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -57,6 +64,43 @@ export default function Reports() {
   useEffect(() => { load(); }, [period, JSON.stringify(params)]);
 
   const { summary, expenseByCategory, expenseByMember, incomeByMember, dailyTrend } = report || {};
+  const customQueryParams = { period, ...params };
+
+  const loadCustomReport = async () => {
+    setCustomLoading(true);
+    try {
+      const { data } = await reportsApi.getCustom({
+        ...customQueryParams,
+        categoryIds: selectedCategoryIds.join(','),
+        subCategoryIds: selectedSubCategoryIds.join(','),
+      });
+      setCustomReport(data);
+    } finally {
+      setCustomLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (customReport) loadCustomReport();
+  }, [period, JSON.stringify(params)]);
+
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  };
+
+  const toggleWholeCategory = (categoryId) => {
+    setSelectedCategoryIds((prev) => (
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
+    ));
+  };
+
+  const toggleSubCategory = (subCategoryId) => {
+    setSelectedSubCategoryIds((prev) => (
+      prev.includes(subCategoryId) ? prev.filter((id) => id !== subCategoryId) : [...prev, subCategoryId]
+    ));
+  };
+
+  const selectedCount = selectedCategoryIds.length + selectedSubCategoryIds.length;
 
   return (
     <div className="space-y-6">
@@ -180,6 +224,170 @@ export default function Reports() {
               </select>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal size={15} className="text-indigo-500" />
+              <h2 className="font-semibold text-slate-700">Custom Sub-Category Report</h2>
+            </div>
+            <p className="text-sm text-slate-500 mt-0.5">Pick any combination of categories and sub-categories for the selected period.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedCount > 0 && (
+              <button
+                type="button"
+                className="btn-secondary py-2 px-3"
+                onClick={() => {
+                  setSelectedCategoryIds([]);
+                  setSelectedSubCategoryIds([]);
+                  setCustomReport(null);
+                }}
+              >
+                Clear
+              </button>
+            )}
+            <button type="button" className="btn-primary" onClick={loadCustomReport} disabled={customLoading}>
+              {customLoading ? 'Drawing...' : 'Draw Report'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+          <div className="border border-slate-100 rounded-xl overflow-hidden">
+            <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Selection</span>
+              <span className="text-xs text-slate-400">{selectedCount} selected</span>
+            </div>
+            <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-50">
+              {categories.map((category) => {
+                const subCategories = category.subCategories || [];
+                const expanded = expandedCategories[category._id] ?? true;
+                const wholeCategorySelected = selectedCategoryIds.includes(category._id);
+                return (
+                  <div key={category._id} className="p-3">
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => toggleCategory(category._id)} className="p-1 text-slate-400 hover:text-slate-600 rounded">
+                        {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      </button>
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: category.color || '#6366f1' }} />
+                      <label className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={wholeCategorySelected}
+                          onChange={() => toggleWholeCategory(category._id)}
+                          className="rounded border-slate-300 text-indigo-600"
+                        />
+                        <span className="text-sm font-semibold text-slate-700 truncate">{category.name}</span>
+                      </label>
+                    </div>
+                    {expanded && (
+                      <div className="mt-2 ml-8 space-y-1.5">
+                        {subCategories.length === 0 ? (
+                          <p className="text-xs text-slate-400">No sub-categories configured.</p>
+                        ) : subCategories.map((subCategory) => (
+                          <label key={subCategory._id} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedSubCategoryIds.includes(subCategory._id)}
+                              onChange={() => toggleSubCategory(subCategory._id)}
+                              className="rounded border-slate-300 text-indigo-600"
+                            />
+                            <span className="truncate">{subCategory.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            {customLoading ? (
+              <LoadingSpinner />
+            ) : !customReport ? (
+              <div className="h-full min-h-[260px] rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-sm text-slate-400 text-center px-6">
+                Select sub-categories from one or more categories, then draw a report.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="rounded-xl bg-rose-50 border border-rose-100 p-3">
+                    <p className="text-xs text-rose-500 font-semibold uppercase tracking-wide">Total Spend</p>
+                    <p className="text-2xl font-bold text-rose-700 mt-1">
+                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(customReport.summary.totalExpense)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Transactions</p>
+                    <p className="text-2xl font-bold text-slate-700 mt-1">{customReport.summary.count}</p>
+                  </div>
+                  <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3 col-span-2 md:col-span-1">
+                    <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wide">Selected Areas</p>
+                    <p className="text-2xl font-bold text-indigo-700 mt-1">{customReport.bySubCategory.length}</p>
+                  </div>
+                </div>
+
+                {customReport.bySubCategory.length > 0 ? (
+                  <div className="rounded-xl border border-slate-100 p-3">
+                    <h3 className="font-semibold text-slate-700 text-sm mb-3">Spend by Sub-Category</h3>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={customReport.bySubCategory} layout="vertical" barSize={16}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                        <YAxis type="category" dataKey="subCategoryName" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={130} />
+                        <Tooltip formatter={(v) => fmt(v)} />
+                        <Bar dataKey="total" name="Amount" radius={[0, 4, 4, 0]}>
+                          {customReport.bySubCategory.map((item, index) => (
+                            <Cell key={`${item.subCategoryId || item.categoryId}-${index}`} fill={item.color || COLORS[index % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-100 py-10 text-center text-sm text-slate-400">No expenses found for this selection.</div>
+                )}
+
+                {customReport.bySubCategory.length > 0 && (
+                  <div className="rounded-xl border border-slate-100 overflow-hidden overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="text-left py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">Category</th>
+                          <th className="text-left py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">Sub-Category</th>
+                          <th className="text-right py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">Transactions</th>
+                          <th className="text-right py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customReport.bySubCategory.map((row, index) => (
+                          <tr key={`${row.subCategoryId || row.categoryId}-${index}`} className="border-b border-slate-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ background: row.color || COLORS[index % COLORS.length] }} />
+                                <span className="text-slate-700">{row.categoryName}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-slate-600">{row.subCategoryName}</td>
+                            <td className="py-3 px-4 text-right text-slate-500">{row.count}</td>
+                            <td className="py-3 px-4 text-right font-semibold text-slate-700">
+                              <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(row.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

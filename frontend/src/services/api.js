@@ -61,6 +61,7 @@ export const expensesApi = {
 export const reportsApi = {
   get: (params) => api.get('/reports', { params }),
   getTrend: (params) => api.get('/reports/trend', { params }),
+  getCustom: (params) => api.get('/reports/custom', { params }),
 };
 
 export const insightsApi = {

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 
@@ -83,6 +84,105 @@ async function getAggregate(model, userId, dateRange) {
   ]);
   return total[0]?.total || 0;
 }
+
+function parseObjectIds(value) {
+  return String(value || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+}
+
+router.get('/custom', async (req, res) => {
+  try {
+    const { start, end } = getDateRange(req.query);
+    const categoryIds = parseObjectIds(req.query.categoryIds);
+    const subCategoryIds = parseObjectIds(req.query.subCategoryIds);
+
+    const match = { userId: req.user._id, date: { $gte: start, $lte: end } };
+    const selected = [];
+    if (categoryIds.length > 0) selected.push({ categoryId: { $in: categoryIds } });
+    if (subCategoryIds.length > 0) selected.push({ subCategoryId: { $in: subCategoryIds } });
+    if (selected.length > 0) match.$or = selected;
+
+    const [summary, bySubCategory, byCategory, byMember, dailyTrend, transactions] = await Promise.all([
+      Expense.aggregate([
+        { $match: match },
+        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      ]),
+      Expense.aggregate([
+        { $match: match },
+        { $group: { _id: { categoryId: '$categoryId', subCategoryId: '$subCategoryId' }, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $lookup: { from: 'categories', localField: '_id.categoryId', foreignField: '_id', as: 'category' } },
+        { $unwind: '$category' },
+        { $lookup: { from: 'subcategories', localField: '_id.subCategoryId', foreignField: '_id', as: 'subCategory' } },
+        { $unwind: { path: '$subCategory', preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 0,
+            categoryId: '$_id.categoryId',
+            subCategoryId: '$_id.subCategoryId',
+            categoryName: '$category.name',
+            subCategoryName: { $ifNull: ['$subCategory.name', 'Uncategorized'] },
+            color: '$category.color',
+            total: 1,
+            count: 1,
+          },
+        },
+        { $sort: { total: -1 } },
+      ]),
+      Expense.aggregate([
+        { $match: match },
+        { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
+        { $unwind: '$category' },
+        { $project: { _id: 0, categoryId: '$_id', name: '$category.name', color: '$category.color', total: 1, count: 1 } },
+        { $sort: { total: -1 } },
+      ]),
+      Expense.aggregate([
+        { $match: match },
+        { $group: { _id: '$memberId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
+        { $unwind: '$member' },
+        { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1, count: 1 } },
+        { $sort: { total: -1 } },
+      ]),
+      Expense.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+            total: { $sum: '$amount' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Expense.find(match)
+        .populate('memberId', 'name color role')
+        .populate('categoryId', 'name color icon')
+        .populate('subCategoryId', 'name')
+        .sort({ date: -1 })
+        .limit(100),
+    ]);
+
+    res.json({
+      dateRange: { start, end },
+      selected: { categoryIds, subCategoryIds },
+      summary: {
+        totalExpense: summary[0]?.total || 0,
+        count: summary[0]?.count || 0,
+      },
+      bySubCategory,
+      byCategory,
+      byMember,
+      dailyTrend,
+      transactions,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/', async (req, res) => {
   try {
