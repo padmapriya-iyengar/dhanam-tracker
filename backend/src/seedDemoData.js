@@ -7,6 +7,7 @@ const Income = require('./models/Income');
 const Member = require('./models/Member');
 const SavingsAccount = require('./models/SavingsAccount');
 const SubCategory = require('./models/SubCategory');
+const Subscription = require('./models/Subscription');
 const Transfer = require('./models/Transfer');
 const { ensureDemoUser } = require('./middleware/currentUser');
 
@@ -96,6 +97,7 @@ async function seedDemoData() {
     Income.deleteMany({ userId }),
     Member.deleteMany({ userId }),
     SavingsAccount.deleteMany({ userId }),
+    Subscription.deleteMany({ userId }),
     Transfer.deleteMany({ userId }),
   ]);
 

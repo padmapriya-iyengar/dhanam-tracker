@@ -107,6 +107,7 @@ async function backfillExistingDataToDefaultUser() {
     SavingsAccount,
     require('../models/CreditCard'),
     require('../models/Transfer'),
+    require('../models/Subscription'),
   ];
 
   await Promise.all(models.map((Model) => Model.updateMany({ userId: { $exists: false } }, { userId: user._id })));

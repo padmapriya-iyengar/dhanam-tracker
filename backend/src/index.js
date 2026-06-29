@@ -24,6 +24,7 @@ app.use('/api/balance', currentUser, require('./routes/balance'));
 app.use('/api/savings', currentUser, require('./routes/savings'));
 app.use('/api/credit-cards', currentUser, require('./routes/credit-cards'));
 app.use('/api/transfers', currentUser, require('./routes/transfers'));
+app.use('/api/subscriptions', currentUser, require('./routes/subscriptions'));
 app.use('/api/category-goals', require('./routes/category-goals'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

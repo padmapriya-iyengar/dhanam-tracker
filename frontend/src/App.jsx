@@ -10,6 +10,7 @@ import Insights from './pages/Insights';
 import Members from './pages/Members';
 import Reports from './pages/Reports';
 import Savings from './pages/Savings';
+import Subscriptions from './pages/Subscriptions';
 import Transfers from './pages/Transfers';
 import Users from './pages/Users';
 
@@ -22,6 +23,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="income" element={<Income />} />
             <Route path="expenses" element={<Expenses />} />
+            <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="categories" element={<Categories />} />
             <Route path="reports" element={<Reports />} />
             <Route path="insights" element={<Insights />} />
