@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Income = require('../models/Income');
+const Subscription = require('../models/Subscription');
 
 function getDateRange(query) {
   const { period, date, month, year, week, quarter, half } = query;
@@ -85,6 +86,34 @@ async function getAggregate(model, userId, dateRange) {
   return total[0]?.total || 0;
 }
 
+async function recurringExpenseFilter(userId, query) {
+  if (query.excludeRecurring !== 'true') return {};
+
+  const subscriptions = await Subscription.find({ userId, isActive: true }).select('categoryId subCategoryId');
+  const recurringAreas = subscriptions.map((subscription) => {
+    const area = { categoryId: subscription.categoryId };
+    if (subscription.subCategoryId) area.subCategoryId = subscription.subCategoryId;
+    return area;
+  });
+
+  const filter = { subscriptionId: null };
+  if (recurringAreas.length > 0) filter.$nor = recurringAreas;
+  return filter;
+}
+
+function expenseMatch(userId, start, end, recurringFilter = {}) {
+  return { userId, date: { $gte: start, $lte: end }, ...recurringFilter };
+}
+
+async function getExpenseAggregate(userId, dateRange, recurringFilter) {
+  const { start, end } = dateRange;
+  const total = await Expense.aggregate([
+    { $match: expenseMatch(userId, start, end, recurringFilter) },
+    { $group: { _id: null, total: { $sum: '$amount' } } },
+  ]);
+  return total[0]?.total || 0;
+}
+
 function parseObjectIds(value) {
   return String(value || '')
     .split(',')
@@ -96,10 +125,11 @@ function parseObjectIds(value) {
 router.get('/custom', async (req, res) => {
   try {
     const { start, end } = getDateRange(req.query);
+    const recurringFilter = await recurringExpenseFilter(req.user._id, req.query);
     const categoryIds = parseObjectIds(req.query.categoryIds);
     const subCategoryIds = parseObjectIds(req.query.subCategoryIds);
 
-    const match = { userId: req.user._id, date: { $gte: start, $lte: end } };
+    const match = expenseMatch(req.user._id, start, end, recurringFilter);
     const selected = [];
     if (categoryIds.length > 0) selected.push({ categoryId: { $in: categoryIds } });
     if (subCategoryIds.length > 0) selected.push({ subCategoryId: { $in: subCategoryIds } });
@@ -188,6 +218,7 @@ router.get('/', async (req, res) => {
   try {
     const dateRange = getDateRange(req.query);
     const { start, end, prevStart, prevEnd } = dateRange;
+    const recurringFilter = await recurringExpenseFilter(req.user._id, req.query);
 
     const [
       expenseByCategory,
@@ -200,7 +231,7 @@ router.get('/', async (req, res) => {
       dailyTrend,
     ] = await Promise.all([
       Expense.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
+        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
         { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
@@ -208,7 +239,7 @@ router.get('/', async (req, res) => {
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
+        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
         { $group: { _id: '$memberId', total: { $sum: '$amount' } } },
         { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
         { $unwind: '$member' },
@@ -221,12 +252,12 @@ router.get('/', async (req, res) => {
         { $unwind: '$member' },
         { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1 } },
       ]),
-      getAggregate(Expense, req.user._id, { start, end }),
+      getExpenseAggregate(req.user._id, { start, end }, recurringFilter),
       getAggregate(Income, req.user._id, { start, end }),
-      getAggregate(Expense, req.user._id, { start: prevStart, end: prevEnd }),
+      getExpenseAggregate(req.user._id, { start: prevStart, end: prevEnd }, recurringFilter),
       getAggregate(Income, req.user._id, { start: prevStart, end: prevEnd }),
       Expense.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
+        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
         { $lookup: { from: 'categories', localField: 'categoryId', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $match: { 'category.name': { $ne: 'Finance & Loans' } } },
@@ -274,10 +305,11 @@ router.get('/trend', async (req, res) => {
     const months = parseInt(req.query.months) || 12;
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    const recurringFilter = await recurringExpenseFilter(req.user._id, req.query);
 
     const [expenseTrend, incomeTrend] = await Promise.all([
       Expense.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start } } },
+        { $match: { userId: req.user._id, date: { $gte: start }, ...recurringFilter } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),

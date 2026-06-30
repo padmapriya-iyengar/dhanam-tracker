@@ -116,7 +116,7 @@ export default function Subscriptions() {
       setModalOpen(false);
       await load();
     } catch (err) {
-      setSaveError(err.response?.data?.error || err.message || 'Failed to save subscription');
+      setSaveError(err.response?.data?.error || err.message || 'Failed to save recurring expense');
     } finally {
       setSaving(false);
     }
@@ -154,11 +154,11 @@ export default function Subscriptions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="page-title">Subscriptions</h1>
+          <h1 className="page-title">Recurring Expenses</h1>
           <p className="text-sm text-slate-500 mt-0.5">Create monthly expenses from reusable templates</p>
         </div>
         <button onClick={openAdd} className="btn-primary">
-          <Plus size={15} /> Add Subscription
+          <Plus size={15} /> Add Recurring Expense
         </button>
       </div>
 
@@ -191,8 +191,8 @@ export default function Subscriptions() {
       {records.length === 0 ? (
         <div className="card text-center py-14">
           <BellRing size={40} className="text-slate-200 mx-auto mb-3" />
-          <p className="font-medium text-slate-500">No subscriptions added yet</p>
-          <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Subscription</button>
+          <p className="font-medium text-slate-500">No recurring expenses added yet</p>
+          <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Recurring Expense</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -244,7 +244,7 @@ export default function Subscriptions() {
         </div>
       )}
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Subscription' : 'Add Subscription'} size="lg">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Recurring Expense' : 'Add Recurring Expense'} size="lg">
         <form onSubmit={saveSubscription} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
@@ -335,7 +335,7 @@ export default function Subscriptions() {
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Subscription'}</button>
+            <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Recurring Expense'}</button>
           </div>
         </form>
       </Modal>

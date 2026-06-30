@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { BarChart2, ChevronDown, ChevronRight, SlidersHorizontal, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { BarChart2, ChevronDown, ChevronRight, Share2, SlidersHorizontal, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line,
@@ -22,10 +22,163 @@ const PERIOD_OPTIONS = [
 
 const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2024, i, 1), 'MMMM') }));
 const COLORS = ['#6366f1', '#f97316', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16'];
+const REPORT_IMAGE_WIDTH = 1200;
 
 function getWeekNumber(d) {
   const oneJan = new Date(d.getFullYear(), 0, 1);
   return Math.ceil((((d - oneJan) / 86400000) + oneJan.getDay() + 1) / 7);
+}
+
+function periodLabel(period, params) {
+  if (period === 'daily') return format(new Date(params.date), 'dd MMM yyyy');
+  if (period === 'weekly') return `Week ${params.week}, ${params.year}`;
+  if (period === 'monthly') return `${months.find((m) => m.value === params.month)?.label || 'Month'} ${params.year}`;
+  if (period === 'quarterly') return `Q${params.quarter} ${params.year}`;
+  if (period === 'halfyearly') return `H${params.half} ${params.year}`;
+  return `${params.year}`;
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function drawText(ctx, text, x, y, options = {}) {
+  ctx.fillStyle = options.color || '#1e293b';
+  ctx.font = `${options.weight || 400} ${options.size || 16}px ${options.family || 'Inter, Arial, sans-serif'}`;
+  ctx.textAlign = options.align || 'left';
+  ctx.textBaseline = options.baseline || 'alphabetic';
+  ctx.fillText(text, x, y);
+}
+
+function truncateText(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let output = text;
+  while (output.length > 1 && ctx.measureText(`${output}...`).width > maxWidth) {
+    output = output.slice(0, -1);
+  }
+  return `${output}...`;
+}
+
+function drawCard(ctx, x, y, width, height, label, value, bg, border, accent) {
+  ctx.fillStyle = bg;
+  roundedRect(ctx, x, y, width, height, 14);
+  ctx.fill();
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  drawText(ctx, label, x + 22, y + 34, { size: 14, weight: 700, color: accent });
+  drawText(ctx, value, x + 22, y + 78, { size: 30, weight: 800, color: '#0f172a' });
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.95));
+}
+
+async function buildCustomReportImage({ report, period, params, currency }) {
+  const rows = report.bySubCategory || [];
+  const visibleRows = rows.slice(0, 18);
+  const chartHeight = Math.max(260, visibleRows.length * 34 + 64);
+  const tableHeight = rows.length > 0 ? Math.min(rows.length, 14) * 42 + 72 : 0;
+  const height = 96 + 112 + 24 + chartHeight + 24 + tableHeight + 40;
+  const canvas = document.createElement('canvas');
+  const scale = Math.max(2, window.devicePixelRatio || 1);
+  canvas.width = REPORT_IMAGE_WIDTH * scale;
+  canvas.height = height * scale;
+  canvas.style.width = `${REPORT_IMAGE_WIDTH}px`;
+  canvas.style.height = `${height}px`;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, REPORT_IMAGE_WIDTH, height);
+
+  drawText(ctx, 'Dhanam Custom Sub-Category Report', 40, 42, { size: 28, weight: 800, color: '#0f172a' });
+  drawText(ctx, periodLabel(period, params), 40, 70, { size: 16, weight: 600, color: '#64748b' });
+  drawText(ctx, `Generated ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, REPORT_IMAGE_WIDTH - 40, 70, {
+    size: 14, weight: 600, color: '#94a3b8', align: 'right',
+  });
+
+  const cardWidth = 354;
+  drawCard(ctx, 40, 104, cardWidth, 96, 'TOTAL SPEND', `${currency} ${fmt(report.summary.totalExpense)}`, '#fff1f2', '#fecdd3', '#e11d48');
+  drawCard(ctx, 423, 104, cardWidth, 96, 'TRANSACTIONS', String(report.summary.count), '#f8fafc', '#e2e8f0', '#475569');
+  drawCard(ctx, 806, 104, cardWidth, 96, 'SELECTED AREAS', String(report.bySubCategory.length), '#eef2ff', '#c7d2fe', '#4f46e5');
+
+  const chartX = 40;
+  const chartY = 224;
+  const chartWidth = 1120;
+  roundedRect(ctx, chartX, chartY, chartWidth, chartHeight, 16);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.stroke();
+  drawText(ctx, 'Spend by Sub-Category', chartX + 24, chartY + 36, { size: 18, weight: 800, color: '#1e293b' });
+
+  if (visibleRows.length === 0) {
+    drawText(ctx, 'No expenses found for this selection.', chartX + chartWidth / 2, chartY + chartHeight / 2, {
+      size: 18, weight: 600, color: '#94a3b8', align: 'center',
+    });
+  } else {
+    const max = Math.max(...visibleRows.map((row) => row.total), 1);
+    const labelWidth = 230;
+    const barX = chartX + labelWidth + 34;
+    const barMaxWidth = chartWidth - labelWidth - 96;
+    let y = chartY + 74;
+    visibleRows.forEach((row, index) => {
+      const barWidth = Math.max(3, (row.total / max) * barMaxWidth);
+      const color = row.color || COLORS[index % COLORS.length];
+      drawText(ctx, truncateText(ctx, row.subCategoryName || row.categoryName || 'Uncategorized', labelWidth), chartX + labelWidth, y + 15, {
+        size: 14, color: '#334155', align: 'right',
+      });
+      ctx.fillStyle = color;
+      roundedRect(ctx, barX, y, barWidth, 20, 5);
+      ctx.fill();
+      drawText(ctx, `${currency} ${fmt(row.total)}`, Math.min(barX + barWidth + 12, chartX + chartWidth - 24), y + 15, {
+        size: 13, weight: 700, color: '#475569',
+      });
+      y += 34;
+    });
+  }
+
+  if (rows.length > 0) {
+    const tableY = chartY + chartHeight + 24;
+    roundedRect(ctx, 40, tableY, 1120, tableHeight, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.stroke();
+    drawText(ctx, 'Breakdown', 64, tableY + 36, { size: 18, weight: 800, color: '#1e293b' });
+    drawText(ctx, 'TRANSACTIONS', 875, tableY + 36, { size: 12, weight: 800, color: '#64748b', align: 'right' });
+    drawText(ctx, 'AMOUNT', 1130, tableY + 36, { size: 12, weight: 800, color: '#64748b', align: 'right' });
+
+    rows.slice(0, 14).forEach((row, index) => {
+      const y = tableY + 66 + index * 42;
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.beginPath();
+      ctx.moveTo(64, y - 16);
+      ctx.lineTo(1136, y - 16);
+      ctx.stroke();
+      ctx.fillStyle = row.color || COLORS[index % COLORS.length];
+      ctx.beginPath();
+      ctx.arc(72, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      drawText(ctx, truncateText(ctx, row.categoryName || 'Category', 250), 90, y + 5, { size: 14, weight: 700, color: '#334155' });
+      drawText(ctx, truncateText(ctx, row.subCategoryName || 'Uncategorized', 360), 370, y + 5, { size: 14, color: '#475569' });
+      drawText(ctx, String(row.count), 875, y + 5, { size: 14, weight: 700, color: '#475569', align: 'right' });
+      drawText(ctx, `${currency} ${fmt(row.total)}`, 1130, y + 5, { size: 14, weight: 800, color: '#1e293b', align: 'right' });
+    });
+  }
+
+  return canvasToBlob(canvas);
 }
 
 export default function Reports() {
@@ -40,19 +193,21 @@ export default function Reports() {
   const [report, setReport] = useState(null);
   const [customReport, setCustomReport] = useState(null);
   const [customLoading, setCustomLoading] = useState(false);
+  const [excludeRecurring, setExcludeRecurring] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState([]);
   const [trend, setTrend] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sharingImage, setSharingImage] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const queryParams = { period, ...params };
+    const queryParams = { period, ...params, excludeRecurring };
     try {
       const [r, t] = await Promise.all([
         reportsApi.get(queryParams),
-        reportsApi.getTrend({ months: 12 }),
+        reportsApi.getTrend({ months: 12, excludeRecurring }),
       ]);
       setReport(r.data);
       setTrend(t.data);
@@ -61,10 +216,10 @@ export default function Reports() {
     }
   };
 
-  useEffect(() => { load(); }, [period, JSON.stringify(params)]);
+  useEffect(() => { load(); }, [period, JSON.stringify(params), excludeRecurring]);
 
   const { summary, expenseByCategory, expenseByMember, incomeByMember, dailyTrend } = report || {};
-  const customQueryParams = { period, ...params };
+  const customQueryParams = { period, ...params, excludeRecurring };
 
   const loadCustomReport = async () => {
     setCustomLoading(true);
@@ -98,6 +253,37 @@ export default function Reports() {
     setSelectedSubCategoryIds((prev) => (
       prev.includes(subCategoryId) ? prev.filter((id) => id !== subCategoryId) : [...prev, subCategoryId]
     ));
+  };
+
+  const shareCustomReportImage = async () => {
+    if (!customReport || sharingImage) return;
+    setSharingImage(true);
+    try {
+      const currency = getCurrencyCode();
+      const blob = await buildCustomReportImage({ report: customReport, period, params, currency });
+      if (!blob) throw new Error('Could not create report image');
+
+      const fileName = `dhanam-custom-report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+        await navigator.share({
+          title: 'Dhanam Custom Report',
+          text: 'Dhanam custom sub-category report',
+          files: [file],
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      }
+    } finally {
+      setSharingImage(false);
+    }
   };
 
   const selectedCount = selectedCategoryIds.length + selectedSubCategoryIds.length;
@@ -224,7 +410,22 @@ export default function Reports() {
               </select>
             </div>
           )}
+
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded border-slate-300 text-indigo-600"
+              checked={excludeRecurring}
+              onChange={(e) => setExcludeRecurring(e.target.checked)}
+            />
+            <span className="text-sm font-medium text-slate-600">Exclude recurring expenses</span>
+          </label>
         </div>
+        {excludeRecurring && (
+          <p className="text-xs text-slate-400 mt-3">
+            Reports exclude expenses matching active recurring expense category and sub-category templates.
+          </p>
+        )}
       </div>
 
       <div className="card p-4">
@@ -248,6 +449,12 @@ export default function Reports() {
                 }}
               >
                 Clear
+              </button>
+            )}
+            {customReport && (
+              <button type="button" className="btn-secondary py-2 px-3 inline-flex items-center gap-2" onClick={shareCustomReportImage} disabled={sharingImage}>
+                <Share2 size={16} />
+                {sharingImage ? 'Preparing...' : 'Share Image'}
               </button>
             )}
             <button type="button" className="btn-primary" onClick={loadCustomReport} disabled={customLoading}>

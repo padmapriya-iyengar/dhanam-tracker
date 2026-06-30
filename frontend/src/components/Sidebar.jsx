@@ -6,7 +6,7 @@ const navItems = [
   { to: '/', icon: Home, label: 'Dashboard', end: true },
   { to: '/income', icon: TrendingUp, label: 'Income' },
   { to: '/expenses', icon: ShoppingCart, label: 'Expenses' },
-  { to: '/subscriptions', icon: BellRing, label: 'Subscriptions' },
+  { to: '/subscriptions', icon: BellRing, label: 'Recurring Expenses' },
   { to: '/categories', icon: Tag, label: 'Categories' },
   { to: '/reports', icon: BarChart2, label: 'Reports' },
   { to: '/insights', icon: Lightbulb, label: 'AI Insights' },
