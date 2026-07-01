@@ -4,6 +4,13 @@ const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Subscription = require('../models/Subscription');
+const SubCategory = require('../models/SubCategory');
+
+const ALWAYS_EXCLUDED_RECURRING_SUB_CATEGORIES = [
+  'Foreign Transfer',
+  'Local Transfer',
+  'Home Improvement',
+];
 
 function getDateRange(query) {
   const { period, date, month, year, week, quarter, half } = query;
@@ -90,6 +97,11 @@ async function recurringExpenseFilter(userId, query) {
   if (query.excludeRecurring !== 'true') return {};
 
   const subscriptions = await Subscription.find({ userId, isActive: true }).select('categoryId subCategoryId');
+  const excludedSubCategories = await SubCategory.find({
+    name: { $in: ALWAYS_EXCLUDED_RECURRING_SUB_CATEGORIES },
+    isActive: true,
+  }).select('_id');
+
   const recurringAreas = subscriptions.map((subscription) => {
     const area = { categoryId: subscription.categoryId };
     if (subscription.subCategoryId) area.subCategoryId = subscription.subCategoryId;
@@ -97,7 +109,11 @@ async function recurringExpenseFilter(userId, query) {
   });
 
   const filter = { subscriptionId: null };
-  if (recurringAreas.length > 0) filter.$nor = recurringAreas;
+  const excludedAreas = [
+    ...recurringAreas,
+    ...excludedSubCategories.map((subCategory) => ({ subCategoryId: subCategory._id })),
+  ];
+  if (excludedAreas.length > 0) filter.$nor = excludedAreas;
   return filter;
 }
 
