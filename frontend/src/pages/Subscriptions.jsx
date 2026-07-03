@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { BellRing, CheckCircle2, CreditCard, Edit2, Plus, Trash2 } from 'lucide-react';
+import { BellRing, CheckCircle2, Clock3, CreditCard, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -52,7 +52,13 @@ export default function Subscriptions() {
 
   const subCategories = categories.find((c) => c._id === form.categoryId)?.subCategories || [];
   const totalMonthly = records.reduce((sum, record) => sum + (record.amount || 0), 0);
-  const createdCount = records.filter((record) => record.generatedExpenseId).length;
+  const createdRecords = records.filter((record) => record.generatedExpenseId);
+  const pendingRecords = records.filter((record) => !record.generatedExpenseId);
+  const createdCount = createdRecords.length;
+  const pendingCount = pendingRecords.length;
+  const doneTotal = createdRecords.reduce((sum, record) => sum + (record.amount || 0), 0);
+  const pendingTotal = pendingRecords.reduce((sum, record) => sum + (record.amount || 0), 0);
+  const donePercent = totalMonthly > 0 ? Math.round((doneTotal / totalMonthly) * 100) : 0;
 
   const load = async () => {
     setLoading(true);
@@ -176,11 +182,38 @@ export default function Subscriptions() {
               {[2024, 2025, 2026, 2027, 2028].map((item) => <option key={item}>{item}</option>)}
             </select>
           </div>
-          <div className="flex-1 min-w-[180px]">
+          <div className="min-w-[180px]">
             <p className="text-xs text-slate-400">Expected monthly total</p>
             <p className="text-xl font-bold text-slate-800">
               <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalMonthly)}
             </p>
+          </div>
+          <div className="flex-1 min-w-[260px] lg:min-w-[420px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-emerald-700">
+                  <CheckCircle2 size={13} />
+                  <span>Expenses done</span>
+                  <span className="ml-auto text-emerald-600">{createdCount}/{records.length}</span>
+                </div>
+                <p className="mt-1 text-lg font-bold text-emerald-800">
+                  <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(doneTotal)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-amber-700">
+                  <Clock3 size={13} />
+                  <span>Expenses pending</span>
+                  <span className="ml-auto text-amber-600">{pendingCount}/{records.length}</span>
+                </div>
+                <p className="mt-1 text-lg font-bold text-amber-800">
+                  <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(pendingTotal)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${donePercent}%` }} />
+            </div>
           </div>
           <button className="btn-secondary" onClick={generateAll} disabled={records.length === 0 || createdCount === records.length}>
             Create Pending Expenses

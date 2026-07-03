@@ -208,7 +208,7 @@ router.get('/custom', async (req, res) => {
         .populate('memberId', 'name color role')
         .populate('categoryId', 'name color icon')
         .populate('subCategoryId', 'name')
-        .sort({ date: -1 })
+        .sort({ date: -1, createdAt: -1, _id: -1 })
         .limit(100),
     ]);
 

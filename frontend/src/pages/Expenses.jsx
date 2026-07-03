@@ -44,6 +44,7 @@ export default function Expenses() {
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [paymentSummary, setPaymentSummary] = useState([]);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,27 @@ export default function Expenses() {
     ? categories.find((c) => c._id === filterCategory)?.subCategories || []
     : categories.flatMap((c) => (c.subCategories || []).map((s) => ({ ...s, categoryName: c.name })));
   const usingCustomDateRange = Boolean(filterStartDate || filterEndDate);
+
+  const getPaymentSourceLabel = (source) => {
+    if (source.paymentMethod === 'credit_card') {
+      const card = allCreditCards.find((item) => String(item._id) === String(source.creditCardId));
+      if (!card) return 'Credit Card';
+      return `${card.bankName || 'Card'}${card.name ? ` - ${card.name}` : ''}${card.lastFourDigits ? ` ****${card.lastFourDigits}` : ''}`;
+    }
+    if (source.paymentMethod === 'savings') {
+      const account = savingsAccounts.find((item) => String(item._id) === String(source.savingsAccountId));
+      if (!account) return 'Savings';
+      return `${account.name}${account.bankName ? ` - ${account.bankName}` : ''}`;
+    }
+    return PAYMENT_LABELS[source.paymentMethod] || source.paymentMethod || 'Other';
+  };
+
+  const getPaymentSourceTone = (paymentMethod) => {
+    if (paymentMethod === 'credit_card') return 'border-violet-100 bg-violet-50 text-violet-700';
+    if (paymentMethod === 'savings') return 'border-emerald-100 bg-emerald-50 text-emerald-700';
+    if (paymentMethod === 'cash') return 'border-amber-100 bg-amber-50 text-amber-700';
+    return 'border-slate-200 bg-white text-slate-600';
+  };
 
   const loadCreditCards = async () => {
     const { data } = await creditCardsApi.getAll();
@@ -100,6 +122,7 @@ export default function Expenses() {
     setRecords(data.records);
     setTotal(data.total);
     setTotalAmount(data.totalAmount ?? data.records.reduce((s, r) => s + r.amount, 0));
+    setPaymentSummary(data.paymentSummary || []);
     setPages(data.pages);
     setPage(p);
     setLoading(false);
@@ -268,9 +291,35 @@ export default function Expenses() {
       </div>
 
       {!loading && records.length > 0 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-slate-500">{total} expenses found</p>
-          <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</p>
+        <div className="space-y-3 px-1">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">{total} expenses found</p>
+            <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {paymentSummary.map((source) => {
+              const percent = totalAmount > 0 ? Math.round((source.amount / totalAmount) * 100) : 0;
+              const tone = getPaymentSourceTone(source.paymentMethod);
+              const key = `${source.paymentMethod}-${source.creditCardId || source.savingsAccountId || 'default'}`;
+              return (
+                <div key={key} className={`min-w-[180px] rounded-lg border px-3 py-2 ${tone}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold truncate">{getPaymentSourceLabel(source)}</p>
+                    <span className="text-[11px] opacity-75 whitespace-nowrap">{source.count} txns</span>
+                  </div>
+                  <div className="mt-1 flex items-end justify-between gap-2">
+                    <p className="text-base font-bold text-slate-800">
+                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(source.amount)}
+                    </p>
+                    <span className="text-xs font-medium opacity-75">{percent}%</span>
+                  </div>
+                  <div className="mt-2 h-1 rounded-full bg-white/70 overflow-hidden">
+                    <div className="h-full rounded-full bg-current opacity-70" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

@@ -39,14 +39,14 @@ router.get('/', async (req, res) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const [records, total, totals] = await Promise.all([
+    const [records, total, totals, paymentSummary] = await Promise.all([
       Expense.find(filter)
         .populate('memberId', 'name color role')
         .populate('categoryId', 'name color icon')
         .populate('subCategoryId', 'name')
         .populate('creditCardId', 'name bankName color')
         .populate('savingsAccountId', 'name bankName')
-        .sort({ date: -1 })
+        .sort({ date: -1, createdAt: -1, _id: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       Expense.countDocuments(filter),
@@ -54,12 +54,34 @@ router.get('/', async (req, res) => {
         { $match: aggregateFilterFrom(filter) },
         { $group: { _id: null, amount: { $sum: '$amount' } } },
       ]),
+      Expense.aggregate([
+        { $match: aggregateFilterFrom(filter) },
+        {
+          $group: {
+            _id: {
+              paymentMethod: '$paymentMethod',
+              creditCardId: '$creditCardId',
+              savingsAccountId: '$savingsAccountId',
+            },
+            amount: { $sum: '$amount' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { amount: -1 } },
+      ]),
     ]);
 
     res.json({
       records,
       total,
       totalAmount: totals[0]?.amount || 0,
+      paymentSummary: paymentSummary.map((item) => ({
+        paymentMethod: item._id.paymentMethod,
+        creditCardId: item._id.creditCardId,
+        savingsAccountId: item._id.savingsAccountId,
+        amount: item.amount,
+        count: item.count,
+      })),
       page: parseInt(page),
       pages: Math.ceil(total / parseInt(limit)),
     });

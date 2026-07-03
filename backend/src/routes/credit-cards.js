@@ -227,7 +227,7 @@ router.get('/reconciliation', async (req, res) => {
       })
         .populate('categoryId', 'name color icon')
         .populate('subCategoryId', 'name')
-        .sort({ date: -1 })
+        .sort({ date: -1, createdAt: -1, _id: -1 })
         .limit(100),
       Transfer.find({
         userId: req.user._id,
@@ -270,7 +270,11 @@ router.get('/reconciliation', async (req, res) => {
         fromMemberId: transfer.fromMemberId,
         fromSavingsAccountId: transfer.fromSavingsAccountId,
       })),
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+    ].sort((a, b) => {
+      const byDate = new Date(b.date) - new Date(a.date);
+      if (byDate) return byDate;
+      return String(b._id).localeCompare(String(a._id));
+    });
 
     const calculatedClosing = values.openingBalance + purchases + values.fees + values.interest - values.refunds - payments;
     const difference = values.statementAmount - calculatedClosing;
