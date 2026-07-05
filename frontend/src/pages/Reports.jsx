@@ -221,13 +221,15 @@ export default function Reports() {
   const { summary, expenseByCategory, expenseByMember, incomeByMember, dailyTrend } = report || {};
   const customQueryParams = { period, ...params, excludeRecurring };
 
-  const loadCustomReport = async () => {
+  const loadCustomReport = async (selection = {}) => {
     setCustomLoading(true);
+    const categoryIds = selection.categoryIds ?? selectedCategoryIds;
+    const subCategoryIds = selection.subCategoryIds ?? selectedSubCategoryIds;
     try {
       const { data } = await reportsApi.getCustom({
         ...customQueryParams,
-        categoryIds: selectedCategoryIds.join(','),
-        subCategoryIds: selectedSubCategoryIds.join(','),
+        categoryIds: categoryIds.join(','),
+        subCategoryIds: subCategoryIds.join(','),
       });
       setCustomReport(data);
     } finally {
@@ -235,9 +237,7 @@ export default function Reports() {
     }
   };
 
-  useEffect(() => {
-    if (customReport) loadCustomReport();
-  }, [period, JSON.stringify(params)]);
+  useEffect(() => { loadCustomReport(); }, [period, JSON.stringify(params), excludeRecurring]);
 
   const toggleCategory = (categoryId) => {
     setExpandedCategories((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -445,7 +445,7 @@ export default function Reports() {
                 onClick={() => {
                   setSelectedCategoryIds([]);
                   setSelectedSubCategoryIds([]);
-                  setCustomReport(null);
+                  loadCustomReport({ categoryIds: [], subCategoryIds: [] });
                 }}
               >
                 Clear
