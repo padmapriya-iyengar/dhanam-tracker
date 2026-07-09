@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { CreditCard, Edit2, Filter, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, CreditCard, Edit2, Filter, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -90,6 +90,7 @@ export default function Expenses() {
   const [filterCreditCard, setFilterCreditCard] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // All credit cards; filtered to member when adding expense
   const [allCreditCards, setAllCreditCards] = useState([]);
   const [savingsAccounts, setSavingsAccounts] = useState([]);
@@ -99,6 +100,15 @@ export default function Expenses() {
     ? categories.find((c) => c._id === filterCategory)?.subCategories || []
     : categories.flatMap((c) => (c.subCategories || []).map((s) => ({ ...s, categoryName: c.name })));
   const usingCustomDateRange = Boolean(filterStartDate || filterEndDate);
+  const activeFilterCount = [
+    filterMember,
+    filterCategory,
+    filterSubCategory,
+    filterPayment,
+    filterCreditCard,
+    filterStartDate,
+    filterEndDate,
+  ].filter(Boolean).length;
 
   const getPaymentSourceLabel = (source) => {
     if (source.paymentMethod === 'credit_card') {
@@ -253,59 +263,85 @@ export default function Expenses() {
     setForm((f) => ({ ...f, paymentMethod, creditCardId: '', savingsAccountId: '' }));
   };
 
+  const clearAdvancedFilters = () => {
+    setFilterMember('');
+    setFilterCategory('');
+    setFilterSubCategory('');
+    setFilterPayment('');
+    setFilterCreditCard('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">Expenses</h1>
-        <button onClick={openAdd} className="btn-primary">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title">Expenses</h1>
+          <p className="text-sm text-slate-500 mt-0.5 sm:hidden">{total} records in selected period</p>
+        </div>
+        <button onClick={openAdd} className="btn-primary flex-shrink-0">
           <Plus size={15} /> Add Expense
         </button>
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter size={14} className="text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3">
+      <div className="card p-3 sm:p-4">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 sm:pointer-events-none"
+        >
+          <span className="flex items-center gap-2">
+            <Filter size={14} className="text-slate-400" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600">{activeFilterCount} active</span>
+            )}
+          </span>
+          <ChevronDown className={`text-slate-400 transition-transform sm:hidden ${filtersOpen ? 'rotate-180' : ''}`} size={18} />
+        </button>
+        <div className="mt-3 grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="filter-month" className="label">Month</label>
-            <select id="filter-month" className="input w-full sm:w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)} disabled={usingCustomDateRange}>
+            <select id="filter-month" className="input w-full" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)} disabled={usingCustomDateRange}>
               {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-year" className="label">Year</label>
-            <select id="filter-year" className="input w-full sm:w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)} disabled={usingCustomDateRange}>
+            <select id="filter-year" className="input w-full" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)} disabled={usingCustomDateRange}>
               {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y}>{y}</option>)}
             </select>
           </div>
+        </div>
+
+        <div className={`${filtersOpen ? 'grid' : 'hidden'} mt-3 grid-cols-1 gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5`}>
           <div>
             <label htmlFor="filter-start-date" className="label">From Date</label>
-            <input id="filter-start-date" type="date" className="input w-full sm:w-40" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
+            <input id="filter-start-date" type="date" className="input w-full" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
           </div>
           <div>
             <label htmlFor="filter-end-date" className="label">To Date</label>
-            <input id="filter-end-date" type="date" className="input w-full sm:w-40" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
+            <input id="filter-end-date" type="date" className="input w-full" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
           </div>
           <div>
             <label htmlFor="filter-member" className="label">Member</label>
-            <select id="filter-member" className="input w-full sm:w-36" value={filterMember} onChange={(e) => setFilterMember(e.target.value)}>
+            <select id="filter-member" className="input w-full" value={filterMember} onChange={(e) => setFilterMember(e.target.value)}>
               <option value="">All Members</option>
               {members.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="filter-category" className="label">Category</label>
-            <select id="filter-category" className="input w-full sm:w-44" value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterSubCategory(''); }}>
+            <select id="filter-category" className="input w-full" value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterSubCategory(''); }}>
               <option value="">All Categories</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <label htmlFor="filter-subcategory" className="label">Sub-Category</label>
-            <select id="filter-subcategory" className="input w-full sm:w-48" value={filterSubCategory} onChange={(e) => setFilterSubCategory(e.target.value)} disabled={!filterSubCategories.length}>
+            <select id="filter-subcategory" className="input w-full" value={filterSubCategory} onChange={(e) => setFilterSubCategory(e.target.value)} disabled={!filterSubCategories.length}>
               <option value="">All Sub-Categories</option>
               {filterSubCategories.map((s) => (
                 <option key={s._id} value={s._id}>
@@ -314,18 +350,18 @@ export default function Expenses() {
               ))}
             </select>
           </div>
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <label htmlFor="filter-payment" className="label">Payment</label>
-            <select id="filter-payment" className="input w-full sm:w-40" value={filterPayment}
+            <select id="filter-payment" className="input w-full" value={filterPayment}
               onChange={(e) => { setFilterPayment(e.target.value); setFilterCreditCard(''); }}>
               <option value="">All Methods</option>
               {PAYMENT_METHODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           {filterPayment === 'credit_card' && (
-            <div className="col-span-2 sm:col-span-1">
+            <div>
               <label htmlFor="filter-credit-card" className="label">Credit Card</label>
-              <select id="filter-credit-card" className="input w-full sm:w-48" value={filterCreditCard} onChange={(e) => setFilterCreditCard(e.target.value)}>
+              <select id="filter-credit-card" className="input w-full" value={filterCreditCard} onChange={(e) => setFilterCreditCard(e.target.value)}>
                 <option value="">All Cards</option>
                 {allCreditCards.map((c) => (
                   <option key={c._id} value={c._id}>
@@ -335,18 +371,14 @@ export default function Expenses() {
               </select>
             </div>
           )}
-          {(filterStartDate || filterEndDate || filterSubCategory) && (
-            <div className="col-span-2 sm:col-span-1 flex items-end">
+          {activeFilterCount > 0 && (
+            <div className="flex items-end">
               <button
                 type="button"
-                className="btn-secondary w-full sm:w-auto py-2.5"
-                onClick={() => {
-                  setFilterStartDate('');
-                  setFilterEndDate('');
-                  setFilterSubCategory('');
-                }}
+                className="btn-secondary w-full justify-center py-2.5"
+                onClick={clearAdvancedFilters}
               >
-                Clear Advanced
+                Clear Filters
               </button>
             </div>
           )}
@@ -354,26 +386,32 @@ export default function Expenses() {
       </div>
 
       {!loading && records.length > 0 && (
-        <div className="space-y-3 px-1">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-500">{total} expenses found</p>
-            <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
-              <span className="font-semibold text-rose-600">Gross: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</span>
-              {recoveredAmount > 0 && (
-                <>
-                  <span className="font-semibold text-emerald-600">Recovered: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(recoveredAmount)}</span>
-                  <span className="font-semibold text-slate-700">Net: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(netTotalAmount)}</span>
-                </>
-              )}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-lg border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Records</p>
+              <p className="text-lg font-bold text-slate-800">{total}</p>
+            </div>
+            <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-500">Gross</p>
+              <p className="text-lg font-bold text-rose-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</p>
+            </div>
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Recovered</p>
+              <p className="text-lg font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(recoveredAmount)}</p>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Net</p>
+              <p className="text-lg font-bold text-slate-800"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(netTotalAmount)}</p>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             {paymentSummary.map((source) => {
               const percent = totalAmount > 0 ? Math.round((source.amount / totalAmount) * 100) : 0;
               const tone = getPaymentSourceTone(source.paymentMethod);
               const key = `${source.paymentMethod}-${source.creditCardId || source.savingsAccountId || 'default'}`;
               return (
-                <div key={key} className={`min-w-[180px] rounded-lg border px-3 py-2 ${tone}`}>
+                <div key={key} className={`min-w-0 rounded-lg border px-3 py-2 ${tone}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold truncate">{getPaymentSourceLabel(source)}</p>
                     <span className="text-[11px] opacity-75 whitespace-nowrap">{source.count} txns</span>
@@ -410,50 +448,54 @@ export default function Expenses() {
               const recovered = rec.recoverySummary?.recoveredAmount || 0;
               const netAmount = rec.recoverySummary?.netAmount ?? rec.amount;
               const recoveries = rec.recoveries || [];
+              const paymentLabel = isCreditCard
+                ? `${rec.creditCardId?.bankName || 'Credit Card'}${rec.creditCardId?.name ? ` - ${rec.creditCardId.name}` : ''}`
+                : PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod;
               return (
-                <div key={rec._id} className="card p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: rec.categoryId?.color }} />
+                <div key={rec._id} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="mt-1 h-3 w-3 flex-shrink-0 rounded-full" style={{ background: rec.categoryId?.color }} />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-700">{rec.categoryId?.name}</p>
-                        {rec.subCategoryId && <p className="text-xs text-slate-400">{rec.subCategoryId.name}</p>}
-                        {rec.description && <p className="text-sm text-slate-500 mt-0.5 truncate">{rec.description}</p>}
+                        <p className="text-sm font-bold text-slate-800">{rec.description || rec.categoryId?.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {rec.categoryId?.name}{rec.subCategoryId ? ` / ${rec.subCategoryId.name}` : ''}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <button onClick={() => openRecovery(rec)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Plus size={13} /></button>
-                      <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
-                      <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
-                      <span>{format(new Date(rec.date), 'dd MMM yyyy')}</span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: rec.memberId?.color }} />
-                        {rec.memberId?.name}
-                      </span>
-                      {isCreditCard ? (
-                        <span className="flex items-center gap-1 text-violet-600">
-                          <CreditCard size={10} /> {rec.creditCardId?.bankName || 'Credit Card'}
-                        </span>
-                      ) : (
-                        <span>{PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod}</span>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-base font-bold" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
                         <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
                       </p>
                       {recovered > 0 && (
-                        <p className="text-xs font-medium text-emerald-600">
+                        <p className="text-xs font-semibold text-emerald-600">
                           Net <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(netAmount)}
                         </p>
                       )}
                     </div>
                   </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <p className="font-semibold text-slate-400 uppercase tracking-wide text-[10px]">Date</p>
+                      <p className="font-semibold text-slate-700">{format(new Date(rec.date), 'dd MMM yyyy')}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <p className="font-semibold text-slate-400 uppercase tracking-wide text-[10px]">Member</p>
+                      <p className="flex items-center gap-1 font-semibold text-slate-700">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: rec.memberId?.color }} />
+                        {rec.memberId?.name}
+                      </p>
+                    </div>
+                    <div className="col-span-2 rounded-lg bg-slate-50 px-2 py-1.5">
+                      <p className="font-semibold text-slate-400 uppercase tracking-wide text-[10px]">Payment</p>
+                      <p className={`flex items-center gap-1 font-semibold ${isCreditCard ? 'text-violet-700' : 'text-slate-700'}`}>
+                        {isCreditCard && <CreditCard size={12} />}
+                        {paymentLabel}
+                      </p>
+                    </div>
+                  </div>
+
                   {recoveries.length > 0 && (
                     <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 px-2 py-1.5">
                       <p className="text-xs font-medium text-emerald-700">
@@ -473,6 +515,12 @@ export default function Expenses() {
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-50 pt-3">
+                    <button onClick={() => openRecovery(rec)} className="rounded-lg bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700">Recover</button>
+                    <button onClick={() => openEdit(rec)} className="rounded-lg bg-indigo-50 px-2 py-2 text-xs font-semibold text-indigo-700">Edit</button>
+                    <button onClick={() => handleDelete(rec._id)} className="rounded-lg bg-rose-50 px-2 py-2 text-xs font-semibold text-rose-700">Delete</button>
+                  </div>
                 </div>
               );
             })}
@@ -589,7 +637,7 @@ export default function Expenses() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="recovery-amount" className="label">Recovered Amount *</label>
               <input
@@ -664,7 +712,7 @@ export default function Expenses() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="exp-member" className="label">Member *</label>
               <select id="exp-member" className="input" value={form.memberId} onChange={(e) => handleMemberChange(e.target.value)} required>
@@ -678,7 +726,7 @@ export default function Expenses() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="exp-category" className="label">Category *</label>
               <select id="exp-category" className="input" value={form.categoryId}
@@ -697,7 +745,7 @@ export default function Expenses() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="exp-amount" className="label">Amount (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
               <input id="exp-amount" type="number" className="input" value={form.amount}
