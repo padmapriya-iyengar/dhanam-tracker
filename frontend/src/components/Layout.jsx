@@ -2,6 +2,7 @@ import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import ChatAssistant from './ChatAssistant';
 import LoadingSpinner from './LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import Login from '../pages/Login';
@@ -46,6 +47,7 @@ export default function Layout() {
             <Outlet />
           </div>
         </main>
+        <ChatAssistant />
       </div>
     </div>
   );

@@ -66,6 +66,41 @@
   .insight-markdown h3 {
     @apply text-sm font-semibold text-slate-800 mt-4 mb-2 first:mt-0;
   }
+  .chat-markdown {
+    @apply text-sm leading-6 text-slate-700;
+  }
+  .chat-markdown p {
+    @apply mb-3 last:mb-0;
+  }
+  .chat-markdown ul,
+  .chat-markdown ol {
+    @apply my-2 space-y-2 pl-4;
+  }
+  .chat-markdown ul {
+    @apply list-disc;
+  }
+  .chat-markdown ol {
+    @apply list-decimal;
+  }
+  .chat-markdown li {
+    @apply pl-1;
+  }
+  .chat-markdown strong {
+    @apply font-semibold text-slate-900;
+  }
+  .chat-markdown h1,
+  .chat-markdown h2,
+  .chat-markdown h3 {
+    @apply mb-2 mt-4 border-t border-slate-100 pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400 first:mt-0 first:border-t-0 first:pt-0;
+  }
+  .chat-markdown h1 + ul,
+  .chat-markdown h2 + ul,
+  .chat-markdown h3 + ul,
+  .chat-markdown h1 + ol,
+  .chat-markdown h2 + ol,
+  .chat-markdown h3 + ol {
+    @apply mt-1;
+  }
 }
 
 /* Recharts tooltip customization */

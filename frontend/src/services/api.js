@@ -70,6 +70,10 @@ export const insightsApi = {
   generate: () => api.post('/insights'),
 };
 
+export const chatApi = {
+  ask: (data) => api.post('/chat', data),
+};
+
 export const creditCardsApi = {
   getAll: (params) => api.get('/credit-cards', { params }),
   getSummary: () => api.get('/credit-cards/summary'),
