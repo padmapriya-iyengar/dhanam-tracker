@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const CreditCard = require('../models/CreditCard');
+const CreditCardBudget = require('../models/CreditCardBudget');
 const CreditCardStatement = require('../models/CreditCardStatement');
 const Expense = require('../models/Expense');
 const Transfer = require('../models/Transfer');
@@ -100,6 +101,116 @@ function normalizeCardPayload(payload) {
   if (data.statementDay !== undefined && data.cycleEndDay === undefined) data.cycleEndDay = data.statementDay;
   return data;
 }
+
+function monthWindow(month, year) {
+  const m = parseInt(month) || new Date().getMonth() + 1;
+  const y = parseInt(year) || new Date().getFullYear();
+  const start = new Date(y, m - 1, 1);
+  const monthEnd = new Date(y, m, 0, 23, 59, 59, 999);
+  const now = new Date();
+  const isCurrentMonth = m === now.getMonth() + 1 && y === now.getFullYear();
+  return { month: m, year: y, start, end: isCurrentMonth ? now : monthEnd };
+}
+
+function budgetStatus(consumedPercent, budgeted, balance) {
+  if (!budgeted) return 'unset';
+  if (balance < 0) return 'over';
+  if (consumedPercent >= 80) return 'watch';
+  return 'ok';
+}
+
+router.get('/budgets', async (req, res) => {
+  try {
+    const { month, year, start, end } = monthWindow(req.query.month, req.query.year);
+    const cards = await CreditCard.find({ userId: req.user._id, isActive: true })
+      .populate('memberId', 'name color role')
+      .sort({ memberId: 1, bankName: 1 });
+
+    const [budgets, spend, payments] = await Promise.all([
+      CreditCardBudget.find({ userId: req.user._id, month, year }),
+      Expense.aggregate([
+        { $match: { userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: start, $lte: end } } },
+        { $group: { _id: '$creditCardId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      ]),
+      Transfer.aggregate([
+        { $match: { userId: req.user._id, toAccountType: 'credit_card', date: { $gte: start, $lte: end } } },
+        { $group: { _id: '$toCreditCardId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const budgetMap = Object.fromEntries(budgets.map((budget) => [String(budget.creditCardId), budget]));
+    const spendMap = Object.fromEntries(spend.filter((item) => item._id).map((item) => [String(item._id), item]));
+    const paymentMap = Object.fromEntries(payments.filter((item) => item._id).map((item) => [String(item._id), item]));
+
+    const rows = cards.map((card) => {
+      const key = String(card._id);
+      const budget = budgetMap[key];
+      const spent = spendMap[key]?.total || 0;
+      const paid = paymentMap[key]?.total || 0;
+      const budgeted = budget?.budgetAmount || 0;
+      const consumedPercent = budgeted > 0 ? Math.round((spent / budgeted) * 100) : 0;
+      const balance = budgeted - spent;
+      return {
+        ...card.toObject(),
+        budgetId: budget?._id || null,
+        budgeted,
+        spent,
+        paid,
+        transactionCount: spendMap[key]?.count || 0,
+        paymentCount: paymentMap[key]?.count || 0,
+        consumedPercent,
+        balance,
+        status: budgetStatus(consumedPercent, budgeted, balance),
+        asOf: end,
+        notes: budget?.notes || '',
+      };
+    });
+
+    res.json({
+      month,
+      year,
+      asOf: end,
+      totals: {
+        budgeted: rows.reduce((sum, row) => sum + row.budgeted, 0),
+        spent: rows.reduce((sum, row) => sum + row.spent, 0),
+        paid: rows.reduce((sum, row) => sum + row.paid, 0),
+        balance: rows.reduce((sum, row) => sum + row.balance, 0),
+      },
+      rows,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id/budget', async (req, res) => {
+  try {
+    const card = await CreditCard.findOne({ _id: req.params.id, userId: req.user._id, isActive: true });
+    if (!card) return res.status(404).json({ error: 'Card not found' });
+
+    const month = parseInt(req.body.month);
+    const year = parseInt(req.body.year);
+    const budgetAmount = parseFloat(req.body.budgetAmount);
+    if (!month || !year) return res.status(400).json({ error: 'Month and year are required' });
+    if (!Number.isFinite(budgetAmount) || budgetAmount < 0) return res.status(400).json({ error: 'Budget must be zero or more' });
+
+    const budget = await CreditCardBudget.findOneAndUpdate(
+      { userId: req.user._id, creditCardId: card._id, month, year },
+      {
+        userId: req.user._id,
+        creditCardId: card._id,
+        month,
+        year,
+        budgetAmount,
+        notes: req.body.notes || '',
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    res.json(budget);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 // Monthly spend per card for the last N months — single aggregation pass
 router.get('/monthly', async (req, res) => {

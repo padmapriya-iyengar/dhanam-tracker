@@ -106,6 +106,7 @@ async function backfillExistingDataToDefaultUser() {
     require('../models/Balance'),
     SavingsAccount,
     require('../models/CreditCard'),
+    require('../models/CreditCardBudget'),
     require('../models/Transfer'),
     require('../models/Subscription'),
     require('../models/ExpenseRecovery'),

@@ -1,6 +1,7 @@
 const Balance = require('./models/Balance');
 const Category = require('./models/Category');
 const CreditCard = require('./models/CreditCard');
+const CreditCardBudget = require('./models/CreditCardBudget');
 const CreditCardStatement = require('./models/CreditCardStatement');
 const Expense = require('./models/Expense');
 const ExpenseRecovery = require('./models/ExpenseRecovery');
@@ -93,6 +94,7 @@ async function seedDemoData() {
   await Promise.all([
     Balance.deleteMany({ userId }),
     CreditCard.deleteMany({ userId }),
+    CreditCardBudget.deleteMany({ userId }),
     CreditCardStatement.deleteMany({ userId }),
     Expense.deleteMany({ userId }),
     ExpenseRecovery.deleteMany({ userId }),
