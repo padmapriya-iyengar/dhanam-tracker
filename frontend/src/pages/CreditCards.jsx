@@ -39,6 +39,7 @@ export default function CreditCards() {
   const [modalOpen, setModalOpen] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [wizardStep, setWizardStep] = useState(0);
   const [budgetForm, setBudgetForm] = useState(emptyBudgetForm);
   const [editing, setEditing] = useState(null);
   const [budgetCard, setBudgetCard] = useState(null);
@@ -108,6 +109,7 @@ export default function CreditCards() {
   const openAdd = () => {
     setEditing(null);
     setForm({ ...emptyForm, memberId: members[0]?._id || '' });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -124,6 +126,7 @@ export default function CreditCards() {
       paymentDueDay: card.paymentDueDay || 5,
       color: card.color,
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -230,6 +233,103 @@ export default function CreditCards() {
     if (status === 'watch') return 'Near limit';
     if (status === 'ok') return 'On track';
     return 'No budget';
+  };
+  const selectedMember = members.find((member) => member._id === form.memberId);
+  const cardWizardSteps = ['Card', 'Owner', 'Cycle', 'Style', 'Review'];
+  const cardCanContinue = () => {
+    if (wizardStep === 0) return Boolean(form.bankName) && Boolean(form.name);
+    if (wizardStep === 1) return Boolean(form.memberId);
+    if (wizardStep === 2) return Boolean(form.cycleStartDay) && Boolean(form.cycleEndDay) && Boolean(form.paymentDueDay);
+    return true;
+  };
+  const optionClass = (selected) => (
+    `w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+      selected ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-slate-100 bg-white text-slate-700 hover:border-violet-100 hover:bg-slate-50'
+    }`
+  );
+  const renderCardWizardStep = () => {
+    if (wizardStep === 0) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Which credit card?</p>
+          <div>
+            <label htmlFor="cc-wizard-bank" className="label">Bank Name *</label>
+            <input id="cc-wizard-bank" type="text" className="input" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} required placeholder="e.g. Mashreq" />
+          </div>
+          <div>
+            <label htmlFor="cc-wizard-name" className="label">Card Name / Type *</label>
+            <input id="cc-wizard-name" type="text" className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. Noon Credit Card" />
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 1) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Owner and last digits</p>
+          <div className="grid grid-cols-1 gap-2">
+            {members.map((member) => (
+              <button key={member._id} type="button" className={optionClass(form.memberId === member._id)} onClick={() => setForm({ ...form, memberId: member._id })}>
+                <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ background: member.color }} /><span className="font-semibold">{member.name}</span></span>
+              </button>
+            ))}
+          </div>
+          <div>
+            <label htmlFor="cc-wizard-last4" className="label">Last 4 Digits</label>
+            <input id="cc-wizard-last4" type="text" className="input" value={form.lastFourDigits} onChange={(e) => setForm({ ...form, lastFourDigits: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="1234" maxLength={4} inputMode="numeric" />
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 2) {
+      return (
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Billing cycle</p>
+            <p className="mt-1 text-xs text-slate-400">Defaults are already filled. Change only if needed.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Cycle Start</label>
+              <input type="number" className="input" value={form.cycleStartDay} onChange={(e) => setForm({ ...form, cycleStartDay: e.target.value })} min={1} max={31} />
+            </div>
+            <div>
+              <label className="label">Cycle End</label>
+              <input type="number" className="input" value={form.cycleEndDay} onChange={(e) => setForm({ ...form, cycleEndDay: e.target.value })} min={1} max={31} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Payment Due Day</label>
+            <input type="number" className="input" value={form.paymentDueDay} onChange={(e) => setForm({ ...form, paymentDueDay: e.target.value })} min={1} max={31} />
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 3) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Choose a color</p>
+          <div className="flex flex-wrap gap-2">
+            {COLORS.map((color) => (
+              <button key={color} type="button" onClick={() => setForm({ ...form, color })} className={`h-8 w-8 rounded-xl transition-transform ${form.color === color ? 'scale-110 ring-2 ring-offset-1 ring-slate-400' : ''}`} style={{ background: color }} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        <p className="text-sm font-semibold text-slate-800">Review card</p>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+          <div className="flex justify-between gap-3 py-1"><span>Bank</span><strong className="text-right text-slate-800">{form.bankName}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Card</span><strong className="text-right text-slate-800">{form.name}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Owner</span><strong className="text-right text-slate-800">{selectedMember?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Last 4</span><strong className="text-right text-slate-800">{form.lastFourDigits || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Cycle</span><strong className="text-right text-slate-800">{form.cycleStartDay}-{form.cycleEndDay}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Due day</span><strong className="text-right text-slate-800">{form.paymentDueDay}</strong></div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) return <LoadingSpinner />;
@@ -870,6 +970,30 @@ export default function CreditCards() {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Credit Card' : 'Add Credit Card'} size="sm">
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
+          <div className="sm:hidden">
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                <span>Step {wizardStep + 1} of {cardWizardSteps.length}</span>
+                <span>{cardWizardSteps[wizardStep]}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${((wizardStep + 1) / cardWizardSteps.length) * 100}%` }} />
+              </div>
+            </div>
+            {renderCardWizardStep()}
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={wizardStep === 0 ? () => setModalOpen(false) : () => setWizardStep((step) => Math.max(step - 1, 0))} className="btn-secondary flex-1">
+                {wizardStep === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {wizardStep === cardWizardSteps.length - 1 ? (
+                <button type="submit" className="btn-primary flex-1" disabled={saving || !cardCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Card'}</button>
+              ) : (
+                <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, cardWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!cardCanContinue()}>Next</button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden space-y-4 sm:block">
           <div>
             <label htmlFor="cc-bank" className="label">Bank Name *</label>
             <input id="cc-bank" type="text" className="input" value={form.bankName}
@@ -933,6 +1057,7 @@ export default function CreditCards() {
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add Card'}
             </button>
+          </div>
           </div>
         </form>
       </Modal>

@@ -22,6 +22,7 @@ export default function Income() {
   const [savingsAccounts, setSavingsAccounts] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [wizardStep, setWizardStep] = useState(0);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -44,6 +45,7 @@ export default function Income() {
   const openAdd = () => {
     setEditing(null);
     setForm({ ...emptyForm, memberId: members[0]?._id || '' });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -58,6 +60,7 @@ export default function Income() {
       date: format(new Date(rec.date), 'yyyy-MM-dd'),
       savingsAccountId: rec.savingsAccountId?._id || '',
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -92,6 +95,105 @@ export default function Income() {
   }, {});
 
   const selectedAccount = savingsAccounts.find((a) => a._id === form.savingsAccountId);
+  const selectedMember = members.find((member) => member._id === form.memberId);
+  const incomeWizardSteps = ['Amount', 'Member', 'Source', 'Account', 'Details'];
+  const incomeCanContinue = () => {
+    if (wizardStep === 0) return Number(form.amount) > 0 && Boolean(form.date);
+    if (wizardStep === 1) return Boolean(form.memberId);
+    if (wizardStep === 2) return Boolean(form.source);
+    return true;
+  };
+  const optionClass = (selected) => (
+    `w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+      selected ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-100 bg-white text-slate-700 hover:border-emerald-100 hover:bg-slate-50'
+    }`
+  );
+  const renderIncomeWizardStep = () => {
+    if (wizardStep === 0) {
+      return (
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">How much income came in?</p>
+            <p className="mt-1 text-xs text-slate-400">Enter the amount and date first.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <label htmlFor="inc-wizard-amount" className="label">Amount</label>
+            <div className="flex items-center gap-2">
+              <DirhamSymbol className="h-7 w-auto text-slate-500" />
+              <input id="inc-wizard-amount" type="number" className="input text-2xl font-bold" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="1" placeholder="0" inputMode="decimal" />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="inc-wizard-date" className="label">Date</label>
+            <input id="inc-wizard-date" type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 1) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-800">Who received it?</p>
+          {members.map((member) => (
+            <button key={member._id} type="button" className={optionClass(form.memberId === member._id)} onClick={() => setForm({ ...form, memberId: member._id })}>
+              <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ background: member.color }} /><span className="font-semibold">{member.name}</span></span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (wizardStep === 2) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-800">What is the source?</p>
+          <div className="grid grid-cols-1 gap-2">
+            {SOURCES.map((source) => (
+              <button key={source} type="button" className={optionClass(form.source === source)} onClick={() => setForm({ ...form, source })}>
+                <span className="font-semibold">{source}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 3) {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Add to savings?</p>
+            <p className="mt-1 text-xs text-slate-400">Optional. Choose None to keep it as income only.</p>
+          </div>
+          <button type="button" className={optionClass(!form.savingsAccountId)} onClick={() => setForm({ ...form, savingsAccountId: '' })}>
+            <span className="font-semibold">None</span>
+          </button>
+          {savingsAccounts.map((account) => (
+            <button key={account._id} type="button" className={optionClass(form.savingsAccountId === account._id)} onClick={() => setForm({ ...form, savingsAccountId: account._id })}>
+              <span className="font-semibold">{account.name}</span>
+              <span className="mt-0.5 block text-xs text-slate-400">{account.bankName ? `${account.bankName} - ` : ''}{account.memberId?.name}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Final details</p>
+          <p className="mt-1 text-xs text-slate-400">Description is optional.</p>
+        </div>
+        <div>
+          <label htmlFor="inc-wizard-description" className="label">Description</label>
+          <input id="inc-wizard-description" type="text" className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. June salary" />
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+          <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Source</span><strong className="text-slate-800">{form.source}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Savings</span><strong className="text-right text-slate-800">{selectedAccount?.name || 'None'}</strong></div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -234,6 +336,30 @@ export default function Income() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
+          <div className="sm:hidden">
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                <span>Step {wizardStep + 1} of {incomeWizardSteps.length}</span>
+                <span>{incomeWizardSteps[wizardStep]}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${((wizardStep + 1) / incomeWizardSteps.length) * 100}%` }} />
+              </div>
+            </div>
+            {renderIncomeWizardStep()}
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={wizardStep === 0 ? () => setModalOpen(false) : () => setWizardStep((step) => Math.max(step - 1, 0))} className="btn-secondary flex-1">
+                {wizardStep === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {wizardStep === incomeWizardSteps.length - 1 ? (
+                <button type="submit" className="btn-primary flex-1" disabled={saving || !incomeCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Income'}</button>
+              ) : (
+                <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, incomeWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!incomeCanContinue()}>Next</button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden space-y-4 sm:block">
           <div>
             <label htmlFor="inc-member" className="label">Member *</label>
             <select id="inc-member" className="input" value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })} required>
@@ -289,6 +415,7 @@ export default function Income() {
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add Income'}
             </button>
+          </div>
           </div>
         </form>
       </Modal>

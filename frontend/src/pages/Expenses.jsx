@@ -75,6 +75,7 @@ export default function Expenses() {
   const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [recoveryForm, setRecoveryForm] = useState(emptyRecoveryForm);
+  const [wizardStep, setWizardStep] = useState(0);
   const [editing, setEditing] = useState(null);
   const [recoveringExpense, setRecoveringExpense] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -172,8 +173,14 @@ export default function Expenses() {
   useEffect(() => { load(1); }, [filterMonth, filterYear, filterMember, filterCategory, filterSubCategory, filterPayment, filterCreditCard, filterStartDate, filterEndDate]);
 
   const openAdd = () => {
+    const defaultCategory = categories[0];
     setEditing(null);
-    setForm({ ...emptyForm, memberId: members[0]?._id || '' });
+    setForm({
+      ...emptyForm,
+      memberId: members[0]?._id || '',
+      categoryId: defaultCategory?._id || '',
+    });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -192,6 +199,7 @@ export default function Expenses() {
       savingsAccountId: rec.savingsAccountId?._id || '',
       notes: rec.notes || '',
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -260,7 +268,16 @@ export default function Expenses() {
   };
 
   const handlePaymentChange = (paymentMethod) => {
-    setForm((f) => ({ ...f, paymentMethod, creditCardId: '', savingsAccountId: '' }));
+    setForm((f) => ({
+      ...f,
+      paymentMethod,
+      creditCardId: paymentMethod === 'credit_card' ? allCreditCards[0]?._id || '' : '',
+      savingsAccountId: paymentMethod === 'savings' ? savingsAccounts[0]?._id || '' : '',
+    }));
+  };
+
+  const selectCategory = (categoryId) => {
+    setForm((current) => ({ ...current, categoryId, subCategoryId: '' }));
   };
 
   const clearAdvancedFilters = () => {
@@ -271,6 +288,242 @@ export default function Expenses() {
     setFilterCreditCard('');
     setFilterStartDate('');
     setFilterEndDate('');
+  };
+
+  const needsPaymentAccount = form.paymentMethod === 'credit_card' || form.paymentMethod === 'savings';
+  const wizardSteps = [
+    { key: 'amount', label: 'Amount' },
+    { key: 'member', label: 'Member' },
+    { key: 'category', label: 'Category' },
+    { key: 'subCategory', label: 'Sub-category' },
+    { key: 'payment', label: 'Payment' },
+    ...(needsPaymentAccount ? [{ key: 'account', label: form.paymentMethod === 'credit_card' ? 'Card' : 'Account' }] : []),
+    { key: 'details', label: 'Details' },
+  ];
+  const currentWizardKey = wizardSteps[wizardStep]?.key || 'amount';
+  const selectedMember = members.find((member) => member._id === form.memberId);
+  const selectedCategory = categories.find((category) => category._id === form.categoryId);
+  const selectedSubCategory = subCategories.find((subCategory) => subCategory._id === form.subCategoryId);
+  const selectedCreditCard = allCreditCards.find((card) => card._id === form.creditCardId);
+  const selectedSavingsAccount = savingsAccounts.find((account) => account._id === form.savingsAccountId);
+  const paymentLabel = PAYMENT_METHODS.find((method) => method.value === form.paymentMethod)?.label || 'Payment';
+
+  const wizardCanContinue = () => {
+    if (currentWizardKey === 'amount') return Number(form.amount) > 0;
+    if (currentWizardKey === 'member') return Boolean(form.memberId);
+    if (currentWizardKey === 'category') return Boolean(form.categoryId);
+    if (currentWizardKey === 'payment') return Boolean(form.paymentMethod);
+    if (currentWizardKey === 'account') {
+      if (form.paymentMethod === 'credit_card') return Boolean(form.creditCardId);
+      if (form.paymentMethod === 'savings') return Boolean(form.savingsAccountId);
+    }
+    return true;
+  };
+
+  const nextWizardStep = () => setWizardStep((step) => Math.min(step + 1, wizardSteps.length - 1));
+  const previousWizardStep = () => setWizardStep((step) => Math.max(step - 1, 0));
+
+  const optionClass = (selected) => (
+    `w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+      selected
+        ? 'border-indigo-200 bg-indigo-50 text-indigo-800'
+        : 'border-slate-100 bg-white text-slate-700 hover:border-indigo-100 hover:bg-slate-50'
+    }`
+  );
+
+  const renderWizardStep = () => {
+    if (currentWizardKey === 'amount') {
+      return (
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">How much did you spend?</p>
+            <p className="mt-1 text-xs text-slate-400">Enter the amount first. Everything else can use defaults.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <label htmlFor="exp-wizard-amount" className="label">Amount</label>
+            <div className="flex items-center gap-2">
+              <DirhamSymbol className="h-7 w-auto text-slate-500" />
+              <input
+                id="exp-wizard-amount"
+                type="number"
+                className="input text-2xl font-bold"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                required
+                min="0.01"
+                step="0.01"
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="exp-wizard-date" className="label">Date</label>
+            <input id="exp-wizard-date" type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+          </div>
+        </div>
+      );
+    }
+
+    if (currentWizardKey === 'member') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Who paid?</p>
+            <p className="mt-1 text-xs text-slate-400">Default selected: {selectedMember?.name || 'None'}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {members.map((member) => (
+              <button key={member._id} type="button" className={optionClass(form.memberId === member._id)} onClick={() => handleMemberChange(member._id)}>
+                <span className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full" style={{ background: member.color }} />
+                  <span className="font-semibold">{member.name}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentWizardKey === 'category') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">What category?</p>
+            <p className="mt-1 text-xs text-slate-400">Pick the closest match. You can refine it next.</p>
+          </div>
+          <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+            {categories.map((category) => (
+              <button key={category._id} type="button" className={optionClass(form.categoryId === category._id)} onClick={() => selectCategory(category._id)}>
+                <span className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full" style={{ background: category.color || '#6366f1' }} />
+                  <span className="font-semibold">{category.name}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentWizardKey === 'subCategory') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Any sub-category?</p>
+            <p className="mt-1 text-xs text-slate-400">{selectedCategory?.name || 'Category'} can stay without a sub-category.</p>
+          </div>
+          <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+            <button type="button" className={optionClass(!form.subCategoryId)} onClick={() => setForm({ ...form, subCategoryId: '' })}>
+              <span className="font-semibold">None</span>
+              <span className="mt-0.5 block text-xs text-slate-400">Keep this expense at category level</span>
+            </button>
+            {subCategories.map((subCategory) => (
+              <button key={subCategory._id} type="button" className={optionClass(form.subCategoryId === subCategory._id)} onClick={() => setForm({ ...form, subCategoryId: subCategory._id })}>
+                <span className="font-semibold">{subCategory.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentWizardKey === 'payment') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">How did you pay?</p>
+            <p className="mt-1 text-xs text-slate-400">Current Account is selected by default.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {PAYMENT_METHODS.map((method) => (
+              <button key={method.value} type="button" className={optionClass(form.paymentMethod === method.value)} onClick={() => handlePaymentChange(method.value)}>
+                <span className="font-semibold">{method.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentWizardKey === 'account') {
+      if (form.paymentMethod === 'credit_card') {
+        return (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Which card?</p>
+              <p className="mt-1 text-xs text-slate-400">Choose the card used for this expense.</p>
+            </div>
+            {allCreditCards.length === 0 ? (
+              <p className="rounded-xl border border-violet-100 bg-violet-50 px-3 py-3 text-xs text-violet-600">
+                No credit cards found. <Link to="/credit-cards" className="font-medium underline">Add one on the Credit Cards page</Link>.
+              </p>
+            ) : (
+              <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+                {allCreditCards.map((card) => (
+                  <button key={card._id} type="button" className={optionClass(form.creditCardId === card._id)} onClick={() => setForm({ ...form, creditCardId: card._id })}>
+                    <span className="font-semibold">{card.bankName} - {card.name}</span>
+                    {card.lastFourDigits && <span className="mt-0.5 block text-xs text-slate-400">**** {card.lastFourDigits}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Which savings account?</p>
+            <p className="mt-1 text-xs text-slate-400">This amount will be deducted from that account.</p>
+          </div>
+          {savingsAccounts.length === 0 ? (
+            <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-xs text-emerald-700">No savings accounts found. Add one on the Savings page.</p>
+          ) : (
+            <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+              {savingsAccounts.map((account) => (
+                <button key={account._id} type="button" className={optionClass(form.savingsAccountId === account._id)} onClick={() => setForm({ ...form, savingsAccountId: account._id })}>
+                  <span className="font-semibold">{account.name}</span>
+                  <span className="mt-0.5 block text-xs text-slate-400">{account.bankName ? `${account.bankName} - ` : ''}{account.memberId?.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Final details</p>
+          <p className="mt-1 text-xs text-slate-400">Description is optional, but useful when searching later.</p>
+        </div>
+        <div>
+          <label htmlFor="exp-wizard-description" className="label">Description</label>
+          <input id="exp-wizard-description" type="text" className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Amazon Now" />
+        </div>
+        <div>
+          <label htmlFor="exp-wizard-notes" className="label">Notes</label>
+          <textarea id="exp-wizard-notes" className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional" />
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+          <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Category</span><strong className="text-slate-800">{selectedCategory?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Sub-category</span><strong className="text-slate-800">{selectedSubCategory?.name || 'None'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Payment</span><strong className="text-slate-800">{paymentLabel}</strong></div>
+          {form.paymentMethod === 'credit_card' && (
+            <div className="flex justify-between gap-3 py-1"><span>Card</span><strong className="text-right text-slate-800">{selectedCreditCard ? `${selectedCreditCard.bankName} - ${selectedCreditCard.name}` : '-'}</strong></div>
+          )}
+          {form.paymentMethod === 'savings' && (
+            <div className="flex justify-between gap-3 py-1"><span>Account</span><strong className="text-right text-slate-800">{selectedSavingsAccount?.name || '-'}</strong></div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -712,6 +965,43 @@ export default function Expenses() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
+          <div className="sm:hidden">
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                <span>Step {wizardStep + 1} of {wizardSteps.length}</span>
+                <span>{wizardSteps[wizardStep]?.label}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all"
+                  style={{ width: `${((wizardStep + 1) / wizardSteps.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {renderWizardStep()}
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={wizardStep === 0 ? () => setModalOpen(false) : previousWizardStep}
+                className="btn-secondary flex-1"
+              >
+                {wizardStep === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {wizardStep === wizardSteps.length - 1 ? (
+                <button type="submit" className="btn-primary flex-1" disabled={saving || !wizardCanContinue()}>
+                  {saving ? 'Saving...' : editing ? 'Update' : 'Save Expense'}
+                </button>
+              ) : (
+                <button type="button" onClick={nextWizardStep} className="btn-primary flex-1" disabled={!wizardCanContinue()}>
+                  Next
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden space-y-4 sm:block">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="exp-member" className="label">Member *</label>
@@ -832,6 +1122,7 @@ export default function Expenses() {
               </div>
             );
           })()}
+          </div>
         </form>
       </Modal>
     </div>

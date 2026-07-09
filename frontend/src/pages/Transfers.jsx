@@ -46,6 +46,7 @@ export default function Transfers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [wizardStep, setWizardStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
@@ -79,6 +80,7 @@ export default function Transfers() {
       toMemberId: members[1]?._id || members[0]?._id || '',
       toCreditCardId: creditCards[0]?._id || '',
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -99,6 +101,7 @@ export default function Transfers() {
       description: transfer.description || '',
       notes: transfer.notes || '',
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -157,6 +160,113 @@ export default function Transfers() {
   };
 
   const total = records.reduce((sum, transfer) => sum + transfer.amount, 0);
+  const transferWizardSteps = ['Amount', 'From', 'To', 'Details'];
+  const accountTypeLabel = { current: 'Current Account', savings: 'Savings Account', credit_card: 'Credit Card' };
+  const accountOptionsFor = (type) => {
+    if (type === 'current') return members.map((member) => ({ id: member._id, label: currentAccountLabel(member), color: member.color }));
+    if (type === 'savings') return savingsAccounts.map((account) => ({ id: account._id, label: accountLabel(account), color: account.color }));
+    return creditCards.map((card) => ({ id: card._id, label: accountLabel(card), color: card.color }));
+  };
+  const selectedAccountIdFor = (side) => {
+    const type = form[`${side}AccountType`];
+    if (type === 'current') return form[`${side}MemberId`];
+    if (type === 'savings') return form[`${side}SavingsAccountId`];
+    return form[`${side}CreditCardId`];
+  };
+  const formAccountLabel = (side) => {
+    const type = form[`${side}AccountType`];
+    const id = selectedAccountIdFor(side);
+    return accountOptionsFor(type).find((option) => option.id === id)?.label || 'Select account';
+  };
+  const setAccountForSide = (side, id) => {
+    const type = form[`${side}AccountType`];
+    setForm((current) => ({
+      ...current,
+      [`${side}MemberId`]: type === 'current' ? id : current[`${side}MemberId`],
+      [`${side}SavingsAccountId`]: type === 'savings' ? id : current[`${side}SavingsAccountId`],
+      [`${side}CreditCardId`]: type === 'credit_card' ? id : current[`${side}CreditCardId`],
+    }));
+  };
+  const transferCanContinue = () => {
+    if (wizardStep === 0) return Number(form.amount) > 0 && Boolean(form.date);
+    if (wizardStep === 1) return Boolean(selectedAccountIdFor('from'));
+    if (wizardStep === 2) return Boolean(selectedAccountIdFor('to'));
+    return true;
+  };
+  const optionClass = (selected) => (
+    `w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+      selected ? 'border-indigo-200 bg-indigo-50 text-indigo-800' : 'border-slate-100 bg-white text-slate-700 hover:border-indigo-100 hover:bg-slate-50'
+    }`
+  );
+  const renderTransferAccountStep = (side) => {
+    const type = form[`${side}AccountType`];
+    const selectedId = selectedAccountIdFor(side);
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">{side === 'from' ? 'Move money from where?' : 'Move money to where?'}</p>
+          <p className="mt-1 text-xs text-slate-400">Choose account type, then the specific account.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {['current', 'savings', 'credit_card'].map((accountType) => (
+            <button key={accountType} type="button" className={optionClass(type === accountType)} onClick={() => handleAccountTypeChange(side, accountType)}>
+              <span className="font-semibold">{accountTypeLabel[accountType]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="grid max-h-[260px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+          {accountOptionsFor(type).map((option) => (
+            <button key={option.id} type="button" className={optionClass(selectedId === option.id)} onClick={() => setAccountForSide(side, option.id)}>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-indigo-500" style={{ background: option.color || '#6366f1' }} />
+                <span className="font-semibold">{option.label}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  const renderTransferWizardStep = () => {
+    if (wizardStep === 0) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">How much was transferred?</p>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <label className="label">Amount</label>
+            <div className="flex items-center gap-2">
+              <DirhamSymbol className="h-7 w-auto text-slate-500" />
+              <input type="number" className="input text-2xl font-bold" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="0.01" step="0.01" inputMode="decimal" />
+            </div>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+          </div>
+        </div>
+      );
+    }
+    if (wizardStep === 1) return renderTransferAccountStep('from');
+    if (wizardStep === 2) return renderTransferAccountStep('to');
+    return (
+      <div className="space-y-4">
+        <p className="text-sm font-semibold text-slate-800">Final details</p>
+        <div>
+          <label className="label">Description</label>
+          <input type="text" className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Credit card payment" />
+        </div>
+        <div>
+          <label className="label">Notes</label>
+          <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+          <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>From</span><strong className="text-right text-slate-800">{formAccountLabel('from')}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>To</span><strong className="text-right text-slate-800">{formAccountLabel('to')}</strong></div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -286,6 +396,30 @@ export default function Transfers() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
+          <div className="md:hidden">
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                <span>Step {wizardStep + 1} of {transferWizardSteps.length}</span>
+                <span>{transferWizardSteps[wizardStep]}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${((wizardStep + 1) / transferWizardSteps.length) * 100}%` }} />
+              </div>
+            </div>
+            {renderTransferWizardStep()}
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={wizardStep === 0 ? () => setModalOpen(false) : () => setWizardStep((step) => Math.max(step - 1, 0))} className="btn-secondary flex-1">
+                {wizardStep === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {wizardStep === transferWizardSteps.length - 1 ? (
+                <button type="submit" className="btn-primary flex-1" disabled={saving || !transferCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Transfer'}</button>
+              ) : (
+                <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, transferWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!transferCanContinue()}>Next</button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden space-y-4 md:block">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Date *</label>
@@ -365,6 +499,7 @@ export default function Transfers() {
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Transfer'}</button>
+          </div>
           </div>
         </form>
       </Modal>

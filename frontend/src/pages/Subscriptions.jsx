@@ -46,6 +46,7 @@ export default function Subscriptions() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [wizardStep, setWizardStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [generatingId, setGeneratingId] = useState('');
@@ -79,8 +80,10 @@ export default function Subscriptions() {
   useEffect(() => { load(); }, [month, year]);
 
   const openAdd = () => {
+    const defaultCategory = categories[0];
     setEditing(null);
-    setForm({ ...emptyForm, memberId: members[0]?._id || '' });
+    setForm({ ...emptyForm, memberId: members[0]?._id || '', categoryId: defaultCategory?._id || '' });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
@@ -100,12 +103,18 @@ export default function Subscriptions() {
       description: record.description || '',
       notes: record.notes || '',
     });
+    setWizardStep(0);
     setSaveError('');
     setModalOpen(true);
   };
 
   const handlePaymentChange = (paymentMethod) => {
-    setForm((prev) => ({ ...prev, paymentMethod, creditCardId: '', savingsAccountId: '' }));
+    setForm((prev) => ({
+      ...prev,
+      paymentMethod,
+      creditCardId: paymentMethod === 'credit_card' ? creditCards[0]?._id || '' : '',
+      savingsAccountId: paymentMethod === 'savings' ? savingsAccounts[0]?._id || '' : '',
+    }));
   };
 
   const saveSubscription = async (event) => {
@@ -152,6 +161,147 @@ export default function Subscriptions() {
       await subscriptionsApi.generate(record._id, { month, year });
     }
     await load();
+  };
+
+  const needsRecurringAccount = form.paymentMethod === 'credit_card' || form.paymentMethod === 'savings';
+  const recurringWizardSteps = [
+    'Basics',
+    'Category',
+    'Schedule',
+    ...(needsRecurringAccount ? [form.paymentMethod === 'credit_card' ? 'Card' : 'Account'] : []),
+    'Details',
+  ];
+  const recurringStep = recurringWizardSteps[wizardStep] || 'Basics';
+  const selectedMember = members.find((member) => member._id === form.memberId);
+  const selectedCategory = categories.find((category) => category._id === form.categoryId);
+  const selectedSubCategory = subCategories.find((subCategory) => subCategory._id === form.subCategoryId);
+  const selectedCard = creditCards.find((card) => card._id === form.creditCardId);
+  const selectedSavings = savingsAccounts.find((account) => account._id === form.savingsAccountId);
+  const paymentLabel = PAYMENT_METHODS.find((method) => method.value === form.paymentMethod)?.label || form.paymentMethod;
+  const recurringCanContinue = () => {
+    if (recurringStep === 'Basics') return Boolean(form.name) && Number(form.amount) > 0;
+    if (recurringStep === 'Category') return Boolean(form.memberId) && Boolean(form.categoryId);
+    if (recurringStep === 'Schedule') return Boolean(form.dayOfMonth) && Boolean(form.paymentMethod);
+    if (recurringStep === 'Card') return Boolean(form.creditCardId);
+    if (recurringStep === 'Account') return Boolean(form.savingsAccountId);
+    return true;
+  };
+  const optionClass = (selected) => (
+    `w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+      selected ? 'border-indigo-200 bg-indigo-50 text-indigo-800' : 'border-slate-100 bg-white text-slate-700 hover:border-indigo-100 hover:bg-slate-50'
+    }`
+  );
+  const renderRecurringWizardStep = () => {
+    if (recurringStep === 'Basics') {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">What repeats every month?</p>
+          <div>
+            <label className="label">Name *</label>
+            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. ChatGPT, Car Loan" />
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <label className="label">Amount</label>
+            <div className="flex items-center gap-2">
+              <DirhamSymbol className="h-7 w-auto text-slate-500" />
+              <input type="number" className="input text-2xl font-bold" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="0.01" step="0.01" inputMode="decimal" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (recurringStep === 'Category') {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Who and what category?</p>
+          <div className="space-y-2">
+            {members.map((member) => (
+              <button key={member._id} type="button" className={optionClass(form.memberId === member._id)} onClick={() => setForm({ ...form, memberId: member._id })}>
+                <span className="font-semibold">{member.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+            {categories.map((category) => (
+              <button key={category._id} type="button" className={optionClass(form.categoryId === category._id)} onClick={() => setForm({ ...form, categoryId: category._id, subCategoryId: '' })}>
+                <span className="font-semibold">{category.name}</span>
+              </button>
+            ))}
+          </div>
+          {subCategories.length > 0 && (
+            <select className="input" value={form.subCategoryId} onChange={(e) => setForm({ ...form, subCategoryId: e.target.value })}>
+              <option value="">No sub-category</option>
+              {subCategories.map((sub) => <option key={sub._id} value={sub._id}>{sub.name}</option>)}
+            </select>
+          )}
+        </div>
+      );
+    }
+    if (recurringStep === 'Schedule') {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-slate-800">When and how is it paid?</p>
+          <div>
+            <label className="label">Day of month</label>
+            <input type="number" className="input" value={form.dayOfMonth} onChange={(e) => setForm({ ...form, dayOfMonth: e.target.value })} required min="1" max="31" />
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {PAYMENT_METHODS.map((method) => (
+              <button key={method.value} type="button" className={optionClass(form.paymentMethod === method.value)} onClick={() => handlePaymentChange(method.value)}>
+                <span className="font-semibold">{method.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (recurringStep === 'Card') {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-800">Which card?</p>
+          {creditCards.map((card) => (
+            <button key={card._id} type="button" className={optionClass(form.creditCardId === card._id)} onClick={() => setForm({ ...form, creditCardId: card._id })}>
+              <span className="font-semibold">{card.bankName} - {card.name}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (recurringStep === 'Account') {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-800">Which savings account?</p>
+          {savingsAccounts.map((account) => (
+            <button key={account._id} type="button" className={optionClass(form.savingsAccountId === account._id)} onClick={() => setForm({ ...form, savingsAccountId: account._id })}>
+              <span className="font-semibold">{account.name}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        <p className="text-sm font-semibold text-slate-800">Final details</p>
+        <div>
+          <label className="label">Description</label>
+          <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description used on generated expense" />
+        </div>
+        <div>
+          <label className="label">Notes</label>
+          <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+          <div className="flex justify-between gap-3 py-1"><span>Name</span><strong className="text-right text-slate-800">{form.name}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Category</span><strong className="text-right text-slate-800">{selectedCategory?.name || '-'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Sub-category</span><strong className="text-right text-slate-800">{selectedSubCategory?.name || 'None'}</strong></div>
+          <div className="flex justify-between gap-3 py-1"><span>Payment</span><strong className="text-right text-slate-800">{paymentLabel}</strong></div>
+          {form.paymentMethod === 'credit_card' && <div className="flex justify-between gap-3 py-1"><span>Card</span><strong className="text-right text-slate-800">{selectedCard ? `${selectedCard.bankName} - ${selectedCard.name}` : '-'}</strong></div>}
+          {form.paymentMethod === 'savings' && <div className="flex justify-between gap-3 py-1"><span>Account</span><strong className="text-right text-slate-800">{selectedSavings?.name || '-'}</strong></div>}
+        </div>
+      </div>
+    );
   };
 
   if (loading) return <LoadingSpinner />;
@@ -281,6 +431,30 @@ export default function Subscriptions() {
         <form onSubmit={saveSubscription} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
+          <div className="sm:hidden">
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                <span>Step {wizardStep + 1} of {recurringWizardSteps.length}</span>
+                <span>{recurringWizardSteps[wizardStep]}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${((wizardStep + 1) / recurringWizardSteps.length) * 100}%` }} />
+              </div>
+            </div>
+            {renderRecurringWizardStep()}
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={wizardStep === 0 ? () => setModalOpen(false) : () => setWizardStep((step) => Math.max(step - 1, 0))} className="btn-secondary flex-1">
+                {wizardStep === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {wizardStep === recurringWizardSteps.length - 1 ? (
+                <button type="submit" className="btn-primary flex-1" disabled={saving || !recurringCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save'}</button>
+              ) : (
+                <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, recurringWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!recurringCanContinue()}>Next</button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden space-y-4 sm:block">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Name *</label>
@@ -369,6 +543,7 @@ export default function Subscriptions() {
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Recurring Expense'}</button>
+          </div>
           </div>
         </form>
       </Modal>
