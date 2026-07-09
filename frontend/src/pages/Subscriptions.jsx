@@ -158,37 +158,37 @@ export default function Subscriptions() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Recurring Expenses</h1>
           <p className="text-sm text-slate-500 mt-0.5">Create monthly expenses from reusable templates</p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Recurring Expense
         </button>
       </div>
 
       <div className="card p-4">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:items-end">
           <div>
             <label className="label">Month</label>
-            <select className="input w-36" value={month} onChange={(e) => setMonth(+e.target.value)}>
+            <select className="input w-full lg:w-36" value={month} onChange={(e) => setMonth(+e.target.value)}>
               {months.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Year</label>
-            <select className="input w-28" value={year} onChange={(e) => setYear(+e.target.value)}>
+            <select className="input w-full lg:w-28" value={year} onChange={(e) => setYear(+e.target.value)}>
               {[2024, 2025, 2026, 2027, 2028].map((item) => <option key={item}>{item}</option>)}
             </select>
           </div>
-          <div className="min-w-[180px]">
+          <div className="col-span-2 lg:col-span-1 lg:min-w-[180px]">
             <p className="text-xs text-slate-400">Expected monthly total</p>
             <p className="text-xl font-bold text-slate-800">
               <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalMonthly)}
             </p>
           </div>
-          <div className="flex-1 min-w-[260px] lg:min-w-[420px]">
+          <div className="col-span-2 lg:min-w-[420px] lg:flex-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-emerald-700">
@@ -215,7 +215,7 @@ export default function Subscriptions() {
               <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${donePercent}%` }} />
             </div>
           </div>
-          <button className="btn-secondary" onClick={generateAll} disabled={records.length === 0 || createdCount === records.length}>
+          <button className="btn-secondary col-span-2 justify-center lg:col-span-1" onClick={generateAll} disabled={records.length === 0 || createdCount === records.length}>
             Create Pending Expenses
           </button>
         </div>
@@ -250,7 +250,7 @@ export default function Subscriptions() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-end justify-between gap-3">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-2xl font-bold text-rose-600">
                       <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(record.amount)}
@@ -264,7 +264,7 @@ export default function Subscriptions() {
                       <CheckCircle2 size={12} /> Created
                     </span>
                   ) : (
-                    <button className="btn-primary py-2 px-3" onClick={() => generateExpense(record)} disabled={generatingId === record._id}>
+                    <button className="btn-primary justify-center py-2 px-3 sm:w-auto" onClick={() => generateExpense(record)} disabled={generatingId === record._id}>
                       {generatingId === record._id ? 'Creating...' : 'Create Expense'}
                     </button>
                   )}
@@ -281,7 +281,7 @@ export default function Subscriptions() {
         <form onSubmit={saveSubscription} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Name *</label>
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. ChatGPT, Car Loan" />
@@ -295,7 +295,7 @@ export default function Subscriptions() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Category *</label>
               <select className="input" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value, subCategoryId: '' })} required>
@@ -312,7 +312,7 @@ export default function Subscriptions() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="label">Amount *</label>
               <input type="number" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="0.01" step="0.01" />
@@ -366,7 +366,7 @@ export default function Subscriptions() {
             <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Recurring Expense'}</button>
           </div>

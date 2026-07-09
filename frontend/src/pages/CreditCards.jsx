@@ -237,12 +237,12 @@ export default function CreditCards() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Credit Cards</h1>
           <p className="text-sm text-slate-500 mt-0.5">Credit card expenses don&apos;t affect your account balance</p>
         </div>
-        <button onClick={openAdd} className="btn-primary"><Plus size={15} /> Add Card</button>
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto"><Plus size={15} /> Add Card</button>
       </div>
 
       {/* Current month totals per card */}
@@ -352,7 +352,71 @@ export default function CreditCards() {
             </div>
           </div>
 
-          <div className="card p-0 overflow-x-auto">
+          <div className="md:hidden space-y-3">
+            {budgetRows.map((card) => {
+              const percentWidth = Math.min(card.consumedPercent || 0, 100);
+              return (
+                <div key={card._id} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: card.color }} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{card.bankName}</p>
+                        <p className="truncate text-xs text-slate-400">{card.name}{card.lastFourDigits ? ` **** ${card.lastFourDigits}` : ''}</p>
+                      </div>
+                    </div>
+                    <span className={`badge flex-shrink-0 border ${budgetStatusClass(card.status)}`}>{budgetStatusLabel(card.status)}</span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-slate-50 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Budgeted</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.budgeted)}</p>
+                    </div>
+                    <div className="rounded-lg bg-violet-50 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-500">Net Spent</p>
+                      <p className="mt-1 text-sm font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.spent)}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">{card.transactionCount} txn{card.transactionCount !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Paid So Far</p>
+                      <p className="mt-1 text-sm font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.paid)}</p>
+                    </div>
+                    <div className={`rounded-lg px-3 py-2 ${card.balance < 0 ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                      <p className={`text-[11px] font-semibold uppercase tracking-wide ${card.balance < 0 ? 'text-rose-500' : 'text-slate-400'}`}>Balance</p>
+                      <p className={`mt-1 text-sm font-bold ${card.balance < 0 ? 'text-rose-700' : 'text-slate-800'}`}><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.balance)}</p>
+                    </div>
+                  </div>
+
+                  {(card.recoveredAmount || 0) > 0 && (
+                    <p className="mt-2 rounded-lg bg-cyan-50 px-3 py-2 text-xs font-medium text-cyan-700">
+                      Gross <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(card.grossSpent || 0)}
+                      {' - '}recovered <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(card.recoveredAmount)}
+                    </p>
+                  )}
+
+                  <div className="mt-3">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-500">Consumed</span>
+                      <span className={`font-semibold ${card.consumedPercent > 100 ? 'text-rose-700' : 'text-slate-700'}`}>{card.consumedPercent}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className={`h-full rounded-full ${card.consumedPercent > 100 ? 'bg-rose-500' : card.consumedPercent >= 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${percentWidth}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-400">As of {format(new Date(card.asOf), 'dd MMM yyyy')}</p>
+                    <button onClick={() => openBudget(card)} className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap">
+                      {card.budgeted > 0 ? 'Edit Budget' : 'Set Budget'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block card p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
@@ -423,9 +487,11 @@ export default function CreditCards() {
       {/* Monthly breakdown section */}
       {summary.length > 0 && (
         <>
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-700">Monthly Breakdown by Card</h2>
-            <span className="text-sm font-semibold text-slate-500">Outstanding: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(outstandingTotal)}</span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-slate-700">Monthly Breakdown by Card</h2>
+              <span className="text-sm font-semibold text-slate-500">Outstanding: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(outstandingTotal)}</span>
+            </div>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
               {MONTH_OPTIONS.map((m) => (
                 <button
@@ -463,7 +529,50 @@ export default function CreditCards() {
           </div>
 
           {/* Table */}
-          <div className="card p-0 overflow-x-auto">
+          <div className="md:hidden space-y-3">
+            {monthly?.cards.map((card) => {
+              const rowTotal = card.monthlyTotals.reduce((s, v) => s + v, 0);
+              return (
+                <div key={card._id} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: card.color }} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{card.bankName}</p>
+                        <p className="truncate text-xs text-slate-400">{card.name}
+                          {card.lastFourDigits && <span className="font-mono"> **** {card.lastFourDigits}</span>}
+                          {' · '}<span style={{ color: card.memberId?.color }}>{card.memberId?.name}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <p className="flex-shrink-0 text-sm font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rowTotal)}</p>
+                  </div>
+
+                  <div className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-100">
+                    {monthly?.months.map((month, index) => {
+                      const amount = card.monthlyTotals[index] || 0;
+                      return (
+                        <div key={month.label} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="text-xs font-medium text-slate-500">{month.label}</span>
+                          <span className={`text-sm font-semibold ${amount > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
+                            {amount > 0 ? <><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(amount)}</> : '-'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-800">Total</p>
+                <p className="text-sm font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(monthlyGrandTotals.reduce((s, v) => s + v, 0))}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden md:block card p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
@@ -599,7 +708,36 @@ export default function CreditCards() {
                   </div>
                 </div>
 
-                <div className="mt-4 overflow-x-auto">
+                <div className="mt-4 md:hidden space-y-2">
+                  {(reconciliation.transactions || reconciliation.expenses).map((txn) => {
+                    const isPayment = txn.type === 'payment';
+                    return (
+                      <div key={`${txn.type || 'expense'}-${txn._id}`} className="rounded-lg border border-slate-100 bg-white px-3 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`badge ${isPayment ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>
+                                {isPayment ? 'Payment' : 'Purchase'}
+                              </span>
+                              <span className="text-xs text-slate-400">{format(new Date(txn.date), 'dd MMM yyyy')}</span>
+                            </div>
+                            <p className="mt-2 truncate text-sm font-semibold text-slate-800">{txn.label || txn.categoryId?.name || 'Uncategorized'}</p>
+                            <p className="mt-0.5 truncate text-xs text-slate-400">{txn.description || '-'}</p>
+                          </div>
+                          <p className={`flex-shrink-0 text-sm font-bold ${isPayment ? 'text-emerald-700' : 'text-violet-700'}`}>
+                            {isPayment ? '-' : ''}
+                            <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(txn.amount)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(reconciliation.transactions || reconciliation.expenses).length === 0 && (
+                    <div className="rounded-lg border border-slate-100 py-6 text-center text-sm text-slate-400">No recorded card transactions in this cycle.</div>
+                  )}
+                </div>
+
+                <div className="mt-4 hidden overflow-x-auto md:block">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100">

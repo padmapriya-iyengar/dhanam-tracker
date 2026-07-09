@@ -43,19 +43,19 @@ export default function Members() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Members</h1>
           <p className="text-sm text-slate-500 mt-0.5">Manage your household members</p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Member
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {members.map((m) => (
-          <div key={m._id} className="card flex items-center gap-4">
+          <div key={m._id} className="card flex items-center gap-3 sm:gap-4">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
               style={{ background: m.color }}
@@ -70,7 +70,7 @@ export default function Members() {
                 <span className="text-xs text-slate-400">{m.color}</span>
               </div>
             </div>
-            <button onClick={() => openEdit(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+            <button onClick={() => openEdit(m)} className="flex-shrink-0 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
               <Edit2 size={16} />
             </button>
           </div>
@@ -80,7 +80,7 @@ export default function Members() {
           <div className="col-span-3 card text-center py-12">
             <User size={40} className="text-slate-200 mx-auto mb-3" />
             <p className="text-slate-400 text-sm">No members yet. Run the seed script to add default members.</p>
-            <button onClick={openAdd} className="btn-primary mt-4">
+            <button onClick={openAdd} className="btn-primary mt-4 w-full justify-center sm:w-auto">
               <Plus size={15} /> Add Member
             </button>
           </div>
@@ -123,7 +123,7 @@ export default function Members() {
               ))}
             </div>
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add Member'}

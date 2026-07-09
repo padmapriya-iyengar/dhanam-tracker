@@ -95,24 +95,24 @@ export default function Income() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="page-title">Income</h1>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Income
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 items-center">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
         <div>
           <label htmlFor="inc-filter-month" className="label">Month</label>
-          <select id="inc-filter-month" className="input w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)}>
+          <select id="inc-filter-month" className="input w-full sm:w-36" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)}>
             {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
         </div>
         <div>
           <label htmlFor="inc-filter-year" className="label">Year</label>
-          <select id="inc-filter-year" className="input w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)}>
+          <select id="inc-filter-year" className="input w-full sm:w-28" value={filterYear} onChange={(e) => setFilterYear(+e.target.value)}>
             {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y}>{y}</option>)}
           </select>
         </div>
@@ -242,7 +242,7 @@ export default function Income() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="inc-amount" className="label">Amount (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />) *</label>
               <input id="inc-amount" type="number" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="1" placeholder="0" />
@@ -284,7 +284,7 @@ export default function Income() {
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add Income'}

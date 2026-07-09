@@ -277,7 +277,47 @@ export default function Dashboard() {
               Manage <ArrowRight size={13} />
             </Link>
           </div>
-          <div className="overflow-x-auto">
+          <div className="md:hidden divide-y divide-slate-100">
+            {budgetRows.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-slate-400">No active cards found.</div>
+            ) : budgetRows.map((card) => (
+              <div key={card._id} className="px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: card.color }} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-800">{card.bankName}</p>
+                      <p className="truncate text-xs text-slate-400">{card.name}</p>
+                    </div>
+                  </div>
+                  <span className={`badge flex-shrink-0 border ${statusClass(card.status)}`}>{statusLabel(card.status)}</span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Budget</p>
+                    <p className="mt-1 text-sm font-bold text-slate-800"><Money value={card.budgeted} /></p>
+                  </div>
+                  <div className="rounded-lg bg-violet-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-500">Net Spent</p>
+                    <p className="mt-1 text-sm font-bold text-violet-700"><Money value={card.spent} /></p>
+                    {(card.recoveredAmount || 0) > 0 && (
+                      <p className="mt-0.5 text-[11px] font-medium text-cyan-600">Recovered <Money value={card.recoveredAmount} /></p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Paid</p>
+                    <p className="mt-1 text-sm font-bold text-emerald-700"><Money value={card.paid} /></p>
+                  </div>
+                  <div className={`rounded-lg px-3 py-2 ${card.balance < 0 ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${card.balance < 0 ? 'text-rose-500' : 'text-slate-400'}`}>Balance</p>
+                    <p className={`mt-1 text-sm font-bold ${card.balance < 0 ? 'text-rose-700' : 'text-slate-800'}`}><Money value={card.balance} /></p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
@@ -323,7 +363,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CalendarDays size={16} className="text-emerald-500" />
             <div>
@@ -331,11 +371,51 @@ export default function Dashboard() {
               <p className="text-xs text-slate-400">As of {balances[0]?.asOf ? format(new Date(balances[0].asOf), 'dd MMM yyyy') : selectedLabel}</p>
             </div>
           </div>
-          <button onClick={openBalanceEdit} className="btn-secondary py-1.5 px-3 text-xs">
+          <button onClick={openBalanceEdit} className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap">
             <Edit2 size={12} /> Opening Balances
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="md:hidden divide-y divide-slate-100">
+          {balances.map((balance) => {
+            const memberSavings = savingsAccounts.filter((account) => account.memberId?._id === balance.memberId);
+            const memberSavingsTotal = memberSavings.reduce((sum, account) => sum + (account.balance || 0), 0);
+            return (
+              <div key={balance.memberId} className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: balance.memberColor }} />
+                  <p className="min-w-0 truncate text-sm font-semibold text-slate-800">{balance.memberName}</p>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className={`rounded-lg px-3 py-2 ${balance.currentBalance < 0 ? 'bg-rose-50' : 'bg-indigo-50'}`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${balance.currentBalance < 0 ? 'text-rose-500' : 'text-indigo-500'}`}>Current Account</p>
+                    <p className={`mt-1 text-sm font-bold ${balance.currentBalance < 0 ? 'text-rose-700' : 'text-indigo-700'}`}><Money value={balance.currentBalance} /></p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Carry Forward</p>
+                    <p className="mt-1 text-sm font-bold text-slate-700"><Money value={balance.balanceLastMonth} /></p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Opening Balance</p>
+                    <p className="mt-1 text-sm font-bold text-slate-700"><Money value={balance.openingBalance} /></p>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Savings</p>
+                    <p className="mt-1 text-sm font-bold text-emerald-700"><Money value={memberSavingsTotal} /></p>
+                  </div>
+                </div>
+
+                {memberSavings.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-slate-100 bg-white px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Savings Accounts</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{memberSavings.map((account) => account.name).join(', ')}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">

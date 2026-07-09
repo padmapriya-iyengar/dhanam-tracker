@@ -562,7 +562,38 @@ export default function Reports() {
                 )}
 
                 {customReport.bySubCategory.length > 0 && (
-                  <div className="rounded-xl border border-slate-100 overflow-hidden overflow-x-auto">
+                  <div className="rounded-xl border border-slate-100 overflow-hidden">
+                    <div className="md:hidden divide-y divide-slate-100">
+                      {customReport.bySubCategory.map((row, index) => (
+                        <div key={`${row.subCategoryId || row.categoryId}-${index}`} className="p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-2">
+                              <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: row.color || COLORS[index % COLORS.length] }} />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800">{row.subCategoryName || 'Uncategorized'}</p>
+                                <p className="truncate text-xs text-slate-400">{row.categoryName}</p>
+                              </div>
+                            </div>
+                            <p className="flex-shrink-0 text-sm font-bold text-slate-800">
+                              <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(row.total)}
+                            </p>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg bg-slate-50 px-3 py-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Transactions</p>
+                              <p className="mt-1 text-sm font-bold text-slate-700">{row.count}</p>
+                            </div>
+                            <div className="rounded-lg bg-indigo-50 px-3 py-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Amount</p>
+                              <p className="mt-1 text-sm font-bold text-indigo-700">
+                                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(row.total)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
@@ -590,6 +621,7 @@ export default function Reports() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -755,11 +787,56 @@ export default function Reports() {
             const breakdownCategories = expenseByCategory.filter((c) => c.name !== 'Finance & Loans');
             const breakdownTotal = breakdownCategories.reduce((s, c) => s + c.total, 0);
             return breakdownCategories.length > 0 && (
-              <div className="card p-0 overflow-hidden overflow-x-auto">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="card p-0 overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="font-semibold text-slate-700">Category Breakdown</h3>
                   <span className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2 py-0.5 whitespace-nowrap">Excl. Finance &amp; Loans</span>
                 </div>
+                <div className="md:hidden divide-y divide-slate-100">
+                  {breakdownCategories.map((c, i) => {
+                    const percent = breakdownTotal > 0 ? ((c.total / breakdownTotal) * 100).toFixed(1) : 0;
+                    return (
+                      <div key={i} className="px-5 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-2">
+                            <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full" style={{ background: c.color || COLORS[i % COLORS.length] }} />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800">{c.name}</p>
+                              <p className="text-xs text-slate-400">{c.count} transactions</p>
+                            </div>
+                          </div>
+                          <p className="flex-shrink-0 text-sm font-bold text-slate-800">
+                            <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}
+                          </p>
+                        </div>
+                        <div className="mt-3">
+                          <div className="mb-1 flex items-center justify-between text-xs">
+                            <span className="font-medium text-slate-500">% of total</span>
+                            <span className="font-semibold text-slate-700">{percent}%</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${percent}%`, background: c.color || COLORS[i % COLORS.length] }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="bg-slate-50 px-5 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Total</p>
+                        <p className="text-xs text-slate-400">{breakdownCategories.reduce((s, c) => s + c.count, 0)} transactions</p>
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">
+                        <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(breakdownTotal)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">
@@ -795,6 +872,7 @@ export default function Reports() {
                     </tr>
                   </tfoot>
                 </table>
+                </div>
               </div>
             );
           })()}

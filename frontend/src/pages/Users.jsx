@@ -69,19 +69,19 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Users</h1>
           <p className="text-sm text-slate-500 mt-0.5">Manage private application users</p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add User
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map((user) => (
-          <div key={user._id} className="card flex items-center gap-4">
+          <div key={user._id} className="card flex items-center gap-3 sm:gap-4">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
               style={{ background: user.color }}
@@ -96,7 +96,7 @@ export default function Users() {
               <p className="text-sm text-slate-500 truncate">{user.email}</p>
               <p className="text-xs text-slate-400 truncate">{user.currency || 'AED'}</p>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-shrink-0 flex-col gap-1">
               <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                 <Edit2 size={16} />
               </button>
@@ -152,7 +152,7 @@ export default function Users() {
               ))}
             </div>
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add User'}

@@ -87,12 +87,12 @@ export default function Categories() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Categories</h1>
           <p className="text-sm text-slate-500 mt-0.5">{categories.length} categories configured</p>
         </div>
-        <button onClick={openAddCat} className="btn-primary">
+        <button onClick={openAddCat} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Category
         </button>
       </div>
@@ -100,24 +100,24 @@ export default function Categories() {
       <div className="space-y-3">
         {categories.map((cat) => (
           <div key={cat._id} className="card p-0 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-start justify-between gap-2 px-4 py-3">
               <button
-                className="flex items-center gap-3 flex-1 text-left"
+                className="flex min-w-0 flex-1 items-start gap-3 text-left"
                 onClick={() => toggleExpand(cat._id)}
               >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: cat.color + '20' }}>
+                <div className="w-8 h-8 rounded-lg flex flex-shrink-0 items-center justify-center" style={{ background: cat.color + '20' }}>
                   <div className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold text-slate-800 text-sm">{cat.name}</p>
                   {cat.description && <p className="text-xs text-slate-400">{cat.description}</p>}
                 </div>
-                <span className="ml-2 text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="ml-auto flex-shrink-0 text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                   {cat.subCategories?.length || 0} subs
                 </span>
-                {expanded[cat._id] ? <ChevronDown size={16} className="ml-auto text-slate-400" /> : <ChevronRight size={16} className="ml-auto text-slate-400" />}
+                {expanded[cat._id] ? <ChevronDown size={16} className="mt-0.5 flex-shrink-0 text-slate-400" /> : <ChevronRight size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />}
               </button>
-              <div className="flex items-center gap-1 ml-3">
+              <div className="flex flex-shrink-0 items-center gap-1">
                 <button onClick={() => openEditCat(cat)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                   <Edit2 size={14} />
                 </button>
@@ -129,7 +129,7 @@ export default function Categories() {
 
             {expanded[cat._id] && (
               <div className="border-t border-slate-50 bg-slate-50 px-4 py-3">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Sub-Categories</p>
                   <button onClick={() => openAddSub(cat._id)} className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
                     <Plus size={12} /> Add Sub
@@ -190,7 +190,7 @@ export default function Categories() {
             const idleLabel = editingCat ? 'Update' : 'Add Category';
             const submitLabel = saving ? 'Saving...' : idleLabel;
             return (
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
                 <button type="button" onClick={() => setCatModal(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>{submitLabel}</button>
               </div>
@@ -215,7 +215,7 @@ export default function Categories() {
             const idleLabel = editingSub ? 'Update' : 'Add';
             const submitLabel = saving ? 'Saving...' : idleLabel;
             return (
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
                 <button type="button" onClick={() => setSubModal(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>{submitLabel}</button>
               </div>

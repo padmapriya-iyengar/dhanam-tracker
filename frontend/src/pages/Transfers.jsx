@@ -160,12 +160,12 @@ export default function Transfers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Transfers</h1>
           <p className="text-sm text-slate-500 mt-0.5">Move money between accounts without changing income or expense reports</p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Transfer
         </button>
       </div>
@@ -188,7 +188,7 @@ export default function Transfers() {
       </div>
 
       {!loading && records.length > 0 && (
-        <div className="flex items-center justify-between px-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <p className="text-sm text-slate-500">{records.length} transfer{records.length !== 1 ? 's' : ''} found</p>
           <p className="text-sm font-semibold text-indigo-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(total)}</p>
         </div>
@@ -205,7 +205,47 @@ export default function Transfers() {
       )}
 
       {!loading && records.length > 0 && (
-        <div className="card p-0 overflow-hidden overflow-x-auto">
+        <>
+        <div className="md:hidden space-y-3">
+          {records.map((transfer) => (
+            <div key={transfer._id} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">{format(new Date(transfer.date), 'dd MMM yyyy')}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{transfer.description || transfer.notes || 'Transfer'}</p>
+                </div>
+                <p className="flex-shrink-0 text-base font-bold text-indigo-700">
+                  <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(transfer.amount)}
+                </p>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">From</p>
+                  <p className="mt-1 truncate text-sm font-medium text-slate-700">{transferAccountLabel(transfer, 'from')}</p>
+                </div>
+                <div className="my-2 flex justify-center">
+                  <ArrowRight size={16} className="text-slate-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-400">To</p>
+                  <p className="mt-1 truncate text-sm font-medium text-indigo-700">{transferAccountLabel(transfer, 'to')}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button onClick={() => openEdit(transfer)} className="btn-secondary py-1.5 px-3 text-xs">
+                  <Edit2 size={13} /> Edit
+                </button>
+                <button onClick={() => handleDelete(transfer._id)} className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100">
+                  <Trash2 size={13} className="inline align-text-bottom mr-1" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block card p-0 overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
@@ -239,13 +279,14 @@ export default function Transfers() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transfer' : 'Add Transfer'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Date *</label>
               <input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />

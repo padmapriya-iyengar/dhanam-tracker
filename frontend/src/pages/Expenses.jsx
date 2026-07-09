@@ -275,12 +275,12 @@ export default function Expenses() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="page-title">Expenses</h1>
           <p className="text-sm text-slate-500 mt-0.5 sm:hidden">{total} records in selected period</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex-shrink-0">
+        <button onClick={openAdd} className="btn-primary w-full flex-shrink-0 justify-center sm:w-auto">
           <Plus size={15} /> Add Expense
         </button>
       </div>
@@ -700,7 +700,7 @@ export default function Expenses() {
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setRecoveryModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={savingRecovery}>{savingRecovery ? 'Saving...' : 'Add Recovery'}</button>
           </div>
@@ -826,7 +826,7 @@ export default function Expenses() {
             const idleLabel = editing ? 'Update' : 'Add Expense';
             const submitLabel = saving ? 'Saving...' : idleLabel;
             return (
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>{submitLabel}</button>
               </div>
