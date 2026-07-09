@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
+const ExpenseRecovery = require('../models/ExpenseRecovery');
 
 function shouldAffectCurrentBalance(paymentMethod) {
   return paymentMethod === 'current_account';
@@ -15,6 +16,73 @@ function aggregateFilterFrom(filter) {
     }
   });
   return aggregateFilter;
+}
+
+function sanitizeRecovery(body) {
+  const amount = parseFloat(body.amount);
+  return {
+    amount,
+    date: body.date ? new Date(body.date) : new Date(),
+    source: body.source || 'other',
+    budgetTreatment: body.budgetTreatment || 'reduce_expense',
+    notes: body.notes || '',
+  };
+}
+
+function netExpenseStages(filter) {
+  return [
+    { $match: aggregateFilterFrom(filter) },
+    {
+      $lookup: {
+        from: 'expenserecoveries',
+        let: { expenseId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$expenseId', '$$expenseId'] },
+                  { $eq: ['$budgetTreatment', 'reduce_expense'] },
+                ],
+              },
+            },
+          },
+          { $group: { _id: null, amount: { $sum: '$amount' } } },
+        ],
+        as: 'budgetRecoveries',
+      },
+    },
+    { $addFields: { recoveredForBudget: { $min: [{ $ifNull: [{ $first: '$budgetRecoveries.amount' }, 0] }, '$amount'] } } },
+    { $addFields: { netAmount: { $max: [{ $subtract: ['$amount', '$recoveredForBudget'] }, 0] } } },
+  ];
+}
+
+async function attachRecoveries(records) {
+  const plainRecords = records.map((record) => record.toObject());
+  const expenseIds = plainRecords.map((record) => record._id);
+  const recoveries = await ExpenseRecovery.find({ expenseId: { $in: expenseIds } }).sort({ date: -1, createdAt: -1 });
+  const grouped = recoveries.reduce((acc, recovery) => {
+    const key = String(recovery.expenseId);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(recovery);
+    return acc;
+  }, {});
+
+  return plainRecords.map((record) => {
+    const recordRecoveries = grouped[String(record._id)] || [];
+    const recoveredAmount = recordRecoveries
+      .filter((recovery) => recovery.budgetTreatment === 'reduce_expense')
+      .reduce((sum, recovery) => sum + recovery.amount, 0);
+    const cappedRecoveredAmount = Math.min(recoveredAmount, record.amount || 0);
+    return {
+      ...record,
+      recoveries: recordRecoveries,
+      recoverySummary: {
+        recoveredAmount: cappedRecoveredAmount,
+        netAmount: Math.max((record.amount || 0) - cappedRecoveredAmount, 0),
+      },
+    };
+  });
 }
 
 router.get('/', async (req, res) => {
@@ -51,8 +119,15 @@ router.get('/', async (req, res) => {
         .limit(parseInt(limit)),
       Expense.countDocuments(filter),
       Expense.aggregate([
-        { $match: aggregateFilterFrom(filter) },
-        { $group: { _id: null, amount: { $sum: '$amount' } } },
+        ...netExpenseStages(filter),
+        {
+          $group: {
+            _id: null,
+            amount: { $sum: '$amount' },
+            recoveredAmount: { $sum: '$recoveredForBudget' },
+            netAmount: { $sum: '$netAmount' },
+          },
+        },
       ]),
       Expense.aggregate([
         { $match: aggregateFilterFrom(filter) },
@@ -70,11 +145,14 @@ router.get('/', async (req, res) => {
         { $sort: { amount: -1 } },
       ]),
     ]);
+    const recordsWithRecoveries = await attachRecoveries(records);
 
     res.json({
-      records,
+      records: recordsWithRecoveries,
       total,
       totalAmount: totals[0]?.amount || 0,
+      recoveredAmount: totals[0]?.recoveredAmount || 0,
+      netTotalAmount: totals[0]?.netAmount || 0,
       paymentSummary: paymentSummary.map((item) => ({
         paymentMethod: item._id.paymentMethod,
         creditCardId: item._id.creditCardId,
@@ -85,6 +163,38 @@ router.get('/', async (req, res) => {
       page: parseInt(page),
       pages: Math.ceil(total / parseInt(limit)),
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/recoveries', async (req, res) => {
+  try {
+    const expense = await Expense.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!expense) return res.status(404).json({ error: 'Expense not found' });
+    const payload = sanitizeRecovery(req.body);
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) return res.status(400).json({ error: 'Recovery amount must be greater than zero' });
+
+    const recovery = await ExpenseRecovery.create({
+      ...payload,
+      userId: req.user._id,
+      expenseId: expense._id,
+    });
+    res.status(201).json(recovery);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/:id/recoveries/:recoveryId', async (req, res) => {
+  try {
+    const recovery = await ExpenseRecovery.findOneAndDelete({
+      _id: req.params.recoveryId,
+      expenseId: req.params.id,
+      userId: req.user._id,
+    });
+    if (!recovery) return res.status(404).json({ error: 'Recovery not found' });
+    res.json({ message: 'Recovery deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -147,6 +257,7 @@ router.delete('/:id', async (req, res) => {
     if (!expense) return res.status(404).json({ error: 'Expense not found' });
 
     await Expense.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    await ExpenseRecovery.deleteMany({ expenseId: expense._id, userId: req.user._id });
     res.json({ message: 'Expense deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

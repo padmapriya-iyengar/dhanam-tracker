@@ -56,6 +56,8 @@ export const expensesApi = {
   create: (data) => api.post('/expenses', data),
   update: (id, data) => api.put(`/expenses/${id}`, data),
   delete: (id) => api.delete(`/expenses/${id}`),
+  addRecovery: (id, data) => api.post(`/expenses/${id}/recoveries`, data),
+  deleteRecovery: (id, recoveryId) => api.delete(`/expenses/${id}/recoveries/${recoveryId}`),
 };
 
 export const reportsApi = {

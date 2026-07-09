@@ -28,6 +28,19 @@ const PAYMENT_LABELS = {
   card: 'Card',
 };
 
+const RECOVERY_SOURCES = [
+  { value: 'bank_reimbursement', label: 'Bank Reimbursement' },
+  { value: 'family_transfer', label: 'Family Transfer' },
+  { value: 'employer', label: 'Employer' },
+  { value: 'friend', label: 'Friend' },
+  { value: 'other', label: 'Other' },
+];
+
+const BUDGET_TREATMENTS = [
+  { value: 'reduce_expense', label: 'Reduce expense in reports/budgets' },
+  { value: 'ignore_for_budget', label: 'Track only, keep expense in budgets' },
+];
+
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
   label: format(new Date(2024, i, 1), 'MMMM'),
@@ -39,20 +52,35 @@ const emptyForm = {
   paymentMethod: 'current_account', creditCardId: '', savingsAccountId: '', notes: '',
 };
 
+const emptyRecoveryForm = {
+  amount: '',
+  date: format(new Date(), 'yyyy-MM-dd'),
+  source: 'bank_reimbursement',
+  budgetTreatment: 'reduce_expense',
+  notes: '',
+};
+
 export default function Expenses() {
   const { members, categories } = useApp();
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [recoveredAmount, setRecoveredAmount] = useState(0);
+  const [netTotalAmount, setNetTotalAmount] = useState(0);
   const [paymentSummary, setPaymentSummary] = useState([]);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [recoveryForm, setRecoveryForm] = useState(emptyRecoveryForm);
   const [editing, setEditing] = useState(null);
+  const [recoveringExpense, setRecoveringExpense] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savingRecovery, setSavingRecovery] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterMember, setFilterMember] = useState('');
@@ -122,6 +150,8 @@ export default function Expenses() {
     setRecords(data.records);
     setTotal(data.total);
     setTotalAmount(data.totalAmount ?? data.records.reduce((s, r) => s + r.amount, 0));
+    setRecoveredAmount(data.recoveredAmount || 0);
+    setNetTotalAmount(data.netTotalAmount ?? data.totalAmount ?? data.records.reduce((s, r) => s + r.amount, 0));
     setPaymentSummary(data.paymentSummary || []);
     setPages(data.pages);
     setPage(p);
@@ -180,6 +210,39 @@ export default function Expenses() {
     if (!confirm('Delete this expense?')) return;
     await expensesApi.delete(id);
     load(page);
+  };
+
+  const openRecovery = (rec) => {
+    setRecoveringExpense(rec);
+    setRecoveryForm({
+      ...emptyRecoveryForm,
+      amount: rec.recoverySummary?.netAmount ?? rec.amount ?? '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+    });
+    setRecoveryError('');
+    setRecoveryModalOpen(true);
+  };
+
+  const saveRecovery = async (event) => {
+    event.preventDefault();
+    if (!recoveringExpense) return;
+    setSavingRecovery(true);
+    setRecoveryError('');
+    try {
+      await expensesApi.addRecovery(recoveringExpense._id, recoveryForm);
+      setRecoveryModalOpen(false);
+      await load(page);
+    } catch (err) {
+      setRecoveryError(err.response?.data?.error || err.message || 'Failed to save recovery');
+    } finally {
+      setSavingRecovery(false);
+    }
+  };
+
+  const deleteRecovery = async (expenseId, recoveryId) => {
+    if (!confirm('Delete this recovery?')) return;
+    await expensesApi.deleteRecovery(expenseId, recoveryId);
+    await load(page);
   };
 
   const handleMemberChange = (memberId) => {
@@ -294,7 +357,15 @@ export default function Expenses() {
         <div className="space-y-3 px-1">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-slate-500">{total} expenses found</p>
-            <p className="text-sm font-semibold text-rose-600">Total: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</p>
+            <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
+              <span className="font-semibold text-rose-600">Gross: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAmount)}</span>
+              {recoveredAmount > 0 && (
+                <>
+                  <span className="font-semibold text-emerald-600">Recovered: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(recoveredAmount)}</span>
+                  <span className="font-semibold text-slate-700">Net: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(netTotalAmount)}</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {paymentSummary.map((source) => {
@@ -336,6 +407,9 @@ export default function Expenses() {
           <div className="md:hidden space-y-2">
             {records.map((rec) => {
               const isCreditCard = rec.paymentMethod === 'credit_card';
+              const recovered = rec.recoverySummary?.recoveredAmount || 0;
+              const netAmount = rec.recoverySummary?.netAmount ?? rec.amount;
+              const recoveries = rec.recoveries || [];
               return (
                 <div key={rec._id} className="card p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -348,6 +422,7 @@ export default function Expenses() {
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button onClick={() => openRecovery(rec)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Plus size={13} /></button>
                       <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
                       <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
                     </div>
@@ -368,10 +443,36 @@ export default function Expenses() {
                         <span>{PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod}</span>
                       )}
                     </div>
-                    <p className="text-sm font-bold flex-shrink-0" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
-                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
-                    </p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-bold" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
+                        <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
+                      </p>
+                      {recovered > 0 && (
+                        <p className="text-xs font-medium text-emerald-600">
+                          Net <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(netAmount)}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {recoveries.length > 0 && (
+                    <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 px-2 py-1.5">
+                      <p className="text-xs font-medium text-emerald-700">
+                        Reduces reports <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(recovered)}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {recoveries.map((recovery) => (
+                          <button
+                            key={recovery._id}
+                            type="button"
+                            onClick={() => deleteRecovery(rec._id, recovery._id)}
+                            className="text-[11px] text-emerald-700 hover:text-rose-600"
+                          >
+                            {fmt(recovery.amount)}{recovery.budgetTreatment === 'ignore_for_budget' ? ' tracked' : ''}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -388,7 +489,11 @@ export default function Expenses() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((rec) => (
+                {records.map((rec) => {
+                  const recovered = rec.recoverySummary?.recoveredAmount || 0;
+                  const netAmount = rec.recoverySummary?.netAmount ?? rec.amount;
+                  const recoveries = rec.recoveries || [];
+                  return (
                   <tr key={rec._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{format(new Date(rec.date), 'dd MMM yyyy')}</td>
                     <td className="py-3 px-4">
@@ -419,17 +524,42 @@ export default function Expenses() {
                         <span className="badge bg-slate-100 text-slate-600">{PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 font-semibold whitespace-nowrap" style={{ color: rec.paymentMethod === 'credit_card' ? '#7c3aed' : '#f43f5e' }}>
-                      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <p className="font-semibold" style={{ color: rec.paymentMethod === 'credit_card' ? '#7c3aed' : '#f43f5e' }}>
+                        <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
+                      </p>
+                      {recovered > 0 && (
+                        <div className="mt-0.5 text-xs">
+                          <p className="text-emerald-600">Recovered <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(recovered)}</p>
+                          <p className="font-semibold text-slate-600">Net <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(netAmount)}</p>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1 justify-end">
+                        <button onClick={() => openRecovery(rec)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Add recovery"><Plus size={14} /></button>
                         <button onClick={() => openEdit(rec)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
                         <button onClick={() => handleDelete(rec._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>
+                      {recoveries.length > 0 && (
+                        <div className="mt-1 flex flex-col items-end gap-0.5">
+                          {recoveries.map((recovery) => (
+                            <button
+                              key={recovery._id}
+                              type="button"
+                              onClick={() => deleteRecovery(rec._id, recovery._id)}
+                              className="text-[11px] text-emerald-600 hover:text-rose-600"
+                              title="Delete recovery"
+                            >
+                              {fmt(recovery.amount)}{recovery.budgetTreatment === 'ignore_for_budget' ? ' tracked' : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -443,6 +573,91 @@ export default function Expenses() {
           )}
         </>
       )}
+
+      <Modal isOpen={recoveryModalOpen} onClose={() => setRecoveryModalOpen(false)} title="Add Recovery" size="md">
+        <form onSubmit={saveRecovery} className="space-y-4">
+          {recoveryError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{recoveryError}</p>}
+          {recoveringExpense && (
+            <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+              <p className="text-sm font-semibold text-slate-700">{recoveringExpense.categoryId?.name}</p>
+              <p className="text-xs text-slate-400">
+                Gross <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(recoveringExpense.amount)}
+                {recoveringExpense.recoverySummary?.recoveredAmount > 0 && (
+                  <> - Already recovered <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(recoveringExpense.recoverySummary.recoveredAmount)}</>
+                )}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="recovery-amount" className="label">Recovered Amount *</label>
+              <input
+                id="recovery-amount"
+                type="number"
+                className="input"
+                value={recoveryForm.amount}
+                onChange={(e) => setRecoveryForm({ ...recoveryForm, amount: e.target.value })}
+                required
+                min="0.01"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <label htmlFor="recovery-date" className="label">Date *</label>
+              <input
+                id="recovery-date"
+                type="date"
+                className="input"
+                value={recoveryForm.date}
+                onChange={(e) => setRecoveryForm({ ...recoveryForm, date: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="recovery-source" className="label">Source</label>
+            <select
+              id="recovery-source"
+              className="input"
+              value={recoveryForm.source}
+              onChange={(e) => setRecoveryForm({ ...recoveryForm, source: e.target.value })}
+            >
+              {RECOVERY_SOURCES.map((source) => <option key={source.value} value={source.value}>{source.label}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="recovery-treatment" className="label">Budget Treatment</label>
+            <select
+              id="recovery-treatment"
+              className="input"
+              value={recoveryForm.budgetTreatment}
+              onChange={(e) => setRecoveryForm({ ...recoveryForm, budgetTreatment: e.target.value })}
+            >
+              {BUDGET_TREATMENTS.map((treatment) => <option key={treatment.value} value={treatment.value}>{treatment.label}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="recovery-notes" className="label">Notes</label>
+            <textarea
+              id="recovery-notes"
+              className="input resize-none"
+              rows={2}
+              value={recoveryForm.notes}
+              onChange={(e) => setRecoveryForm({ ...recoveryForm, notes: e.target.value })}
+              placeholder="Bank reimbursement, shared expense, etc."
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={() => setRecoveryModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" className="btn-primary flex-1" disabled={savingRecovery}>{savingRecovery ? 'Saving...' : 'Add Recovery'}</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add / Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Expense' : 'Add Expense'} size="lg">

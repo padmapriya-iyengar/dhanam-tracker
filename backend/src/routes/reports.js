@@ -121,11 +121,39 @@ function expenseMatch(userId, start, end, recurringFilter = {}) {
   return { userId, date: { $gte: start, $lte: end }, ...recurringFilter };
 }
 
+function netExpenseStages(match) {
+  return [
+    { $match: match },
+    {
+      $lookup: {
+        from: 'expenserecoveries',
+        let: { expenseId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$expenseId', '$$expenseId'] },
+                  { $eq: ['$budgetTreatment', 'reduce_expense'] },
+                ],
+              },
+            },
+          },
+          { $group: { _id: null, amount: { $sum: '$amount' } } },
+        ],
+        as: 'budgetRecoveries',
+      },
+    },
+    { $addFields: { recoveredForBudget: { $min: [{ $ifNull: [{ $first: '$budgetRecoveries.amount' }, 0] }, '$amount'] } } },
+    { $addFields: { netAmount: { $max: [{ $subtract: ['$amount', '$recoveredForBudget'] }, 0] } } },
+  ];
+}
+
 async function getExpenseAggregate(userId, dateRange, recurringFilter) {
   const { start, end } = dateRange;
   const total = await Expense.aggregate([
-    { $match: expenseMatch(userId, start, end, recurringFilter) },
-    { $group: { _id: null, total: { $sum: '$amount' } } },
+    ...netExpenseStages(expenseMatch(userId, start, end, recurringFilter)),
+    { $group: { _id: null, total: { $sum: '$netAmount' } } },
   ]);
   return total[0]?.total || 0;
 }
@@ -153,12 +181,12 @@ router.get('/custom', async (req, res) => {
 
     const [summary, bySubCategory, byCategory, byMember, dailyTrend, transactions] = await Promise.all([
       Expense.aggregate([
-        { $match: match },
-        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netExpenseStages(match),
+        { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
       ]),
       Expense.aggregate([
-        { $match: match },
-        { $group: { _id: { categoryId: '$categoryId', subCategoryId: '$subCategoryId' }, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netExpenseStages(match),
+        { $group: { _id: { categoryId: '$categoryId', subCategoryId: '$subCategoryId' }, total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id.categoryId', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $lookup: { from: 'subcategories', localField: '_id.subCategoryId', foreignField: '_id', as: 'subCategory' } },
@@ -178,27 +206,27 @@ router.get('/custom', async (req, res) => {
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: match },
-        { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netExpenseStages(match),
+        { $group: { _id: '$categoryId', total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $project: { _id: 0, categoryId: '$_id', name: '$category.name', color: '$category.color', total: 1, count: 1 } },
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: match },
-        { $group: { _id: '$memberId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netExpenseStages(match),
+        { $group: { _id: '$memberId', total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
         { $unwind: '$member' },
         { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1, count: 1 } },
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: match },
+        ...netExpenseStages(match),
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-            total: { $sum: '$amount' },
+            total: { $sum: '$netAmount' },
             count: { $sum: 1 },
           },
         },
@@ -247,16 +275,16 @@ router.get('/', async (req, res) => {
       dailyTrend,
     ] = await Promise.all([
       Expense.aggregate([
-        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
-        { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netExpenseStages(expenseMatch(req.user._id, start, end, recurringFilter)),
+        { $group: { _id: '$categoryId', total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
         { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $project: { _id: 0, categoryId: '$_id', name: '$category.name', color: '$category.color', icon: '$category.icon', total: 1, count: 1 } },
         { $sort: { total: -1 } },
       ]),
       Expense.aggregate([
-        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
-        { $group: { _id: '$memberId', total: { $sum: '$amount' } } },
+        ...netExpenseStages(expenseMatch(req.user._id, start, end, recurringFilter)),
+        { $group: { _id: '$memberId', total: { $sum: '$netAmount' } } },
         { $lookup: { from: 'members', localField: '_id', foreignField: '_id', as: 'member' } },
         { $unwind: '$member' },
         { $project: { _id: 0, memberId: '$_id', name: '$member.name', color: '$member.color', total: 1 } },
@@ -273,14 +301,14 @@ router.get('/', async (req, res) => {
       getExpenseAggregate(req.user._id, { start: prevStart, end: prevEnd }, recurringFilter),
       getAggregate(Income, req.user._id, { start: prevStart, end: prevEnd }),
       Expense.aggregate([
-        { $match: expenseMatch(req.user._id, start, end, recurringFilter) },
+        ...netExpenseStages(expenseMatch(req.user._id, start, end, recurringFilter)),
         { $lookup: { from: 'categories', localField: 'categoryId', foreignField: '_id', as: 'category' } },
         { $unwind: '$category' },
         { $match: { 'category.name': { $ne: 'Finance & Loans' } } },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-            expenses: { $sum: '$amount' },
+            expenses: { $sum: '$netAmount' },
           },
         },
         { $sort: { _id: 1 } },
@@ -325,8 +353,8 @@ router.get('/trend', async (req, res) => {
 
     const [expenseTrend, incomeTrend] = await Promise.all([
       Expense.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start }, ...recurringFilter } },
-        { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
+        ...netExpenseStages({ userId: req.user._id, date: { $gte: start }, ...recurringFilter }),
+        { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$netAmount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       Income.aggregate([

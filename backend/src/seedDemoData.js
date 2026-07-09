@@ -3,6 +3,7 @@ const Category = require('./models/Category');
 const CreditCard = require('./models/CreditCard');
 const CreditCardStatement = require('./models/CreditCardStatement');
 const Expense = require('./models/Expense');
+const ExpenseRecovery = require('./models/ExpenseRecovery');
 const Income = require('./models/Income');
 const Member = require('./models/Member');
 const SavingsAccount = require('./models/SavingsAccount');
@@ -94,6 +95,7 @@ async function seedDemoData() {
     CreditCard.deleteMany({ userId }),
     CreditCardStatement.deleteMany({ userId }),
     Expense.deleteMany({ userId }),
+    ExpenseRecovery.deleteMany({ userId }),
     Income.deleteMany({ userId }),
     Member.deleteMany({ userId }),
     SavingsAccount.deleteMany({ userId }),
