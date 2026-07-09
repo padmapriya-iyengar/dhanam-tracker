@@ -114,7 +114,7 @@ router.get('/', async (req, res) => {
         .populate('subCategoryId', 'name')
         .populate('creditCardId', 'name bankName color')
         .populate('savingsAccountId', 'name bankName')
-        .sort({ date: -1, createdAt: -1, _id: -1 })
+        .sort({ date: -1, _id: -1, createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       Expense.countDocuments(filter),

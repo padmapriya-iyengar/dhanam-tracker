@@ -393,10 +393,24 @@ export default function Transfers() {
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transfer' : 'Add Transfer'} size="lg">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={(event) => {
+            if (event.nativeEvent.submitter?.dataset.allowSubmit !== 'true') {
+              event.preventDefault();
+              return;
+            }
+            handleSubmit(event);
+          }}
+          className="space-y-4"
+        >
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
-          <div className="md:hidden">
+          <div
+            className="md:hidden"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault();
+            }}
+          >
             <div className="mb-4">
               <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                 <span>Step {wizardStep + 1} of {transferWizardSteps.length}</span>
@@ -412,7 +426,7 @@ export default function Transfers() {
                 {wizardStep === 0 ? 'Cancel' : 'Back'}
               </button>
               {wizardStep === transferWizardSteps.length - 1 ? (
-                <button type="submit" className="btn-primary flex-1" disabled={saving || !transferCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Transfer'}</button>
+                <button type="button" onClick={handleSubmit} className="btn-primary flex-1" disabled={saving || !transferCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Transfer'}</button>
               ) : (
                 <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, transferWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!transferCanContinue()}>Next</button>
               )}
@@ -498,7 +512,7 @@ export default function Transfers() {
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Transfer'}</button>
+            <button type="submit" data-allow-submit="true" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Transfer'}</button>
           </div>
           </div>
         </form>

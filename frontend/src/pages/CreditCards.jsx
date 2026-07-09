@@ -968,9 +968,23 @@ export default function CreditCards() {
 
       {/* Add / Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Credit Card' : 'Add Credit Card'} size="sm">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={(event) => {
+            if (event.nativeEvent.submitter?.dataset.allowSubmit !== 'true') {
+              event.preventDefault();
+              return;
+            }
+            handleSubmit(event);
+          }}
+          className="space-y-4"
+        >
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
-          <div className="sm:hidden">
+          <div
+            className="sm:hidden"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault();
+            }}
+          >
             <div className="mb-4">
               <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                 <span>Step {wizardStep + 1} of {cardWizardSteps.length}</span>
@@ -986,7 +1000,7 @@ export default function CreditCards() {
                 {wizardStep === 0 ? 'Cancel' : 'Back'}
               </button>
               {wizardStep === cardWizardSteps.length - 1 ? (
-                <button type="submit" className="btn-primary flex-1" disabled={saving || !cardCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Card'}</button>
+                <button type="button" onClick={handleSubmit} className="btn-primary flex-1" disabled={saving || !cardCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Card'}</button>
               ) : (
                 <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, cardWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!cardCanContinue()}>Next</button>
               )}
@@ -1054,7 +1068,7 @@ export default function CreditCards() {
           </div>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>
+            <button type="submit" data-allow-submit="true" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Add Card'}
             </button>
           </div>

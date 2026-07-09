@@ -428,10 +428,24 @@ export default function Subscriptions() {
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Recurring Expense' : 'Add Recurring Expense'} size="lg">
-        <form onSubmit={saveSubscription} className="space-y-4">
+        <form
+          onSubmit={(event) => {
+            if (event.nativeEvent.submitter?.dataset.allowSubmit !== 'true') {
+              event.preventDefault();
+              return;
+            }
+            saveSubscription(event);
+          }}
+          className="space-y-4"
+        >
           {saveError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{saveError}</p>}
 
-          <div className="sm:hidden">
+          <div
+            className="sm:hidden"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault();
+            }}
+          >
             <div className="mb-4">
               <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                 <span>Step {wizardStep + 1} of {recurringWizardSteps.length}</span>
@@ -447,7 +461,7 @@ export default function Subscriptions() {
                 {wizardStep === 0 ? 'Cancel' : 'Back'}
               </button>
               {wizardStep === recurringWizardSteps.length - 1 ? (
-                <button type="submit" className="btn-primary flex-1" disabled={saving || !recurringCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save'}</button>
+                <button type="button" onClick={saveSubscription} className="btn-primary flex-1" disabled={saving || !recurringCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save'}</button>
               ) : (
                 <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, recurringWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!recurringCanContinue()}>Next</button>
               )}
@@ -542,7 +556,7 @@ export default function Subscriptions() {
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Recurring Expense'}</button>
+            <button type="submit" data-allow-submit="true" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Recurring Expense'}</button>
           </div>
           </div>
         </form>

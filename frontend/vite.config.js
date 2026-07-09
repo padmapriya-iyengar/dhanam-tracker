@@ -6,6 +6,14 @@ export default defineConfig({
   build: {
     outDir: 'dist/dhanam-tracker',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ['recharts'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
   plugins: [react()],
   server: {

@@ -26,7 +26,7 @@ const expenseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-expenseSchema.index({ date: -1, createdAt: -1 });
+expenseSchema.index({ date: -1, _id: -1, createdAt: -1 });
 expenseSchema.index({ month: 1, year: 1 });
 expenseSchema.index({ userId: 1, memberId: 1 });
 expenseSchema.index({ categoryId: 1 });
