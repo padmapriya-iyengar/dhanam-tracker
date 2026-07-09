@@ -60,8 +60,13 @@ async function currentTransferEffect(userId, memberId, dateLte) {
 router.get('/', async (req, res) => {
   try {
     const now = new Date();
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const selectedMonth = parseInt(req.query.month) || now.getMonth() + 1;
+    const selectedYear = parseInt(req.query.year) || now.getFullYear();
+    const isCurrentMonth = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
+    const periodEnd = isCurrentMonth
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      : new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
+    const previousMonthEnd = new Date(selectedYear, selectedMonth - 1, 0, 23, 59, 59, 999);
 
     const members = await Member.find({ userId: req.user._id, isActive: true });
 
@@ -70,13 +75,13 @@ router.get('/', async (req, res) => {
         const doc = await Balance.findOne({ userId: req.user._id, memberId: member._id });
         const openingBalance = doc?.openingBalance ?? 0;
 
-        const [incomeLastMonth, expenseLastMonth, transferLastMonth, incomeToday, expenseToday, transferToday] = await Promise.all([
-          sumForMember(Income, req.user._id, member._id, lastMonthEnd, { currentAccountIncomeOnly: true }),
-          sumForMember(Expense, req.user._id, member._id, lastMonthEnd, { onlyDebit: true }),
-          currentTransferEffect(req.user._id, member._id, lastMonthEnd),
-          sumForMember(Income, req.user._id, member._id, todayEnd, { currentAccountIncomeOnly: true }),
-          sumForMember(Expense, req.user._id, member._id, todayEnd, { onlyDebit: true }),
-          currentTransferEffect(req.user._id, member._id, todayEnd),
+        const [incomeLastMonth, expenseLastMonth, transferLastMonth, incomePeriod, expensePeriod, transferPeriod] = await Promise.all([
+          sumForMember(Income, req.user._id, member._id, previousMonthEnd, { currentAccountIncomeOnly: true }),
+          sumForMember(Expense, req.user._id, member._id, previousMonthEnd, { onlyDebit: true }),
+          currentTransferEffect(req.user._id, member._id, previousMonthEnd),
+          sumForMember(Income, req.user._id, member._id, periodEnd, { currentAccountIncomeOnly: true }),
+          sumForMember(Expense, req.user._id, member._id, periodEnd, { onlyDebit: true }),
+          currentTransferEffect(req.user._id, member._id, periodEnd),
         ]);
 
         return {
@@ -86,8 +91,8 @@ router.get('/', async (req, res) => {
           openingBalance,
           notes: doc?.notes ?? '',
           balanceLastMonth: openingBalance + incomeLastMonth - expenseLastMonth + transferLastMonth,
-          currentBalance: openingBalance + incomeToday - expenseToday + transferToday,
-          asOf: lastMonthEnd,
+          currentBalance: openingBalance + incomePeriod - expensePeriod + transferPeriod,
+          asOf: periodEnd,
         };
       })
     );

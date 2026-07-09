@@ -100,14 +100,14 @@ export const subscriptionsApi = {
 };
 
 export const savingsApi = {
-  getAll: () => api.get('/savings'),
+  getAll: (params) => api.get('/savings', { params }),
   create: (data) => api.post('/savings', data),
   update: (id, data) => api.put(`/savings/${id}`, data),
   delete: (id) => api.delete(`/savings/${id}`),
 };
 
 export const balanceApi = {
-  get: () => api.get('/balance'),
+  get: (params) => api.get('/balance', { params }),
   update: (memberId, data) => api.put(`/balance/${memberId}`, data),
 };
 

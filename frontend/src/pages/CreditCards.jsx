@@ -327,14 +327,18 @@ export default function CreditCards() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
             <div className="rounded-lg border border-slate-100 bg-white px-3 py-2">
               <p className="text-xs text-slate-400">Budgeted</p>
               <p className="text-xl font-bold text-slate-800"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(budgetTotals.budgeted)}</p>
             </div>
             <div className="rounded-lg border border-violet-100 bg-violet-50 px-3 py-2">
-              <p className="text-xs text-violet-500">Spent So Far</p>
+              <p className="text-xs text-violet-500">Net Spent</p>
               <p className="text-xl font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(budgetTotals.spent)}</p>
+            </div>
+            <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-2">
+              <p className="text-xs text-cyan-600">Recovered</p>
+              <p className="text-xl font-bold text-cyan-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(budgetTotals.recoveredAmount || 0)}</p>
             </div>
             <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
               <p className="text-xs text-emerald-600">Balance</p>
@@ -352,7 +356,7 @@ export default function CreditCards() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {['Paid For', 'Date', 'Budgeted', 'Spent So Far', 'Paid So Far', '% Consumed', 'Balance', 'Status', ''].map((header) => (
+                  {['Paid For', 'Date', 'Budgeted', 'Net Spent', 'Paid So Far', '% Consumed', 'Balance', 'Status', ''].map((header) => (
                     <th key={header} className="text-left py-3 px-4 font-semibold text-slate-500 text-xs uppercase tracking-wide whitespace-nowrap">{header}</th>
                   ))}
                 </tr>
@@ -378,6 +382,12 @@ export default function CreditCards() {
                       <td className="py-3 px-4 font-semibold text-violet-700 whitespace-nowrap">
                         <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.spent)}
                         <p className="text-xs font-normal text-slate-400">{card.transactionCount} txn{card.transactionCount !== 1 ? 's' : ''}</p>
+                        {(card.recoveredAmount || 0) > 0 && (
+                          <p className="text-xs font-normal text-cyan-600">
+                            Gross <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(card.grossSpent || 0)}
+                            {' - '}recovered <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(card.recoveredAmount)}
+                          </p>
+                        )}
                       </td>
                       <td className="py-3 px-4 font-semibold text-emerald-700 whitespace-nowrap">
                         <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.paid)}

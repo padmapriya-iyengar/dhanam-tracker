@@ -1,88 +1,124 @@
 import { format } from 'date-fns';
-import { ArrowRight, Building2, CreditCard, Edit2, PiggyBank, Plus, ShoppingCart, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
-} from 'recharts';
+  ArrowLeft, ArrowRight, CalendarDays, CreditCard, Edit2, RefreshCw,
+  Scale, TrendingDown, TrendingUp, Wallet,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import CategoryGoalsWidget from '../components/CategoryGoalsWidget';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
-import StatCard from '../components/StatCard';
-import CategoryGoalsWidget from '../components/CategoryGoalsWidget';
-import { balanceApi, creditCardsApi, expensesApi, fmt, reportsApi, savingsApi } from '../services/api';
+import { balanceApi, creditCardsApi, fmt, reportsApi, savingsApi } from '../services/api';
 
-const COLORS = ['#6366f1', '#f97316', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444'];
+const budgetMonths = Array.from({ length: 12 }, (_, index) => ({
+  value: index + 1,
+  label: format(new Date(2026, index, 1), 'MMMM'),
+}));
+
+const years = [2024, 2025, 2026, 2027, 2028];
+
+function Money({ value, className = '' }) {
+  return (
+    <span className={className}>
+      <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />
+      {fmt(value || 0)}
+    </span>
+  );
+}
+
+function statusClass(status) {
+  if (status === 'over') return 'bg-rose-50 text-rose-600 border-rose-100';
+  if (status === 'watch') return 'bg-amber-50 text-amber-600 border-amber-100';
+  if (status === 'ok') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+  return 'bg-slate-50 text-slate-500 border-slate-100';
+}
+
+function statusLabel(status) {
+  if (status === 'over') return 'Over';
+  if (status === 'watch') return 'Watch';
+  if (status === 'ok') return 'On track';
+  return 'Unset';
+}
+
+function monthDate(month, year) {
+  return new Date(year, month - 1, 1);
+}
 
 export default function Dashboard() {
   const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
   const [report, setReport] = useState(null);
-  const [trend, setTrend] = useState([]);
-  const [recent, setRecent] = useState([]);
-  const [loading, setLoading] = useState(true);
-  // balances is an array, one entry per member
+  const [budgets, setBudgets] = useState(null);
   const [balances, setBalances] = useState([]);
-  const [ccSummary, setCcSummary] = useState([]);
   const [savingsAccounts, setSavingsAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [balanceModal, setBalanceModal] = useState(false);
-  // balanceForms: { [memberId]: { openingBalance, notes } }
   const [balanceForms, setBalanceForms] = useState({});
   const [savingBalance, setSavingBalance] = useState(false);
   const [balanceError, setBalanceError] = useState('');
 
-  const loadBalance = async () => {
-    const { data } = await balanceApi.get();
+  const selectedDate = useMemo(() => monthDate(month, year), [month, year]);
+  const selectedLabel = format(selectedDate, 'MMMM yyyy');
+
+  const loadBalance = async (params = { month, year }) => {
+    const { data } = await balanceApi.get(params);
     setBalances(data);
   };
 
+  const loadDashboard = async (nextMonth = month, nextYear = year) => {
+    setLoading(true);
+    try {
+      const params = { month: nextMonth, year: nextYear };
+      const [reportResult, budgetResult, savingsResult] = await Promise.all([
+        reportsApi.get({ period: 'monthly', ...params }),
+        creditCardsApi.getBudgets(params),
+        savingsApi.getAll(params),
+        loadBalance(params),
+      ]);
+      setReport(reportResult.data);
+      setBudgets(budgetResult.data);
+      setSavingsAccounts(savingsResult.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [r, t, e, cc, sa] = await Promise.all([
-          reportsApi.get({ period: 'monthly', month: now.getMonth() + 1, year: now.getFullYear() }),
-          reportsApi.getTrend({ months: 6 }),
-          expensesApi.getAll({ page: 1, limit: 8 }),
-          creditCardsApi.getSummary(),
-          savingsApi.getAll(),
-          loadBalance(),
-        ]);
-        setReport(r.data);
-        setTrend(t.data);
-        setRecent(e.data.records);
-        setCcSummary(cc.data);
-        setSavingsAccounts(sa.data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    loadDashboard(month, year);
+  }, [month, year]);
+
+  const shiftMonth = (delta) => {
+    const next = new Date(year, month - 1 + delta, 1);
+    setMonth(next.getMonth() + 1);
+    setYear(next.getFullYear());
+  };
 
   const openBalanceEdit = () => {
     const forms = {};
-    balances.forEach((b) => {
-      forms[b.memberId] = { openingBalance: b.openingBalance, notes: b.notes };
+    balances.forEach((balance) => {
+      forms[balance.memberId] = { openingBalance: balance.openingBalance, notes: balance.notes };
     });
     setBalanceForms(forms);
     setBalanceError('');
     setBalanceModal(true);
   };
 
-  const saveBalance = async (e) => {
-    e.preventDefault();
+  const saveBalance = async (event) => {
+    event.preventDefault();
     setSavingBalance(true);
     setBalanceError('');
     try {
       await Promise.all(
-        Object.entries(balanceForms).map(([memberId, val]) =>
+        Object.entries(balanceForms).map(([memberId, value]) =>
           balanceApi.update(memberId, {
-            openingBalance: parseFloat(val.openingBalance) || 0,
-            notes: val.notes,
+            openingBalance: parseFloat(value.openingBalance) || 0,
+            notes: value.notes,
           })
         )
       );
-      await loadBalance();
+      await loadBalance({ month, year });
       setBalanceModal(false);
     } catch (err) {
       setBalanceError(err.response?.data?.error || err.message || 'Failed to save');
@@ -93,324 +129,275 @@ export default function Dashboard() {
 
   if (loading) return <LoadingSpinner />;
 
-  const { summary, expenseByCategory } = report || {};
-  const topCategories = expenseByCategory?.slice(0, 5) || [];
-  const allCategories = expenseByCategory || [];
+  const summary = report?.summary || {};
+  const budgetRows = budgets?.rows || [];
+  const budgetTotals = budgets?.totals || { budgeted: 0, spent: 0, recoveredAmount: 0, paid: 0, balance: 0 };
+  const expenseByCategory = report?.expenseByCategory || [];
   const totalCurrentBalance = balances.reduce((sum, balance) => sum + (balance.currentBalance || 0), 0);
   const totalSavingsBalance = savingsAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-  const totalAvailableSavings = totalCurrentBalance + totalSavingsBalance;
+  const availableFunds = totalCurrentBalance + totalSavingsBalance;
+  const monthResult = (summary.totalIncome || 0) - (summary.totalExpense || 0);
+  const budgetConsumed = budgetTotals.budgeted > 0 ? Math.round((budgetTotals.spent / budgetTotals.budgeted) * 100) : 0;
+
+  const realityRows = [
+    {
+      label: 'Income recorded',
+      value: summary.totalIncome || 0,
+      detail: 'Income entered for the selected month.',
+      tone: 'text-emerald-700',
+    },
+    {
+      label: 'Net expenses',
+      value: summary.totalExpense || 0,
+      detail: 'Expenses after recoveries. Credit-card purchases are included here.',
+      tone: 'text-rose-700',
+    },
+    {
+      label: 'Card payments logged',
+      value: budgetTotals.paid || 0,
+      detail: 'Transfers paid to credit cards this month. Shown separately so spend is not double-counted.',
+      tone: 'text-slate-700',
+    },
+    {
+      label: 'Monthly result',
+      value: monthResult,
+      detail: 'Income minus net expenses for this month.',
+      tone: monthResult >= 0 ? 'text-emerald-700' : 'text-rose-700',
+    },
+    {
+      label: 'Available funds as of period end',
+      value: availableFunds,
+      detail: 'Current account plus savings balances as of the selected month-end, or today for the current month.',
+      tone: availableFunds >= 0 ? 'text-emerald-700' : 'text-rose-700',
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{format(now, 'MMMM yyyy')} overview</p>
+          <p className="text-sm text-slate-500 mt-0.5">Monthly operating view for {selectedLabel}</p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Link to="/income" className="btn-secondary hidden sm:inline-flex">
-            <TrendingUp size={15} /> Add Income
-          </Link>
-          <Link to="/expenses" className="btn-primary">
-            <Plus size={15} /> <span className="hidden sm:inline">Add Expense</span><span className="sm:hidden">Expense</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Income"
-          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.totalIncome || 0)}</>}
-          icon={TrendingUp}
-          color="green"
-          change={summary?.incomeChange}
-        />
-        <StatCard
-          title="Total Expenses"
-          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(summary?.totalExpense || 0)}</>}
-          icon={ShoppingCart}
-          color="red"
-          change={summary?.expenseChange}
-        />
-        <StatCard
-          title="Total Savings"
-          value={<><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(totalAvailableSavings)}</>}
-          icon={Wallet}
-          color={totalAvailableSavings >= 0 ? 'green' : 'red'}
-        />
-        <StatCard
-          title="Savings Rate"
-          value={`${summary?.savingsRate || 0}%`}
-          subtitle="of total income"
-          icon={TrendingDown}
-          color="indigo"
-        />
-      </div>
-
-      {/* Balance Card — per member */}
-      <div className="card border-indigo-100 bg-gradient-to-r from-indigo-50 to-white">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <PiggyBank size={20} className="text-indigo-600" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 sm:flex sm:items-end">
+            <button onClick={() => shiftMonth(-1)} className="btn-secondary px-3" title="Previous month">
+              <ArrowLeft size={15} />
+            </button>
+            <div>
+              <label htmlFor="dashboard-month" className="label">Month</label>
+              <select id="dashboard-month" className="input w-full sm:w-36" value={month} onChange={(event) => setMonth(+event.target.value)}>
+                {budgetMonths.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
             </div>
             <div>
-              <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide">Current Account</p>
-              <p className="text-xs text-slate-400">as of {format(now, 'dd MMM yyyy')}</p>
+              <label htmlFor="dashboard-year" className="label">Year</label>
+              <select id="dashboard-year" className="input w-full sm:w-28" value={year} onChange={(event) => setYear(+event.target.value)}>
+                {years.map((item) => <option key={item}>{item}</option>)}
+              </select>
             </div>
+            <button onClick={() => shiftMonth(1)} className="btn-secondary px-3" title="Next month">
+              <ArrowRight size={15} />
+            </button>
           </div>
-          <button onClick={openBalanceEdit} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" title="Edit opening balances">
-            <Edit2 size={14} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {balances.map((b) => (
-            <div key={b.memberId} className="bg-white rounded-xl border border-indigo-100 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: b.memberColor }} />
-                <span className="text-sm font-semibold text-slate-700">{b.memberName}</span>
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xl font-bold text-indigo-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.currentBalance)}</p>
-                  <p className="text-xs text-slate-400">Current (today)</p>
-                </div>
-                <div className="flex gap-4 pt-1 border-t border-slate-50">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.balanceLastMonth)}</p>
-                    <p className="text-xs text-slate-400">Carry-forward (last month)</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-400"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(b.openingBalance)}</p>
-                    <p className="text-xs text-slate-400">Opening</p>
-                  </div>
-                </div>
-              </div>
-              {b.notes && <p className="text-xs text-slate-400 mt-2 italic">{b.notes}</p>}
-            </div>
-          ))}
         </div>
       </div>
 
-      {/* Savings Accounts Snapshot */}
-      {savingsAccounts.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <Building2 size={15} className="text-emerald-600" />
-              </div>
-              <p className="font-semibold text-slate-700 text-sm">Savings Accounts</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-emerald-700">
-                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(savingsAccounts.reduce((s, a) => s + a.balance, 0))}
-              </span>
-              <Link to="/savings" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
-                View all <ArrowRight size={13} />
-              </Link>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="rounded-lg border border-slate-100 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Month Result</p>
+            {monthResult >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-500" />}
+          </div>
+          <p className={`text-2xl font-bold mt-2 ${monthResult >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}><Money value={monthResult} /></p>
+          <p className="text-xs text-slate-400 mt-1">Income minus net expenses</p>
+        </div>
+        <div className="rounded-lg border border-slate-100 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Available Funds</p>
+            <Wallet size={16} className="text-indigo-500" />
+          </div>
+          <p className={`text-2xl font-bold mt-2 ${availableFunds >= 0 ? 'text-indigo-700' : 'text-rose-700'}`}><Money value={availableFunds} /></p>
+          <p className="text-xs text-slate-400 mt-1">Current + savings balance</p>
+        </div>
+        <div className="rounded-lg border border-violet-100 bg-violet-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Card Budget Left</p>
+            <CreditCard size={16} className="text-violet-500" />
+          </div>
+          <p className={`text-2xl font-bold mt-2 ${budgetTotals.balance < 0 ? 'text-rose-700' : 'text-violet-700'}`}><Money value={budgetTotals.balance} /></p>
+          <p className="text-xs text-violet-500 mt-1">{budgetConsumed}% consumed</p>
+        </div>
+        <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">Recovered</p>
+            <RefreshCw size={16} className="text-cyan-500" />
+          </div>
+          <p className="text-2xl font-bold text-cyan-700 mt-2"><Money value={budgetTotals.recoveredAmount || 0} /></p>
+          <p className="text-xs text-cyan-600 mt-1">Removed from card budgets</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+        <div className="card p-0 overflow-hidden xl:col-span-2">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+            <Scale size={16} className="text-indigo-500" />
+            <div>
+              <h2 className="font-semibold text-slate-700">Accounting Reality</h2>
+              <p className="text-xs text-slate-400">Compact monthly view without double-counting card payments</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {savingsAccounts.map((acc) => (
-              <div key={acc._id} className="rounded-xl border border-slate-100 p-3 hover:border-emerald-200 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: acc.color + '25' }}>
-                    <Building2 size={12} style={{ color: acc.color }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{acc.name}</p>
-                    {acc.bankName && <p className="text-xs text-slate-400 truncate">{acc.bankName}</p>}
-                  </div>
-                </div>
-                <p className="text-base font-bold text-emerald-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(acc.balance)}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: acc.memberId?.color }} />
-                  <span className="text-xs text-slate-400">{acc.memberId?.name}</span>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {realityRows.map((row) => (
+                  <tr key={row.label} className="border-b border-slate-50 last:border-0">
+                    <td className="py-3 px-4 min-w-[190px]">
+                      <p className="font-semibold text-slate-700">{row.label}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{row.detail}</p>
+                    </td>
+                    <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${row.tone}`}><Money value={row.value} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
 
-      {/* Credit Card Snapshot */}
-      {ccSummary.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
+        <div className="card p-0 overflow-hidden xl:col-span-3">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
-                <CreditCard size={15} className="text-violet-600" />
-              </div>
+              <CreditCard size={16} className="text-violet-500" />
               <div>
-                <p className="font-semibold text-slate-700 text-sm">Credit Card Spend — This Month</p>
-                <p className="text-xs text-slate-400">Does not affect account balance</p>
+                <h2 className="font-semibold text-slate-700">Monthly Card Budgets</h2>
+                <p className="text-xs text-slate-400">Net spend after recoveries for {selectedLabel}</p>
               </div>
             </div>
             <Link to="/credit-cards" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
-              View details <ArrowRight size={13} />
+              Manage <ArrowRight size={13} />
             </Link>
           </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  {['Card', 'Budget', 'Net Spent', 'Paid', 'Balance', 'Status'].map((heading) => (
+                    <th key={heading} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{heading}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {budgetRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 px-4 text-center text-sm text-slate-400">No active cards found.</td>
+                  </tr>
+                ) : budgetRows.map((card) => (
+                  <tr key={card._id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                    <td className="py-3 px-4 min-w-[180px]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: card.color }} />
+                        <div>
+                          <p className="font-medium text-slate-700">{card.bankName}</p>
+                          <p className="text-xs text-slate-400">{card.name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-slate-700 whitespace-nowrap"><Money value={card.budgeted} /></td>
+                    <td className="py-3 px-4 font-semibold text-violet-700 whitespace-nowrap">
+                      <Money value={card.spent} />
+                      {(card.recoveredAmount || 0) > 0 && (
+                        <p className="text-xs font-normal text-cyan-600">Recovered <Money value={card.recoveredAmount} /></p>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-emerald-700 whitespace-nowrap"><Money value={card.paid} /></td>
+                    <td className={`py-3 px-4 font-semibold whitespace-nowrap ${card.balance < 0 ? 'text-rose-700' : 'text-slate-700'}`}><Money value={card.balance} /></td>
+                    <td className="py-3 px-4">
+                      <span className={`badge border ${statusClass(card.status)}`}>{statusLabel(card.status)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {ccSummary.map((card) => (
-              <div key={card._id} className="rounded-xl border border-slate-100 p-3 hover:border-violet-200 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: card.color + '25' }}>
-                    <CreditCard size={12} style={{ color: card.color }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{card.bankName}</p>
-                    <p className="text-xs text-slate-400 truncate">{card.name}</p>
-                  </div>
-                </div>
-                <p className="text-base font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalThisMonth)}</p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-xs text-slate-400">{card.countThisMonth} txn{card.countThisMonth !== 1 ? 's' : ''}</p>
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: card.memberId?.color }} />
-                    <span className="text-xs text-slate-400">{card.memberId?.name}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Grand total tile */}
-            <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
-              <p className="text-xs font-semibold text-violet-500 uppercase tracking-wide mb-2">Total</p>
-              <p className="text-base font-bold text-violet-700">
-                <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(ccSummary.reduce((s, c) => s + c.totalThisMonth, 0))}
-              </p>
-              <p className="text-xs text-violet-400 mt-0.5">
-                {ccSummary.reduce((s, c) => s + c.countThisMonth, 0)} transactions
-              </p>
+      <div className="card p-0 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={16} className="text-emerald-500" />
+            <div>
+              <h2 className="font-semibold text-slate-700">Account Balances</h2>
+              <p className="text-xs text-slate-400">As of {balances[0]?.asOf ? format(new Date(balances[0].asOf), 'dd MMM yyyy') : selectedLabel}</p>
             </div>
           </div>
+          <button onClick={openBalanceEdit} className="btn-secondary py-1.5 px-3 text-xs">
+            <Edit2 size={12} /> Opening Balances
+          </button>
         </div>
-      )}
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        {/* Trend Bar Chart */}
-        <div className="card xl:col-span-3">
-          <h3 className="font-semibold text-slate-700 mb-4">6-Month Trend</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={trend} barSize={18}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v) => fmt(v)} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="Expenses" fill="#f97316" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="savings" name="Savings" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Pie Chart */}
-        <div className="card xl:col-span-2">
-          <h3 className="font-semibold text-slate-700 mb-4">Expenses by Category</h3>
-          {topCategories.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={topCategories} dataKey="total" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={false}>
-                    {topCategories.map((_, i) => (
-                      <Cell key={i} fill={topCategories[i]?.color || COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => fmt(v)} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-1 mt-2">
-                {topCategories.map((c, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c.color || COLORS[i % COLORS.length] }} />
-                      <span className="text-slate-600 truncate max-w-[100px]">{c.name}</span>
-                    </div>
-                    <span className="font-medium text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(c.total)}</span>
-                  </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                {['Owner', 'Current Account', 'Carry Forward', 'Opening Balance', 'Savings Accounts'].map((heading) => (
+                  <th key={heading} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{heading}</th>
                 ))}
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-40 text-sm text-slate-400">No expenses this month</div>
-          )}
+              </tr>
+            </thead>
+            <tbody>
+              {balances.map((balance) => {
+                const memberSavings = savingsAccounts.filter((account) => account.memberId?._id === balance.memberId);
+                const memberSavingsTotal = memberSavings.reduce((sum, account) => sum + (account.balance || 0), 0);
+                return (
+                  <tr key={balance.memberId} className="border-b border-slate-50 last:border-0">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: balance.memberColor }} />
+                        <span className="font-semibold text-slate-700">{balance.memberName}</span>
+                      </div>
+                    </td>
+                    <td className={`py-3 px-4 font-bold whitespace-nowrap ${balance.currentBalance < 0 ? 'text-rose-700' : 'text-indigo-700'}`}><Money value={balance.currentBalance} /></td>
+                    <td className="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap"><Money value={balance.balanceLastMonth} /></td>
+                    <td className="py-3 px-4 text-slate-500 whitespace-nowrap"><Money value={balance.openingBalance} /></td>
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-emerald-700 whitespace-nowrap"><Money value={memberSavingsTotal} /></p>
+                      {memberSavings.length > 0 && (
+                        <p className="text-xs text-slate-400 mt-0.5">{memberSavings.map((account) => account.name).join(', ')}</p>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Category Goals */}
-      <CategoryGoalsWidget expenseByCategory={allCategories} />
+      <CategoryGoalsWidget expenseByCategory={expenseByCategory} />
 
-      {/* Recent Transactions */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-slate-700">Recent Expenses</h3>
-          <Link to="/expenses" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
-            View all <ArrowRight size={13} />
-          </Link>
-        </div>
-        {recent.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400">
-            No expenses yet.{' '}
-            <Link to="/expenses" className="text-indigo-600 hover:underline">
-              Add your first expense
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {recent.map((exp) => (
-              <div key={exp._id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: exp.categoryId?.color || '#6366f1' }}
-                  >
-                    {exp.categoryId?.name?.[0] || '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{exp.description || exp.categoryId?.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {exp.memberId?.name} · {format(new Date(exp.date), 'dd MMM')}
-                      {exp.subCategoryId && ` · ${exp.subCategoryId.name}`}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-rose-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(exp.amount)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Edit Opening Balances Modal — one row per member */}
       <Modal isOpen={balanceModal} onClose={() => setBalanceModal(false)} title="Edit Opening Balances">
         <form onSubmit={saveBalance} className="space-y-5">
           {balanceError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{balanceError}</p>}
           <p className="text-xs text-slate-400">
-            Enter the balance each person had before they started tracking in this app. Income and expenses recorded will be added/subtracted automatically.
+            Enter the balance each person had before they started tracking in this app. Recorded income, expenses, and transfers are applied automatically.
           </p>
-          {balances.map((b) => (
-            <div key={b.memberId} className="border border-slate-100 rounded-xl p-4 space-y-3">
+          {balances.map((balance) => (
+            <div key={balance.memberId} className="border border-slate-100 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full" style={{ background: b.memberColor }} />
-                <span className="font-semibold text-slate-700 text-sm">{b.memberName}</span>
+                <span className="w-3 h-3 rounded-full" style={{ background: balance.memberColor }} />
+                <span className="font-semibold text-slate-700 text-sm">{balance.memberName}</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Opening Balance (<DirhamSymbol className="h-[0.75em] w-auto inline align-middle" />)</label>
+                  <label className="label">Opening Balance</label>
                   <input
                     type="number"
                     className="input"
-                    value={balanceForms[b.memberId]?.openingBalance ?? ''}
-                    onChange={(e) =>
-                      setBalanceForms((prev) => ({
-                        ...prev,
-                        [b.memberId]: { ...prev[b.memberId], openingBalance: e.target.value },
+                    value={balanceForms[balance.memberId]?.openingBalance ?? ''}
+                    onChange={(event) =>
+                      setBalanceForms((previous) => ({
+                        ...previous,
+                        [balance.memberId]: { ...previous[balance.memberId], openingBalance: event.target.value },
                       }))
                     }
                     placeholder="0"
@@ -418,18 +405,18 @@ export default function Dashboard() {
                   />
                 </div>
                 <div>
-                  <label className="label">Notes (optional)</label>
+                  <label className="label">Notes</label>
                   <input
                     type="text"
                     className="input"
-                    value={balanceForms[b.memberId]?.notes ?? ''}
-                    onChange={(e) =>
-                      setBalanceForms((prev) => ({
-                        ...prev,
-                        [b.memberId]: { ...prev[b.memberId], notes: e.target.value },
+                    value={balanceForms[balance.memberId]?.notes ?? ''}
+                    onChange={(event) =>
+                      setBalanceForms((previous) => ({
+                        ...previous,
+                        [balance.memberId]: { ...previous[balance.memberId], notes: event.target.value },
                       }))
                     }
-                    placeholder="e.g. Savings as of Jan 2026"
+                    placeholder="Optional"
                   />
                 </div>
               </div>

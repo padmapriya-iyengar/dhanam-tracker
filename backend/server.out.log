@@ -1,3 +1,7 @@
+
+> dhanam-tracker-backend@1.0.0 start
+> node src/index.js
+
 Connected to MongoDB
 Default and demo users are ready
 Server running on port 5000

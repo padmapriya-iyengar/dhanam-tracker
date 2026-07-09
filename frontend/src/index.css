@@ -39,6 +39,33 @@
   .page-title {
     @apply text-2xl font-bold text-slate-800;
   }
+  .insight-markdown {
+    @apply text-sm text-slate-600 leading-6;
+  }
+  .insight-markdown p {
+    @apply mb-3 last:mb-0;
+  }
+  .insight-markdown ul,
+  .insight-markdown ol {
+    @apply space-y-2 pl-5;
+  }
+  .insight-markdown ul {
+    @apply list-disc;
+  }
+  .insight-markdown ol {
+    @apply list-decimal;
+  }
+  .insight-markdown li {
+    @apply pl-1;
+  }
+  .insight-markdown strong {
+    @apply font-semibold text-slate-800;
+  }
+  .insight-markdown h1,
+  .insight-markdown h2,
+  .insight-markdown h3 {
+    @apply text-sm font-semibold text-slate-800 mt-4 mb-2 first:mt-0;
+  }
 }
 
 /* Recharts tooltip customization */

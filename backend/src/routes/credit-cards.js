@@ -119,6 +119,35 @@ function budgetStatus(consumedPercent, budgeted, balance) {
   return 'ok';
 }
 
+function netCreditCardExpenseStages(match) {
+  return [
+    { $match: match },
+    {
+      $lookup: {
+        from: 'expenserecoveries',
+        let: { expenseId: '$_id', userId: '$userId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$expenseId', '$$expenseId'] },
+                  { $eq: ['$userId', '$$userId'] },
+                  { $eq: ['$budgetTreatment', 'reduce_expense'] },
+                ],
+              },
+            },
+          },
+          { $group: { _id: null, amount: { $sum: '$amount' } } },
+        ],
+        as: 'budgetRecoveries',
+      },
+    },
+    { $addFields: { recoveredForBudget: { $min: [{ $ifNull: [{ $first: '$budgetRecoveries.amount' }, 0] }, '$amount'] } } },
+    { $addFields: { netAmount: { $max: [{ $subtract: ['$amount', '$recoveredForBudget'] }, 0] } } },
+  ];
+}
+
 router.get('/budgets', async (req, res) => {
   try {
     const { month, year, start, end } = monthWindow(req.query.month, req.query.year);
@@ -129,8 +158,16 @@ router.get('/budgets', async (req, res) => {
     const [budgets, spend, payments] = await Promise.all([
       CreditCardBudget.find({ userId: req.user._id, month, year }),
       Expense.aggregate([
-        { $match: { userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: start, $lte: end } } },
-        { $group: { _id: '$creditCardId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ...netCreditCardExpenseStages({ userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: start, $lte: end } }),
+        {
+          $group: {
+            _id: '$creditCardId',
+            total: { $sum: '$netAmount' },
+            grossTotal: { $sum: '$amount' },
+            recoveredAmount: { $sum: '$recoveredForBudget' },
+            count: { $sum: 1 },
+          },
+        },
       ]),
       Transfer.aggregate([
         { $match: { userId: req.user._id, toAccountType: 'credit_card', date: { $gte: start, $lte: end } } },
@@ -155,6 +192,8 @@ router.get('/budgets', async (req, res) => {
         budgetId: budget?._id || null,
         budgeted,
         spent,
+        grossSpent: spendMap[key]?.grossTotal || 0,
+        recoveredAmount: spendMap[key]?.recoveredAmount || 0,
         paid,
         transactionCount: spendMap[key]?.count || 0,
         paymentCount: paymentMap[key]?.count || 0,
@@ -173,6 +212,8 @@ router.get('/budgets', async (req, res) => {
       totals: {
         budgeted: rows.reduce((sum, row) => sum + row.budgeted, 0),
         spent: rows.reduce((sum, row) => sum + row.spent, 0),
+        grossSpent: rows.reduce((sum, row) => sum + row.grossSpent, 0),
+        recoveredAmount: rows.reduce((sum, row) => sum + row.recoveredAmount, 0),
         paid: rows.reduce((sum, row) => sum + row.paid, 0),
         balance: rows.reduce((sum, row) => sum + row.balance, 0),
       },
@@ -229,8 +270,16 @@ router.get('/monthly', async (req, res) => {
     const cards = await CreditCard.find({ userId: req.user._id, isActive: true }).populate('memberId', 'name color');
 
     const aggResult = await Expense.aggregate([
-      { $match: { userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: startDate } } },
-      { $group: { _id: { creditCardId: '$creditCardId', month: '$month', year: '$year' }, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      ...netCreditCardExpenseStages({ userId: req.user._id, paymentMethod: 'credit_card', date: { $gte: startDate } }),
+      {
+        $group: {
+          _id: { creditCardId: '$creditCardId', month: '$month', year: '$year' },
+          total: { $sum: '$netAmount' },
+          grossTotal: { $sum: '$amount' },
+          recoveredAmount: { $sum: '$recoveredForBudget' },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const paymentAggResult = await Transfer.aggregate([

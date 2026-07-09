@@ -1,16 +1,51 @@
 const express = require('express');
 const router = express.Router();
-const Anthropic = require('@anthropic-ai/sdk');
 const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Member = require('../models/Member');
 
+async function generateOpenAIInsights({ prompt, apiKey, model }) {
+  const requestBody = {
+    model,
+    messages: [{ role: 'user', content: prompt }],
+    max_completion_tokens: 4000,
+  };
+
+  if (model.startsWith('gpt-5')) {
+    requestBody.reasoning_effort = 'minimal';
+  }
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload.error?.message || `OpenAI request failed with status ${response.status}`;
+    throw new Error(message);
+  }
+
+  const text = payload.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    const finishReason = payload.choices?.[0]?.finish_reason;
+    const detail = finishReason ? ` Finish reason: ${finishReason}.` : '';
+    throw new Error(`OpenAI returned an empty insights response.${detail}`);
+  }
+  return text;
+}
+
 router.post('/', async (req, res) => {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey || apiKey === 'your_anthropic_api_key_here') {
-      return res.status(400).json({ error: 'Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your .env file.' });
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey || apiKey === 'your_openai_api_key_here') {
+      return res.status(400).json({ error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your backend .env file.' });
     }
+    const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
 
     const now = new Date();
     const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
@@ -82,34 +117,40 @@ ${monthlyTrend.map((m) => `- ${formatMonth(m._id.month, m._id.year)}: ${money(m.
 ${topExpenses.map((e) => `- ${money(e.amount)} on ${e.category.name}${e.description ? ` (${e.description})` : ''} by ${e.member.name}`).join('\n')}
 `;
 
-    const client = new Anthropic({ apiKey });
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a friendly personal finance advisor. Analyze this financial data and provide clear, actionable insights in a warm, encouraging tone. Use ${currencyName} in your analysis. Be specific with amounts and percentages.
+    const prompt = `You are a friendly personal finance advisor. Analyze this financial data and provide clear, actionable insights in a warm, encouraging tone. Use ${currencyName} in your analysis. Be specific with amounts and percentages.
 
 ${financialSummary}
 
-Please provide:
-1. **Overall Financial Health** - A brief assessment (2-3 sentences)
-2. **Top 3 Spending Insights** - Where money is going and what's notable
-3. **Savings Opportunities** - 3 specific areas where they can cut back, with estimated savings
-4. **Positive Patterns** - What they're doing well
-5. **Action Plan** - 3 concrete steps for next month
+Return ONLY Markdown using this exact structure and headings:
 
-Keep each section concise. Use bullet points. Be specific, practical, and encouraging.`,
-        },
-      ],
-    });
+## Overall Financial Health
+- 2 to 3 bullets.
+- Start each bullet with a short bold label, then a practical explanation.
+
+## Spending Insights
+- Exactly 3 bullets about where money is going and what is notable.
+- Include concrete amounts or percentages where useful.
+
+## Savings Opportunities
+- Exactly 3 bullets.
+- Each bullet must include an estimated AED/INR saving or reduction range.
+
+## Positive Patterns
+- 2 to 3 bullets about what is going well.
+
+## Action Plan
+- Exactly 3 bullets for next month.
+- Each bullet should be a concrete action, not a generic suggestion.
+
+Keep every bullet concise. Do not use long paragraphs. Do not add any sections outside the requested headings.`;
+
+    const insights = await generateOpenAIInsights({ prompt, apiKey, model });
 
     res.json({
-      insights: message.content[0].text,
+      insights,
       summary: { totalIncome, totalExpense, savings: totalIncome - totalExpense, avgMonthlyIncome, avgMonthlyExpense },
       generatedAt: new Date(),
+      model,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

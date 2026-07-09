@@ -1,8 +1,128 @@
-import { AlertCircle, Coins, Lightbulb, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  AlertCircle, CheckCircle2, Coins, Lightbulb, ListChecks, PiggyBank, RefreshCw,
+  Sparkles, Target, TrendingUp,
+} from 'lucide-react';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import DirhamSymbol from '../components/DirhamSymbol';
 import { fmt, insightsApi } from '../services/api';
+
+const sectionConfig = {
+  'overall financial health': {
+    title: 'Overall Financial Health',
+    eyebrow: 'Household snapshot',
+    icon: TrendingUp,
+    accent: 'border-l-indigo-500',
+    iconClass: 'bg-indigo-50 text-indigo-600',
+  },
+  'spending insights': {
+    title: 'Spending Insights',
+    eyebrow: 'Where money is moving',
+    icon: Target,
+    accent: 'border-l-sky-500',
+    iconClass: 'bg-sky-50 text-sky-600',
+  },
+  'top 3 spending insights': {
+    title: 'Spending Insights',
+    eyebrow: 'Where money is moving',
+    icon: Target,
+    accent: 'border-l-sky-500',
+    iconClass: 'bg-sky-50 text-sky-600',
+  },
+  'savings opportunities': {
+    title: 'Savings Opportunities',
+    eyebrow: 'Near-term reductions',
+    icon: PiggyBank,
+    accent: 'border-l-emerald-500',
+    iconClass: 'bg-emerald-50 text-emerald-600',
+  },
+  'positive patterns': {
+    title: 'Positive Patterns',
+    eyebrow: 'What is working',
+    icon: CheckCircle2,
+    accent: 'border-l-amber-500',
+    iconClass: 'bg-amber-50 text-amber-600',
+  },
+  'action plan': {
+    title: 'Action Plan',
+    eyebrow: 'Next month',
+    icon: ListChecks,
+    accent: 'border-l-violet-500',
+    iconClass: 'bg-violet-50 text-violet-600',
+  },
+};
+
+const normalizeHeading = (value) => value
+  .toLowerCase()
+  .replace(/\s+[-–—].*$/, '')
+  .replace(/\s*\([^)]*\)/g, '')
+  .replace(/^\d+\.\s*/, '')
+  .trim();
+
+function splitInsightsIntoSections(markdown) {
+  if (!markdown) return [];
+
+  const headingRegex = /^#{1,3}\s+(.+)$/gm;
+  const matches = [...markdown.matchAll(headingRegex)];
+
+  if (matches.length) {
+    return matches.map((match, index) => {
+      const heading = match[1].replace(/\*\*/g, '').trim();
+      const start = match.index + match[0].length;
+      const end = matches[index + 1]?.index ?? markdown.length;
+      return { heading, body: markdown.slice(start, end).trim() };
+    }).filter((section) => section.body);
+  }
+
+  const knownHeadings = [
+    'Overall Financial Health',
+    'Top 3 Spending Insights',
+    'Spending Insights',
+    'Savings Opportunities',
+    'Positive Patterns',
+    'Action Plan',
+  ];
+  const plainHeadingRegex = new RegExp(`^(${knownHeadings.join('|')})(?:\\s*[-–—].*)?$`, 'gmi');
+  const plainMatches = [...markdown.matchAll(plainHeadingRegex)];
+
+  if (!plainMatches.length) return [{ heading: 'Financial Insights', body: markdown.trim() }];
+
+  return plainMatches.map((match, index) => {
+    const heading = match[1].trim();
+    const start = match.index + match[0].length;
+    const end = plainMatches[index + 1]?.index ?? markdown.length;
+    return { heading, body: markdown.slice(start, end).trim() };
+  }).filter((section) => section.body);
+}
+
+function InsightSection({ section }) {
+  const key = normalizeHeading(section.heading);
+  const config = sectionConfig[key] || {
+    title: section.heading,
+    eyebrow: 'AI recommendation',
+    icon: Sparkles,
+    accent: 'border-l-slate-300',
+    iconClass: 'bg-slate-100 text-slate-600',
+  };
+  const Icon = config.icon;
+
+  return (
+    <section className={`bg-white rounded-lg shadow-sm border border-slate-100 border-l-4 ${config.accent} p-5`}>
+      <div className="flex items-start gap-3 mb-4">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${config.iconClass}`}>
+          <Icon size={18} />
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{config.eyebrow}</p>
+          <h2 className="text-base font-bold text-slate-800 leading-tight">{config.title}</h2>
+        </div>
+      </div>
+      <div className="insight-markdown">
+        <ReactMarkdown>{section.body}</ReactMarkdown>
+      </div>
+    </section>
+  );
+}
 
 export default function Insights() {
   const [insights, setInsights] = useState(null);
@@ -10,6 +130,8 @@ export default function Insights() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [generatedAt, setGeneratedAt] = useState(null);
+  const [model, setModel] = useState(null);
+  const insightSections = splitInsightsIntoSections(insights);
 
   const generate = async () => {
     setLoading(true);
@@ -19,8 +141,9 @@ export default function Insights() {
       setInsights(data.insights);
       setSummary(data.summary);
       setGeneratedAt(data.generatedAt);
+      setModel(data.model);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to generate insights. Please check your AI API key in the backend .env file.');
+      setError(err.response?.data?.error || 'Failed to generate insights. Please check your OpenAI API key in the backend .env file.');
     } finally {
       setLoading(false);
     }
@@ -31,7 +154,7 @@ export default function Insights() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">AI Insights</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Powered by Claude AI — personalized financial advice for your household</p>
+          <p className="text-sm text-slate-500 mt-0.5">Powered by OpenAI — personalized financial advice for your household</p>
         </div>
         <button onClick={generate} disabled={loading} className="btn-primary">
           {loading ? (
@@ -51,7 +174,7 @@ export default function Insights() {
             </div>
             <h3 className="font-semibold text-slate-700 text-lg mb-2">Get Smart Financial Insights</h3>
             <p className="text-slate-500 text-sm mb-6">
-              Click "Generate Insights" and Claude AI will analyze your last 3 months of income and expenses to provide personalized recommendations for your household.
+              Click "Generate Insights" and OpenAI will analyze your last 3 months of income and expenses to provide personalized recommendations for your household.
             </p>
             <div className="grid grid-cols-3 gap-3 text-left">
               {[
@@ -65,7 +188,7 @@ export default function Insights() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-slate-400 mt-4">Requires Anthropic API key in backend .env</p>
+            <p className="text-xs text-slate-400 mt-4">Requires OPENAI_API_KEY in backend .env</p>
           </div>
         </div>
       )}
@@ -79,7 +202,7 @@ export default function Insights() {
               <p className="font-medium text-rose-700 text-sm">Failed to generate insights</p>
               <p className="text-rose-600 text-sm mt-1">{error}</p>
               <p className="text-xs text-rose-500 mt-2">
-                Make sure you've set ANTHROPIC_API_KEY in backend/.env and restarted the server.
+                Make sure you've set OPENAI_API_KEY in backend/.env and restarted the server.
               </p>
             </div>
           </div>
@@ -93,7 +216,7 @@ export default function Insights() {
             <Sparkles size={24} className="text-indigo-600" />
           </div>
           <p className="font-medium text-slate-700">Analyzing your finances...</p>
-          <p className="text-sm text-slate-500 mt-1">Claude is reviewing your last 3 months of data</p>
+          <p className="text-sm text-slate-500 mt-1">OpenAI is reviewing your last 3 months of data</p>
         </div>
       )}
 
@@ -136,24 +259,29 @@ export default function Insights() {
             </div>
           )}
 
-          {/* AI Insights Card */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+          {/* AI Insights */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <Sparkles size={16} className="text-white" />
               </div>
               <div>
                 <p className="font-semibold text-slate-800">AI Financial Insights</p>
                 {generatedAt && (
-                  <p className="text-xs text-slate-400">Generated {new Date(generatedAt).toLocaleString('en-AE')}</p>
+                  <p className="text-xs text-slate-400">
+                    Generated {new Date(generatedAt).toLocaleString('en-AE')}{model ? ` with ${model}` : ''}
+                  </p>
                 )}
               </div>
               <button onClick={generate} className="ml-auto btn-secondary py-1.5 px-3 text-xs">
                 <RefreshCw size={12} /> Refresh
               </button>
             </div>
-            <div className="prose prose-sm max-w-none prose-headings:text-slate-800 prose-headings:font-semibold prose-p:text-slate-600 prose-li:text-slate-600 prose-strong:text-slate-700">
-              <ReactMarkdown>{insights}</ReactMarkdown>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {insightSections.map((section) => (
+                <InsightSection key={section.heading} section={section} />
+              ))}
             </div>
           </div>
         </>

@@ -42,12 +42,9 @@ async function savingsLedgerEffect(userId, accountId, dateLte = new Date()) {
     - (transfers[0]?.outgoing || 0);
 }
 
-async function withCalculatedBalances(userId, accounts) {
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-
+async function withCalculatedBalances(userId, accounts, dateLte = new Date()) {
   return Promise.all(accounts.map(async (account) => {
-    const effect = await savingsLedgerEffect(userId, account._id, todayEnd);
+    const effect = await savingsLedgerEffect(userId, account._id, dateLte);
     const obj = account.toObject();
     obj.openingBalance = obj.openingBalance ?? 0;
     obj.balance = obj.openingBalance + effect;
@@ -58,10 +55,17 @@ async function withCalculatedBalances(userId, accounts) {
 
 router.get('/', async (req, res) => {
   try {
+    const now = new Date();
+    const selectedMonth = parseInt(req.query.month) || now.getMonth() + 1;
+    const selectedYear = parseInt(req.query.year) || now.getFullYear();
+    const isCurrentMonth = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
+    const asOf = isCurrentMonth
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      : new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
     const accounts = await SavingsAccount.find({ userId: req.user._id })
       .populate('memberId', 'name color role')
       .sort({ memberId: 1, createdAt: 1 });
-    res.json(await withCalculatedBalances(req.user._id, accounts));
+    res.json(await withCalculatedBalances(req.user._id, accounts, asOf));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
