@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ADO Resource Allocation Gantt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f7f9fb;
+      color: #222;
+    }
+
+    h2 {
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 18px;
+    }
+
+    input[type="file"] {
+      margin-top: 8px;
+    }
+
+    button {
+      border: 0;
+      background: #2563eb;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 13px;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .summary {
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #444;
+    }
+
+    .gantt-wrapper {
+      overflow: auto;
+      max-height: 650px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: max-content;
+      min-width: 1200px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      min-width: 115px;
+      height: 42px;
+      box-sizing: border-box;
+      position: relative;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f0f2f5;
+      font-weight: 600;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .resource-col {
+      min-width: 160px;
+      max-width: 160px;
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      font-weight: 700;
+      color: white;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    th.resource-header {
+      left: 0;
+      z-index: 8;
+      color: #222;
+    }
+
+    .item-col {
+      min-width: 320px;
+      max-width: 320px;
+      position: sticky;
+      left: 160px;
+      background: #fafafa;
+      z-index: 3;
+      font-weight: 600;
+    }
+
+    th.item-header {
+      left: 160px;
+      z-index: 7;
+      background: #f0f2f5;
+    }
+
+    .project {
+      display: block;
+      font-size: 11px;
+      color: #666;
+      font-weight: normal;
+      margin-top: 3px;
+    }
+
+    .bar {
+      height: 24px;
+      border-radius: 12px;
+      color: white;
+      font-size: 12px;
+      line-height: 24px;
+      padding-left: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-sizing: border-box;
+      position: absolute;
+      top: 9px;
+      left: 6px;
+      z-index: 2;
+    }
+
+    .legend {
+      margin-top: 16px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+    }
+
+    .empty {
+      padding: 20px;
+      color: #666;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .sample-table {
+      border-collapse: collapse;
+      margin-top: 10px;
+      width: auto;
+      min-width: 0;
+    }
+
+    .sample-table th,
+    .sample-table td {
+      position: static;
+      min-width: 120px;
+      height: auto;
+      font-size: 12px;
+      padding: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>ADO Resource Allocation Gantt</h2>
+<div class="subtitle">
+  Upload ADO CSV export and view resource-wise weekly allocation across EPICs, Features, User Stories, or Tasks.
+</div>
+
+<div class="panel">
+  <strong>Upload ADO CSV Export</strong><br>
+  <input type="file" id="csvFile" accept=".csv" />
+  <button onclick="loadSampleData()">Load Sample Data</button>
+
+  <div class="hint">
+    Required columns:
+    <b>ID</b>, <b>Work Item Type</b>, <b>Title</b>, <b>Assigned To</b>, <b>Project</b>, <b>Start Date</b>, <b>Target Date</b>, <b>State</b>.
+    <br>
+    If Project is not available, the page will use <b>Area Path</b>. If Target Date is blank, it will use <b>Closed Date</b>.
+  </div>
+</div>
+
+<div id="summary" class="summary"></div>
+<div id="legend" class="legend"></div>
+
+<div class="gantt-wrapper">
+  <table id="gantt"></table>
+</div>
+
+<div id="empty" class="empty">
+  Upload a CSV file or click <b>Load Sample Data</b>.
+
+  <table class="sample-table">
+    <tr>
+      <th>ID</th>
+      <th>Work Item Type</th>
+      <th>Title</th>
+      <th>Assigned To</th>
+      <th>Project</th>
+      <th>Start Date</th>
+      <th>Target Date</th>
+      <th>State</th>
+    </tr>
+    <tr>
+      <td>301</td>
+      <td>Epic</td>
+      <td>Digital Onboarding</td>
+      <td>Kiran</td>
+      <td>Business Banking</td>
+      <td>2026-07-06</td>
+      <td>2026-07-24</td>
+      <td>In Progress</td>
+    </tr>
+  </table>
+</div>
+
+<script>
+  const weekWidth = 115;
+
+  const colorPalette = [
+    "#1d4ed8", "#15803d", "#6d28d9", "#c2410c", "#0f766e",
+    "#be123c", "#4338ca", "#a16207", "#0369a1", "#4d7c0f"
+  ];
+
+  document.getElementById("csvFile").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const csvText = e.target.result;
+      const records = csvToJson(csvText);
+      render(records);
+    };
+
+    reader.readAsText(file);
+  });
+
+  function loadSampleData() {
+    const records = [
+      {
+        id: "301",
+        type: "Epic",
+        title: "Digital Onboarding",
+        assignedTo: "Kiran",
+        project: "Business Banking",
+        start: "2026-07-06",
+        finish: "2026-07-24",
+        state: "In Progress"
+      },
+      {
+        id: "1450",
+        type: "Feature",
+        title: "RBAC Automation",
+        assignedTo: "Kiran",
+        project: "IAM",
+        start: "2026-07-20",
+        finish: "2026-08-14",
+        state: "Active"
+      },
+      {
+        id: "889",
+        type: "Task",
+        title: "Production Defect Support",
+        assignedTo: "Kiran",
+        project: "BAU",
+        start: "2026-08-17",
+        finish: "2026-08-28",
+        state: "New"
+      },
+      {
+        id: "2210",
+        type: "Feature",
+        title: "CASA Statement Changes",
+        assignedTo: "Amit",
+        project: "Statement Engine",
+        start: "2026-07-06",
+        finish: "2026-07-31",
+        state: "In Progress"
+      },
+      {
+        id: "1102",
+        type: "Task",
+        title: "API Mapping",
+        assignedTo: "Amit",
+        project: "Reconciliation",
+        start: "2026-08-03",
+        finish: "2026-08-14",
+        state: "Active"
+      },
+      {
+        id: "501",
+        type: "Epic",
+        title: "AppWorks Migration",
+        assignedTo: "Neha",
+        project: "OpenText BPM",
+        start: "2026-07-13",
+        finish: "2026-08-07",
+        state: "In Progress"
+      }
+    ];
+
+    render(records);
+  }
+
+  function csvToJson(csvText) {
+    const rows = parseCSV(csvText);
+    if (rows.length < 2) return [];
+
+    const headers = rows[0].map(h => cleanHeader(h));
+
+    return rows.slice(1)
+      .filter(row => row.some(value => value && value.trim() !== ""))
+      .map(row => {
+        const obj = {};
+
+        headers.forEach((header, index) => {
+          obj[header] = row[index] ? row[index].trim() : "";
+        });
+
+        return normalizeRecord(obj);
+      })
+      .filter(x => x.assignedTo && x.start && x.finish);
+  }
+
+  function cleanHeader(value) {
+    return value
+      .replace(/^\uFEFF/, "")
+      .trim();
+  }
+
+  function normalizeRecord(row) {
+    return {
+      id: row["ID"] || row["Id"] || row["Work Item Id"] || "",
+      type: row["Work Item Type"] || row["Type"] || "",
+      title: row["Title"] || "",
+      assignedTo: cleanupAssignedTo(row["Assigned To"] || row["AssignedTo"] || ""),
+      project: row["Project"] || row["Team Project"] || row["Area Path"] || "",
+      areaPath: row["Area Path"] || "",
+      iterationPath: row["Iteration Path"] || "",
+      start: formatDate(row["Start Date"] || row["StartDate"] || row["Created Date"] || ""),
+      finish: formatDate(row["Target Date"] || row["Finish Date"] || row["End Date"] || row["Closed Date"] || ""),
+      state: row["State"] || "",
+      parent: row["Parent"] || row["Parent ID"] || "",
+      tags: row["Tags"] || ""
+    };
+  }
+
+  function cleanupAssignedTo(value) {
+    // Handles formats like "Kiran Joshi <kiran.joshi@domain.com>"
+    return value.replace(/<[^>]*>/g, "").trim();
+  }
+
+  function formatDate(value) {
+    if (!value) return "";
+
+    const cleaned = value.trim();
+
+    // Handles 2026-07-06
+    if (/^\d{4}-\d{2}-\d{2}/.test(cleaned)) {
+      return cleaned.substring(0, 10);
+    }
+
+    // Handles 06/07/2026 or 7/6/2026 depending on browser locale.
+    const parsed = new Date(cleaned);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().substring(0, 10);
+    }
+
+    return "";
+  }
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let current = "";
+    let insideQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const next = text[i + 1];
+
+      if (char === '"' && insideQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === "," && !insideQuotes) {
+        row.push(current);
+        current = "";
+      } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+        if (current !== "" || row.length > 0) {
+          row.push(current);
+          rows.push(row);
+          row = [];
+          current = "";
+        }
+
+        if (char === "\r" && next === "\n") i++;
+      } else {
+        current += char;
+      }
+    }
+
+    if (current !== "" || row.length > 0) {
+      row.push(current);
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
+  function render(records) {
+    const validRecords = records
+      .filter(x => x.assignedTo && x.start && x.finish)
+      .sort((a, b) => {
+        if (a.assignedTo !== b.assignedTo) return a.assignedTo.localeCompare(b.assignedTo);
+        return new Date(a.start) - new Date(b.start);
+      });
+
+    document.getElementById("empty").style.display = validRecords.length ? "none" : "block";
+
+    if (!validRecords.length) {
+      document.getElementById("summary").innerHTML = "No valid records found. Please check mandatory columns and date values.";
+      document.getElementById("gantt").innerHTML = "";
+      document.getElementById("legend").innerHTML = "";
+      return;
+    }
+
+    const weeks = buildWeeks(validRecords);
+    const grouped = groupByResource(validRecords);
+    const resourceColors = assignColors(Object.keys(grouped));
+
+    renderSummary(validRecords, grouped, weeks);
+    renderLegend(resourceColors);
+    renderTable(grouped, weeks, resourceColors);
+  }
+
+  function buildWeeks(records) {
+    const minDate = new Date(Math.min(...records.map(x => new Date(x.start))));
+    const maxDate = new Date(Math.max(...records.map(x => new Date(x.finish))));
+
+    const firstMonday = getMonday(minDate);
+    const weeks = [];
+
+    let current = new Date(firstMonday);
+    let weekNo = 1;
+
+    while (current <= maxDate) {
+      const start = new Date(current);
+      const end = new Date(current);
+      end.setDate(end.getDate() + 6);
+
+      weeks.push({
+        index: weekNo,
+        label: "W" + weekNo + "<br>" + formatDisplayDate(start),
+        start,
+        end
+      });
+
+      current.setDate(current.getDate() + 7);
+      weekNo++;
+    }
+
+    return weeks;
+  }
+
+  function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function formatDisplayDate(date) {
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+  }
+
+  function groupByResource(records) {
+    return records.reduce((acc, item) => {
+      if (!acc[item.assignedTo]) acc[item.assignedTo] = [];
+      acc[item.assignedTo].push(item);
+      return acc;
+    }, {});
+  }
+
+  function assignColors(resources) {
+    const colors = {};
+
+    resources.forEach((resource, index) => {
+      colors[resource] = colorPalette[index % colorPalette.length];
+    });
+
+    return colors;
+  }
+
+  function renderSummary(records, grouped, weeks) {
+    document.getElementById("summary").innerHTML =
+      `<b>${records.length}</b> work item allocation(s), ` +
+      `<b>${Object.keys(grouped).length}</b> resource(s), ` +
+      `<b>${weeks.length}</b> week(s) displayed.`;
+  }
+
+  function renderLegend(resourceColors) {
+    let html = "";
+
+    Object.keys(resourceColors).forEach(resource => {
+      html += `
+        <div class="legend-item">
+          <span class="legend-box" style="background:${resourceColors[resource]}"></span>
+          ${escapeHtml(resource)}
+        </div>`;
+    });
+
+    document.getElementById("legend").innerHTML = html;
+  }
+
+  function renderTable(grouped, weeks, resourceColors) {
+    let html = "<thead><tr>";
+    html += "<th class='resource-header resource-col'>Resource</th>";
+    html += "<th class='item-header item-col'>ADO Item / Project</th>";
+
+    weeks.forEach(week => {
+      html += `<th>${week.label}</th>`;
+    });
+
+    html += "</tr></thead><tbody>";
+
+    Object.keys(grouped).forEach(resource => {
+      const items = grouped[resource];
+      const color = resourceColors[resource];
+
+      items.forEach((row, rowIndex) => {
+        html += "<tr>";
+
+        if (rowIndex === 0) {
+          html += `
+            <td class="resource-col"
+                rowspan="${items.length}"
+                style="background:${color}">
+              ${escapeHtml(resource)}<br>
+              <span style="font-size:11px;font-weight:normal;">${items.length} item(s)</span>
+            </td>`;
+        }
+
+        html += `
+          <td class="item-col">
+            ${escapeHtml(row.type)} ${escapeHtml(row.id)} - ${escapeHtml(row.title)}
+            <span class="project">${escapeHtml(row.project)} | ${escapeHtml(row.state)}</span>
+          </td>`;
+
+        weeks.forEach((week, weekIndex) => {
+          html += "<td>";
+
+          if (isBarStart(row, week)) {
+            const spanWeeks = calculateWeekSpan(row, weeks, weekIndex);
+            const width = (spanWeeks * weekWidth) - 14;
+
+            html += `
+              <div class="bar"
+                   style="width:${width}px;background:${color}"
+                   title="${escapeHtml(resource)} | ${escapeHtml(row.project)} | ${escapeHtml(row.title)} | ${row.start} to ${row.finish}">
+                ${escapeHtml(row.title)}
+              </div>`;
+          }
+
+          html += "</td>";
+        });
+
+        html += "</tr>";
+      });
+    });
+
+    html += "</tbody>";
+
+    document.getElementById("gantt").innerHTML = html;
+  }
+
+  function isBarStart(row, week) {
+    const start = new Date(row.start);
+    return start >= week.start && start <= week.end;
+  }
+
+  function calculateWeekSpan(row, weeks, startWeekIndex) {
+    const finish = new Date(row.finish);
+    let span = 1;
+
+    for (let i = startWeekIndex + 1; i < weeks.length; i++) {
+      if (finish >= weeks[i].start) {
+        span++;
+      }
+    }
+
+    return span;
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "id": "/dhanam-tracker/",
+  "name": "Dhanam Tracker",
+  "short_name": "Dhanam",
+  "description": "Family finance, budgeting, savings, and expense tracker",
+  "start_url": "/dhanam-tracker/",
+  "scope": "/dhanam-tracker/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/dhanam-tracker/dhanam-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
