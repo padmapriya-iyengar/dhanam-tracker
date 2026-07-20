@@ -16,6 +16,7 @@ const Savings = lazy(() => import('./pages/Savings'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const Transfers = lazy(() => import('./pages/Transfers'));
 const Users = lazy(() => import('./pages/Users'));
+const AccountOverview = lazy(() => import('./pages/AccountOverview'));
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="savings" element={<Savings />} />
               <Route path="credit-cards" element={<CreditCards />} />
               <Route path="transfers" element={<Transfers />} />
+              <Route path="accounts" element={<AccountOverview />} />
               <Route path="members" element={<Members />} />
               <Route path="users" element={<Users />} />
             </Route>

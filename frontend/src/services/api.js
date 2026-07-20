@@ -95,6 +95,11 @@ export const transfersApi = {
   delete: (id) => api.delete(`/transfers/${id}`),
 };
 
+export const accountsApi = {
+  getAll: () => api.get('/accounts'),
+  getTransactions: (params) => api.get('/accounts/transactions', { params }),
+};
+
 export const subscriptionsApi = {
   getAll: (params) => api.get('/subscriptions', { params }),
   create: (data) => api.post('/subscriptions', data),
