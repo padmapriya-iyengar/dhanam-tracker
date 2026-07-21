@@ -62,6 +62,74 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/category-comparison', async (req, res) => {
+  try {
+    const [accountType, accountId] = String(req.query.account || '').split(':');
+    const months = String(req.query.months || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value));
+    if (!accountId || !['current', 'savings', 'credit_card'].includes(accountType)) {
+      return res.status(400).json({ error: 'Select a current account, savings account, or credit card' });
+    }
+    if (!months.length) return res.status(400).json({ error: 'Add at least one month' });
+
+    const monthParts = months.map((value) => {
+      const [year, month] = value.split('-').map(Number);
+      return { year, month };
+    });
+    const filter = { userId: req.user._id, $or: monthParts };
+    if (accountType === 'current') {
+      filter.memberId = accountId;
+      filter.paymentMethod = { $in: CURRENT_EXPENSE_METHODS };
+    } else if (accountType === 'savings') {
+      filter.savingsAccountId = accountId;
+      filter.paymentMethod = 'savings';
+    } else {
+      filter.creditCardId = accountId;
+      filter.paymentMethod = 'credit_card';
+    }
+
+    const expenses = await Expense.find(filter)
+      .populate('categoryId', 'name color icon')
+      .populate('subCategoryId', 'name');
+    const categoryMap = new Map();
+    const totals = Object.fromEntries(months.map((month) => [month, 0]));
+    expenses.forEach((expense) => {
+      const monthKey = `${expense.year}-${String(expense.month).padStart(2, '0')}`;
+      const categoryId = idOf(expense.categoryId) || 'uncategorized';
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          id: categoryId,
+          name: expense.categoryId?.name || 'Uncategorized',
+          color: expense.categoryId?.color || '#94a3b8',
+          values: Object.fromEntries(months.map((month) => [month, 0])),
+          subcategories: new Map(),
+        });
+      }
+      const category = categoryMap.get(categoryId);
+      category.values[monthKey] += expense.amount;
+      totals[monthKey] += expense.amount;
+      const subcategoryId = idOf(expense.subCategoryId) || 'other';
+      if (!category.subcategories.has(subcategoryId)) {
+        category.subcategories.set(subcategoryId, {
+          id: subcategoryId,
+          name: expense.subCategoryId?.name || 'Other',
+          values: Object.fromEntries(months.map((month) => [month, 0])),
+        });
+      }
+      category.subcategories.get(subcategoryId).values[monthKey] += expense.amount;
+    });
+
+    const rows = [...categoryMap.values()]
+      .map((category) => ({ ...category, subcategories: [...category.subcategories.values()].sort((a, b) => a.name.localeCompare(b.name)) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ months, rows, totals });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/transactions', async (req, res) => {
   try {
     const selectedKey = req.query.account || '';

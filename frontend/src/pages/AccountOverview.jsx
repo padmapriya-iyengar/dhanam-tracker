@@ -1,6 +1,7 @@
 import { ArrowDownLeft, ArrowUpRight, CalendarRange, Check, ChevronDown, CreditCard, Landmark, RefreshCw, WalletCards } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import AccountTransactionLedger from '../components/AccountTransactionLedger';
+import AccountCategoryComparison from '../components/AccountCategoryComparison';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { accountsApi, fmt } from '../services/api';
@@ -123,6 +124,7 @@ export default function AccountOverview() {
       </div>
       {data.summary.scope === 'cash' && <div className="space-y-2"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Current &amp; savings cash flow</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"><SummaryCard label="Money in" amount={data.summary.cash.totalIn} icon={ArrowDownLeft} tone="green" /><SummaryCard label="Money out" amount={data.summary.cash.totalOut} icon={ArrowUpRight} tone="rose" /><div className="col-span-2 sm:col-span-1"><SummaryCard label="Net cash movement" amount={data.summary.cash.net} icon={filters.account ? Landmark : WalletCards} tone="indigo" /></div></div></div>}
       {(!filters.account || data.summary.scope === 'credit_card') && <div className="space-y-2"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Credit card activity</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"><SummaryCard label="Card purchases" amount={data.summary.creditCards.purchases} icon={CreditCard} tone="rose" /><SummaryCard label="Card payments" amount={data.summary.creditCards.payments} icon={ArrowDownLeft} tone="green" /><div className="col-span-2 sm:col-span-1"><SummaryCard label="Outstanding movement" amount={data.summary.creditCards.outstandingMovement} icon={CreditCard} tone="indigo" /></div></div></div>}
+      <AccountCategoryComparison account={filters.account} />
       <div className="flex items-end justify-between"><div><h2 className="font-semibold text-slate-800">Transaction history</h2><p className="text-xs text-slate-400">{data.total || 0} transaction{data.total === 1 ? '' : 's'}</p></div>{ledgerLoading && <span className="text-xs text-indigo-500">Updating…</span>}</div>
       {error ? <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : <div className={ledgerLoading ? 'opacity-60 transition-opacity' : ''}><AccountTransactionLedger transactions={data.records} page={page} pages={data.pages} onPageChange={setPage} /></div>}
     </div>

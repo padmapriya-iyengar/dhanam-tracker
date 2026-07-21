@@ -98,6 +98,7 @@ export const transfersApi = {
 export const accountsApi = {
   getAll: () => api.get('/accounts'),
   getTransactions: (params) => api.get('/accounts/transactions', { params }),
+  getCategoryComparison: (params) => api.get('/accounts/category-comparison', { params }),
 };
 
 export const subscriptionsApi = {
