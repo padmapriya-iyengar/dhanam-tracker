@@ -50,7 +50,12 @@ router.get('/', async (req, res) => {
     res.json([
       ...members.map((member) => ({ key: keyFor('current', member._id), id: member._id, type: 'current', name: `${member.name} Current Account`, owner: member.name, color: member.color, openingBalance: balanceMap.get(idOf(member._id)) || 0 })),
       ...savings.map((account) => ({ key: keyFor('savings', account._id), id: account._id, type: 'savings', accountType: account.accountType, name: account.name, bankName: account.bankName, owner: account.memberId?.name, color: account.color, openingBalance: account.openingBalance || 0 })),
-      ...cards.map((card) => ({ key: keyFor('credit_card', card._id), id: card._id, type: 'credit_card', name: card.name, bankName: card.bankName, owner: card.memberId?.name, color: card.color, lastFourDigits: card.lastFourDigits, openingBalance: 0 })),
+      ...cards.map((card) => ({
+        key: keyFor('credit_card', card._id), id: card._id, type: 'credit_card', name: card.name,
+        bankName: card.bankName, owner: card.memberId?.name, color: card.color,
+        lastFourDigits: card.lastFourDigits, cycleStartDay: card.cycleStartDay,
+        cycleEndDay: card.cycleEndDay, statementDay: card.statementDay, openingBalance: 0,
+      })),
     ]);
   } catch (err) {
     res.status(500).json({ error: err.message });

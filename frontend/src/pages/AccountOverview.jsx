@@ -7,6 +7,33 @@ import { accountsApi, fmt } from '../services/api';
 
 const groups = { current: 'Current Accounts', savings: 'Savings & Investments', credit_card: 'Credit Cards' };
 
+function localDateValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateAtCycleDay(year, monthIndex, day) {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  return new Date(year, monthIndex, Math.min(day, lastDay));
+}
+
+function currentStatementCycle(card, today = new Date()) {
+  const endDay = card.cycleEndDay || card.statementDay || 14;
+  const startDay = card.cycleStartDay || (endDay === 31 ? 1 : endDay + 1);
+  const endMonth = today.getDate() <= endDay
+    ? new Date(today.getFullYear(), today.getMonth(), 1)
+    : new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const startMonth = startDay > endDay
+    ? new Date(endMonth.getFullYear(), endMonth.getMonth() - 1, 1)
+    : endMonth;
+  return {
+    startDate: localDateValue(dateAtCycleDay(startMonth.getFullYear(), startMonth.getMonth(), startDay)),
+    endDate: localDateValue(dateAtCycleDay(endMonth.getFullYear(), endMonth.getMonth(), endDay)),
+  };
+}
+
 function AccountSelect({ accounts, value, onChange }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -74,13 +101,20 @@ export default function AccountOverview() {
   }, [filters, page]);
 
   const updateFilter = (name, value) => { setFilters((current) => ({ ...current, [name]: value })); setPage(1); };
+  const selectAccount = (accountKey) => {
+    const account = accounts.find((item) => item.key === accountKey);
+    setFilters((current) => account?.type === 'credit_card'
+      ? { ...current, account: accountKey, ...currentStatementCycle(account) }
+      : { ...current, account: accountKey });
+    setPage(1);
+  };
   if (loading) return <LoadingSpinner />;
   return (
     <div className="space-y-4">
       <div><h1 className="page-title">Account Overview</h1><p className="mt-0.5 text-sm text-slate-500">Every income, expense and transfer in one account ledger</p></div>
       <div className="card p-3 sm:p-4">
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_170px_170px_auto] md:items-end">
-          <div className="min-w-0 sm:col-span-2 md:col-span-1"><label className="label">Account or card</label><AccountSelect accounts={accounts} value={filters.account} onChange={(value) => updateFilter('account', value)} /></div>
+          <div className="min-w-0 sm:col-span-2 md:col-span-1"><label className="label">Account or card</label><AccountSelect accounts={accounts} value={filters.account} onChange={selectAccount} /></div>
           <div className="min-w-0"><label className="label">From date</label><input className="input min-w-0" type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(e) => updateFilter('startDate', e.target.value)} /></div>
           <div className="min-w-0"><label className="label">To date</label><input className="input min-w-0" type="date" value={filters.endDate} min={filters.startDate || undefined} onChange={(e) => updateFilter('endDate', e.target.value)} /></div>
           <button className="btn-secondary justify-center sm:col-span-2 md:col-span-1" onClick={() => { setFilters({ account: '', startDate: '', endDate: '' }); setPage(1); }}><RefreshCw size={15} /> Reset</button>

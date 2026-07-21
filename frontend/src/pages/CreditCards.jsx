@@ -215,8 +215,9 @@ export default function CreditCards() {
     (monthly?.cards || []).reduce((s, c) => s + c.monthlyTotals[i], 0)
   ) || [];
 
-  const grandTotal = summary.reduce((s, c) => s + c.totalThisMonth, 0);
-  const outstandingTotal = summary.reduce((s, c) => s + c.outstandingAllTime, 0);
+  const grandTotal = summary.reduce((s, c) => s + (c.cyclePurchases || 0), 0);
+  const paidTotal = summary.reduce((s, c) => s + (c.cyclePayments || 0), 0);
+  const outstandingTotal = summary.reduce((s, c) => s + (c.cycleOutstanding || 0), 0);
   const selectedCycle = cycles[selectedCycleIndex];
   const reconciliationDifference = Math.abs(reconciliation?.difference || 0);
   const budgetRows = budgets?.rows || [];
@@ -345,7 +346,30 @@ export default function CreditCards() {
         <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto"><Plus size={15} /> Add Card</button>
       </div>
 
-      {/* Current month totals per card */}
+      {summary.length > 0 && (
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+          <div className="mb-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-indigo-500">Overall across active statement cycles</p>
+            <p className="mt-0.5 text-xs text-slate-500">Each card is counted using its own current cycle dates.</p>
+          </div>
+          <div className="grid grid-cols-1 divide-y divide-indigo-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="pb-2 sm:pb-0 sm:pr-4">
+              <p className="text-xs text-slate-500">Spent</p>
+              <p className="text-xl font-bold text-violet-700"><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(grandTotal)}</p>
+            </div>
+            <div className="py-2 sm:px-4 sm:py-0">
+              <p className="text-xs text-slate-500">Paid</p>
+              <p className="text-xl font-bold text-emerald-600"><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(paidTotal)}</p>
+            </div>
+            <div className="pt-2 sm:pl-4 sm:pt-0">
+              <p className="text-xs text-slate-500">Outstanding</p>
+              <p className={`text-xl font-bold ${outstandingTotal > 0 ? 'text-rose-600' : 'text-slate-700'}`}><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(outstandingTotal)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Current statement-cycle totals per card */}
       {summary.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {summary.map((card) => (
@@ -374,18 +398,18 @@ export default function CreditCards() {
               <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-3 gap-3">
                 <div>
                   <p className="text-xs text-slate-400">Spend</p>
-                  <p className="text-lg font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.totalThisMonth)}</p>
-                  <p className="text-xs text-slate-400">{card.countThisMonth} txn{card.countThisMonth !== 1 ? 's' : ''}</p>
+                  <p className="text-lg font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cyclePurchases || 0)}</p>
+                  <p className="text-xs text-slate-400">{card.cycleTransactionCount || 0} txn{card.cycleTransactionCount !== 1 ? 's' : ''}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Paid</p>
-                  <p className="text-lg font-semibold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.paymentsAllTime || 0)}</p>
-                  <p className="text-xs text-slate-400">Transfers</p>
+                  <p className="text-lg font-semibold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cyclePayments || 0)}</p>
+                  <p className="text-xs text-slate-400">This cycle</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Outstanding</p>
-                  <p className="text-lg font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.outstandingAllTime || 0)}</p>
-                  <p className="text-xs text-slate-400">All time</p>
+                  <p className="text-lg font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cycleOutstanding || 0)}</p>
+                  <p className="truncate text-xs text-slate-400" title={card.cycleLabel}>{card.cycleLabel || 'Current cycle'}</p>
                 </div>
               </div>
             </div>

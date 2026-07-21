@@ -495,49 +495,35 @@ router.put('/statements', async (req, res) => {
   }
 });
 
-// Total spent per card (all time and current month)
+// Current statement-cycle position per card. Each card is calculated against its
+// own configured cycle rather than calendar-month or all-time totals.
 router.get('/summary', async (req, res) => {
   try {
     const cards = await CreditCard.find({ userId: req.user._id, isActive: true }).populate('memberId', 'name color');
-
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
     const summary = await Promise.all(
       cards.map(async (card) => {
-        const [allTime, thisMonth, paymentsAllTime, paymentsThisMonth] = await Promise.all([
-          Expense.aggregate([
-            { $match: { userId: req.user._id, creditCardId: card._id, paymentMethod: 'credit_card' } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-          ]),
-          Expense.aggregate([
-            { $match: { userId: req.user._id, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: monthStart, $lte: monthEnd } } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-          ]),
-          Transfer.aggregate([
-            { $match: { userId: req.user._id, toCreditCardId: card._id, toAccountType: 'credit_card' } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-          ]),
-          Transfer.aggregate([
-            { $match: { userId: req.user._id, toCreditCardId: card._id, toAccountType: 'credit_card', date: { $gte: monthStart, $lte: monthEnd } } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-          ]),
+        const cycle = cycleFor(card);
+        const [purchase, payment] = await Promise.all([
+          purchaseTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
+          paymentTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
         ]);
-        const totalAllTime = allTime[0]?.total || 0;
-        const paidAllTime = paymentsAllTime[0]?.total || 0;
-        const totalThisMonth = thisMonth[0]?.total || 0;
-        const paidThisMonth = paymentsThisMonth[0]?.total || 0;
+        const outstanding = purchase.purchases - payment.payments;
         return {
           ...card.toObject(),
-          totalAllTime,
-          countAllTime: allTime[0]?.count || 0,
-          paymentsAllTime: paidAllTime,
-          paymentsThisMonth: paidThisMonth,
-          outstandingAllTime: totalAllTime - paidAllTime,
-          outstandingThisMonth: totalThisMonth - paidThisMonth,
-          totalThisMonth,
-          countThisMonth: thisMonth[0]?.count || 0,
+          cycleStart: cycle.cycleStart,
+          cycleEnd: cycle.cycleEnd,
+          cycleLabel: cycleLabel(cycle),
+          cyclePurchases: purchase.purchases,
+          cyclePayments: payment.payments,
+          cycleOutstanding: outstanding,
+          cycleTransactionCount: purchase.count,
+          cyclePaymentCount: payment.count,
+          // Compatibility aliases for the existing charts/totals while the card
+          // summary UI consumes the explicit cycle fields above.
+          totalThisMonth: purchase.purchases,
+          countThisMonth: purchase.count,
+          paymentsAllTime: payment.payments,
+          outstandingAllTime: outstanding,
         };
       })
     );
