@@ -122,7 +122,8 @@ router.get('/transactions', async (req, res) => {
           signedAmount: isIncoming ? item.amount : isOutgoing ? -item.amount : 0,
           title: 'Transfer', description: item.description || '', owner: '',
           account: `${accountLabel(from.type, from.value)} → ${accountLabel(to.type, to.value)}`,
-          fromAccount: accountLabel(from.type, from.value), toAccount: accountLabel(to.type, to.value), paymentMethod: 'Transfer', notes: item.notes || '',
+          fromAccount: accountLabel(from.type, from.value), toAccount: accountLabel(to.type, to.value),
+          fromAccountType: from.type, toAccountType: to.type, paymentMethod: 'Transfer', notes: item.notes || '',
         };
       }),
     ];
@@ -157,9 +158,37 @@ router.get('/transactions', async (req, res) => {
 
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
-    const totalIn = visibleRecords.filter((r) => r.direction === 'in').reduce((sum, r) => sum + r.amount, 0);
-    const totalOut = visibleRecords.filter((r) => r.direction === 'out').reduce((sum, r) => sum + r.amount, 0);
-    res.json({ records: visibleRecords.slice((page - 1) * limit, page * limit), total: visibleRecords.length, page, pages: Math.ceil(visibleRecords.length / limit), summary: { totalIn, totalOut, net: totalIn - totalOut } });
+    const isCardSelection = selectedType === 'credit_card';
+    const isCashSelection = selectedType === 'current' || selectedType === 'savings';
+    const cashIn = visibleRecords.reduce((sum, record) => {
+      if (isCashSelection) return sum + (record.direction === 'in' ? record.amount : 0);
+      if (record.type === 'income') return sum + record.amount;
+      // Only transfers entering the real-account boundary count as external cash in.
+      if (record.type === 'transfer' && record.toAccountType !== 'credit_card' && record.fromAccountType === 'credit_card') return sum + record.amount;
+      return sum;
+    }, 0);
+    const cashOut = visibleRecords.reduce((sum, record) => {
+      if (isCashSelection) return sum + (record.direction === 'out' ? record.amount : 0);
+      if (record.type === 'expense' && record.paymentMethod !== 'credit_card') return sum + record.amount;
+      // Payments to cards leave current/savings and are real cash out.
+      if (record.type === 'transfer' && record.fromAccountType !== 'credit_card' && record.toAccountType === 'credit_card') return sum + record.amount;
+      return sum;
+    }, 0);
+    const cardPurchases = visibleRecords
+      .filter((record) => record.type === 'expense' && record.paymentMethod === 'credit_card')
+      .reduce((sum, record) => sum + record.amount, 0);
+    const cardPayments = visibleRecords
+      .filter((record) => record.type === 'transfer' && record.toAccountType === 'credit_card')
+      .reduce((sum, record) => sum + record.amount, 0);
+
+    res.json({
+      records: visibleRecords.slice((page - 1) * limit, page * limit), total: visibleRecords.length, page, pages: Math.ceil(visibleRecords.length / limit),
+      summary: {
+        scope: isCardSelection ? 'credit_card' : 'cash',
+        cash: { totalIn: cashIn, totalOut: cashOut, net: cashIn - cashOut },
+        creditCards: { purchases: cardPurchases, payments: cardPayments, outstandingMovement: cardPurchases - cardPayments },
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
