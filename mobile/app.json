@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Dhanam",
+    "slug": "dhanam-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.dhanam.tracker",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.dhanam.tracker",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "scheme": "dhanam",
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "de213cf7-a7a8-47ec-bff8-ace4ca768c9f"
+      }
+    },
+    "owner": "jkiran809"
+  }
+}

@@ -17,7 +17,7 @@ const ACCOUNT_TYPES = [
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444'];
 
 const emptyForm = {
-  name: '', bankName: '', accountType: 'savings',
+  name: '', bankName: '', lastFourDigits: '', accountType: 'savings',
   openingBalance: '', memberId: '', color: '#6366f1', notes: '',
 };
 
@@ -53,6 +53,7 @@ export default function Savings() {
     setForm({
       name: acc.name,
       bankName: acc.bankName || '',
+      lastFourDigits: acc.lastFourDigits || '',
       accountType: acc.accountType,
       openingBalance: acc.openingBalance ?? 0,
       memberId: acc.memberId._id,
@@ -124,6 +125,12 @@ export default function Savings() {
           <div>
             <label className="label">Bank Name</label>
             <input type="text" className="input" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="e.g. HSBC, Emirates NBD" />
+          </div>
+          <div>
+            <label className="label">Account last four digits</label>
+            <input type="text" inputMode="numeric" maxLength={4} className="input" value={form.lastFourDigits}
+              onChange={(e) => setForm({ ...form, lastFourDigits: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="e.g. 8002" />
+            <p className="mt-1 text-xs text-slate-400">Used to match masked bank notifications.</p>
           </div>
         </div>
       );
@@ -374,6 +381,12 @@ export default function Savings() {
               <input type="text" className="input" value={form.bankName}
                 onChange={(e) => setForm({ ...form, bankName: e.target.value })}
                 placeholder="e.g. HSBC, Emirates NBD" />
+            </div>
+            <div>
+              <label className="label">Account last four digits</label>
+              <input type="text" inputMode="numeric" maxLength={4} className="input" value={form.lastFourDigits}
+                onChange={(e) => setForm({ ...form, lastFourDigits: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                placeholder="e.g. 8002" />
             </div>
           </div>
 

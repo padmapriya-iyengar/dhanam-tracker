@@ -5,6 +5,7 @@ const savingsAccountSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true },
     bankName: { type: String, trim: true },
+    lastFourDigits: { type: String, trim: true, maxlength: 4 },
     accountType: {
       type: String,
       enum: ['savings', 'current', 'fixed_deposit', 'investment', 'other'],

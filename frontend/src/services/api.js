@@ -70,6 +70,11 @@ export const insightsApi = {
   generate: () => api.post('/insights'),
 };
 
+export const messageImportApi = {
+  analyze: (message) => api.post('/message-import/analyze', { message }),
+  feedback: (data) => api.post('/message-import/feedback', data),
+};
+
 export const chatApi = {
   ask: (data) => api.post('/chat', data),
 };

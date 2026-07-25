@@ -8,7 +8,19 @@ const seedDemoData = require('./seedDemoData');
 const app = express();
 
 app.disable('x-powered-by');
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000' }));
+const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const localDevelopmentOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || configuredOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && localDevelopmentOrigin.test(origin))) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
+}));
 app.use(express.json());
 
 // Routes
@@ -20,6 +32,7 @@ app.use('/api/income', currentUser, require('./routes/income'));
 app.use('/api/expenses', currentUser, require('./routes/expenses'));
 app.use('/api/reports', currentUser, require('./routes/reports'));
 app.use('/api/insights', currentUser, require('./routes/insights'));
+app.use('/api/message-import', currentUser, require('./routes/message-import'));
 app.use('/api/chat', currentUser, require('./routes/chat'));
 app.use('/api/balance', currentUser, require('./routes/balance'));
 app.use('/api/savings', currentUser, require('./routes/savings'));

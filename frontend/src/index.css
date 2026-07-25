@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .input {
+    @apply w-full min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100;
+  }
+}
+
 @layer base {
   html {
     font-family: 'Trebuchet MS', Trebuchet, sans-serif;

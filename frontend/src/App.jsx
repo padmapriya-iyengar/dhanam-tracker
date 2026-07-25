@@ -17,6 +17,7 @@ const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const Transfers = lazy(() => import('./pages/Transfers'));
 const Users = lazy(() => import('./pages/Users'));
 const AccountOverview = lazy(() => import('./pages/AccountOverview'));
+const MessageImport = lazy(() => import('./pages/MessageImport'));
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="categories" element={<Categories />} />
               <Route path="reports" element={<Reports />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="message-import" element={<MessageImport />} />
               <Route path="savings" element={<Savings />} />
               <Route path="credit-cards" element={<CreditCards />} />
               <Route path="transfers" element={<Transfers />} />
