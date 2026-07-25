@@ -34,7 +34,12 @@ export default function MessageImport() {
       setResult(data);
       setDraft({ ...data.draft, transactionDate: formatDate(data.draft.transactionDate) });
     } catch (next) {
-      setError(next.response?.data?.error || 'The message could not be analyzed.');
+      const serverError = next.response?.data?.error;
+      const status = next.response?.status;
+      if (serverError) setError(serverError);
+      else if (status) setError(`The server rejected the analysis request (HTTP ${status}).`);
+      else if (next.code === 'ERR_NETWORK') setError('The deployed API could not be reached. Check the server connection and try again.');
+      else setError(next.message || 'The message could not be analyzed.');
     } finally { setAnalyzing(false); }
   }
 

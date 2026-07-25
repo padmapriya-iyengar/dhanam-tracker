@@ -53,6 +53,24 @@ function extractJson(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+async function callOpenAIJson({ apiKey, model, messages, maxCompletionTokens = 1800 }) {
+  const requestBody = {
+    model,
+    messages,
+    response_format: { type: 'json_object' },
+    max_completion_tokens: maxCompletionTokens,
+  };
+  if (model.startsWith('gpt-5')) requestBody.reasoning_effort = 'minimal';
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || `OpenAI request failed (${response.status}).`);
+  return extractJson(payload.choices?.[0]?.message?.content);
+}
+
 function allowedId(value, ids) {
   const normalized = objectId(value);
   return normalized && ids.has(normalized) ? normalized : null;
@@ -183,23 +201,14 @@ User base currency: ${req.user.currency || 'AED'}
 
 Message:
 ${message}`;
-    const requestBody = {
+    const rawDraft = await callOpenAIJson({
+      apiKey,
       model,
       messages: [
         { role: 'system', content: 'Return one strict JSON object and no markdown.' },
         { role: 'user', content: prompt },
       ],
-      response_format: { type: 'json_object' },
-      max_completion_tokens: 1800,
-    };
-    if (model.startsWith('gpt-5')) requestBody.reasoning_effort = 'minimal';
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error?.message || `OpenAI request failed (${response.status}).`);
     const context = {
       currency: req.user.currency || 'AED',
       accounts,
@@ -210,7 +219,7 @@ ${message}`;
       subCategoryIds,
       subCategoryParents: new Map(subCategories.map((item) => [String(item._id), String(item.categoryId)])),
     };
-    const draft = normalizeResult(extractJson(payload.choices?.[0]?.message?.content), context);
+    const draft = normalizeResult(rawDraft, context);
     const learnedMatch = learnings
       .filter((item) => normalizeMerchant(item.merchantLabel) === normalizeMerchant(draft.merchant))
       .filter((item) => categoryIds.has(String(item.categoryId)))
@@ -220,9 +229,54 @@ ${message}`;
       draft.subCategoryId = subCategoryIds.has(String(learnedMatch.subCategoryId)) ? String(learnedMatch.subCategoryId) : null;
       draft.reasoning = `${draft.reasoning}${draft.reasoning ? ' ' : ''}Category follows your previously confirmed choice for this merchant.`;
     }
+    const selectedCategory = categories.find((item) => String(item._id) === draft.categoryId);
+    const selectedSubCategory = subCategories.find((item) => String(item._id) === draft.subCategoryId);
+    const selectedCatchAll = /misc|other/i.test(selectedCategory?.name || '') || /misc|other/i.test(selectedSubCategory?.name || '');
+    if (draft.classification === 'expense' && !learnedMatch && selectedCatchAll && draft.merchant) {
+      try {
+        const specificCategories = categoryOptions
+          .filter((item) => !/misc|other/i.test(item.name))
+          .map((item) => ({ ...item, subcategories: item.subcategories.filter((sub) => !/misc|other/i.test(sub.name)) }));
+        const specificCategoryIds = new Set(specificCategories.map((item) => item.id));
+        const specificSubCategoryIds = new Set(specificCategories.flatMap((item) => item.subcategories.map((sub) => sub.id)));
+        const reconsidered = await callOpenAIJson({
+          apiKey,
+          model,
+          maxCompletionTokens: 600,
+          messages: [
+            {
+              role: 'system',
+              content: 'Select the most semantically appropriate specific category for an expense. Return JSON only.',
+            },
+            {
+              role: 'user',
+              content: `The first categorization used a catch-all category. Reconsider it using merchant purpose and the specific choices below.
+Return categoryId, subCategoryId, confidence, and reasoning. Use null only when no choice is defensible.
+Merchant: ${draft.merchant}
+Description: ${draft.description}
+Original message: ${message}
+Specific categories: ${JSON.stringify(specificCategories)}`,
+            },
+          ],
+        });
+        const reconsideredCategoryId = allowedId(reconsidered.categoryId, specificCategoryIds);
+        const reconsideredSubCategoryId = allowedId(reconsidered.subCategoryId, specificSubCategoryIds);
+        const reconsideredConfidence = Number(reconsidered.confidence) || 0;
+        const validSubcategory = !reconsideredSubCategoryId
+          || context.subCategoryParents.get(reconsideredSubCategoryId) === reconsideredCategoryId;
+        if (reconsideredCategoryId && validSubcategory && reconsideredConfidence >= 0.5) {
+          draft.categoryId = reconsideredCategoryId;
+          draft.subCategoryId = reconsideredSubCategoryId;
+          draft.reasoning = cleanText(reconsidered.reasoning, 400) || draft.reasoning;
+        }
+      } catch (refinementError) {
+        console.warn('Message category refinement skipped:', refinementError.message);
+      }
+    }
     const duplicates = await findDuplicates(req.user._id, draft);
     res.json({ draft, duplicates, options: { members: members.map(({ _id, name }) => ({ id: String(_id), name })), accounts, categories: categoryOptions } });
   } catch (err) {
+    console.error('Message import analysis failed:', err.message);
     res.status(400).json({ error: err.message });
   }
 });
