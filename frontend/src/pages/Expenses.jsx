@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { ChevronDown, CreditCard, Edit2, Filter, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, CreditCard, Edit2, Filter, Plus, ScanText, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -533,9 +533,14 @@ export default function Expenses() {
           <h1 className="page-title">Expenses</h1>
           <p className="text-sm text-slate-500 mt-0.5 sm:hidden">{total} records in selected period</p>
         </div>
-        <button onClick={openAdd} className="btn-primary w-full flex-shrink-0 justify-center sm:w-auto">
-          <Plus size={15} /> Add Expense
-        </button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Link to="/message-import" className="btn-secondary justify-center">
+            <ScanText size={15} /> Import message
+          </Link>
+          <button onClick={openAdd} className="btn-primary justify-center">
+            <Plus size={15} /> Add manually
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -689,7 +694,10 @@ export default function Expenses() {
       {!loading && records.length === 0 && (
         <div className="card text-center py-12">
           <p className="text-slate-400 text-sm">No expenses found for this period.</p>
-          <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Expense</button>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Link to="/message-import" className="btn-secondary"><ScanText size={15} /> Import message</Link>
+            <button onClick={openAdd} className="btn-primary"><Plus size={15} /> Add manually</button>
+          </div>
         </div>
       )}
       {!loading && records.length > 0 && (

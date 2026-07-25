@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoadingSpinner from './components/LoadingSpinner';
 import { AppProvider } from './context/AppContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const Categories = lazy(() => import('./pages/Categories'));
 const CreditCards = lazy(() => import('./pages/CreditCards'));
@@ -22,10 +23,11 @@ const MessageImport = lazy(() => import('./pages/MessageImport'));
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <AppProvider>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/" element={<Layout />}>
+      <ThemeProvider>
+        <AppProvider>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="income" element={<Income />} />
               <Route path="expenses" element={<Expenses />} />
@@ -40,10 +42,11 @@ export default function App() {
               <Route path="accounts" element={<AccountOverview />} />
               <Route path="members" element={<Members />} />
               <Route path="users" element={<Users />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </AppProvider>
+              </Route>
+            </Routes>
+          </Suspense>
+        </AppProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

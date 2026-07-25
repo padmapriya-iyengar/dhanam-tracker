@@ -82,7 +82,13 @@ export function AddRecordScreen({ navigation }: any) {
     <Choice label="What would you like to add?" value={kind} options={kinds} onChange={value => reset(value as Kind)} />
     <ErrorBox message={error} />
     {success ? <Text style={[styles.success, { color: theme.positive, backgroundColor: theme.positiveSoft }]}>{success}</Text> : null}
+    {kind === 'expense' ? <Card>
+      <Text style={[styles.importTitle, { color: theme.text }]}>How do you want to add it?</Text>
+      <Text style={[styles.importText, { color: theme.textMuted }]}>Paste a bank or card message and let Dhanam prepare the expense, or complete the form manually below.</Text>
+      <Button label="Import from message" tone="secondary" onPress={() => navigation.navigate('MessageImport')} />
+    </Card> : null}
     <Card>
+      {kind === 'expense' ? <Text style={[styles.manualTitle, { color: theme.textMuted }]}>ENTER MANUALLY</Text> : null}
       {kind === 'subscription' ? <Field label="Recurring expense name" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Netflix, rent, insurance…" /> : null}
       {kind !== 'transfer' ? <Choice label={kind === 'income' ? 'Who received it?' : 'Who paid?'} value={form.memberId || ''} options={memberOptions} onChange={v => set('memberId', v)} /> : null}
       <Field label="Amount" value={form.amount} onChangeText={(v: string) => set('amount', v)} placeholder="0" keyboardType="decimal-pad" />
@@ -109,4 +115,7 @@ export function AddRecordScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   success: { ...typography, color: colors.positive, backgroundColor: colors.positiveSoft, borderRadius: 11, padding: 11, fontSize: 12, marginBottom: 12 },
+  importTitle: { ...typography, fontSize: 13, fontWeight: '800', marginBottom: 4 },
+  importText: { ...typography, fontSize: 10.5, lineHeight: 15, marginBottom: 11 },
+  manualTitle: { ...typography, fontSize: 9, fontWeight: '800', letterSpacing: 0.8, marginBottom: 12 },
 });

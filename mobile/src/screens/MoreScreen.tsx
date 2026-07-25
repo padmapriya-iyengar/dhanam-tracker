@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  Bot, Building2, ChevronRight, CircleGauge, CreditCard, FileCheck2, Landmark, Lightbulb, LogOut, ScanText, Scale, Tags, Target, UserCog, Users,
+  Bot, Building2, ChevronRight, CircleGauge, CreditCard, FileCheck2, Landmark, Lightbulb, LogOut, Scale, Tags, Target, UserCog, Users,
 } from 'lucide-react-native';
 import { useAuth } from '../AuthContext';
 import { Choice, Page, PageTitle } from '../components/MobileUI';
@@ -18,7 +18,6 @@ const items = [
   { route: 'Categories', label: 'Categories', icon: Tags },
   { route: 'Members', label: 'Members', icon: Users },
   { route: 'Insights', label: 'AI insights', icon: Lightbulb },
-  { route: 'MessageImport', label: 'Import bank message', icon: ScanText },
   { route: 'Assistant', label: 'Dhanam assistant', icon: Bot },
   { route: 'Users', label: 'Users', icon: UserCog },
 ];
