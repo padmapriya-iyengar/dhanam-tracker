@@ -4,6 +4,7 @@ import AccountTransactionLedger from '../components/AccountTransactionLedger';
 import AccountCategoryComparison from '../components/AccountCategoryComparison';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
+import CollapsibleSection from '../components/CollapsibleSection';
 import { accountsApi, fmt } from '../services/api';
 
 const groups = { current: 'Current Accounts', savings: 'Savings & Investments', credit_card: 'Credit Cards' };
@@ -113,7 +114,7 @@ export default function AccountOverview() {
   return (
     <div className="space-y-4">
       <div><h1 className="page-title">Account Overview</h1><p className="mt-0.5 text-sm text-slate-500">Every income, expense and transfer in one account ledger</p></div>
-      <div className="card p-3 sm:p-4">
+      <CollapsibleSection storageKey="account-overview-filters" title="Account and date filters" subtitle="Choose the ledger scope and reporting period" icon={CalendarRange} defaultOpen>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_170px_170px_auto] md:items-end">
           <div className="min-w-0 sm:col-span-2 md:col-span-1"><label className="label">Account or card</label><AccountSelect accounts={accounts} value={filters.account} onChange={selectAccount} /></div>
           <div className="min-w-0"><label className="label">From date</label><input className="input min-w-0" type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(e) => updateFilter('startDate', e.target.value)} /></div>
@@ -121,12 +122,16 @@ export default function AccountOverview() {
           <button className="btn-secondary justify-center sm:col-span-2 md:col-span-1" onClick={() => { setFilters({ account: '', startDate: '', endDate: '' }); setPage(1); }}><RefreshCw size={15} /> Reset</button>
         </div>
         <div className="mt-3 flex items-center gap-2 text-xs text-slate-400"><CalendarRange size={14} /><span>{filters.startDate || filters.endDate ? `${filters.startDate || 'Beginning'} to ${filters.endDate || 'Today'}` : 'Showing all dates, newest first'}</span></div>
-      </div>
+      </CollapsibleSection>
+      <CollapsibleSection storageKey="account-overview-snapshot" title="Financial snapshot" subtitle="Cash flow and card movement for the selected scope" icon={WalletCards} summary={data.summary.scope === 'cash' ? `Net ${fmt(data.summary.cash.net)}` : `Outstanding ${fmt(data.summary.creditCards.outstandingMovement)}`} defaultOpen contentClassName="space-y-4">
       {data.summary.scope === 'cash' && <div className="space-y-2"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Current &amp; savings cash flow</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"><SummaryCard label="Money in" amount={data.summary.cash.totalIn} icon={ArrowDownLeft} tone="green" /><SummaryCard label="Money out" amount={data.summary.cash.totalOut} icon={ArrowUpRight} tone="rose" /><div className="col-span-2 sm:col-span-1"><SummaryCard label="Net cash movement" amount={data.summary.cash.net} icon={filters.account ? Landmark : WalletCards} tone="indigo" /></div></div></div>}
       {(!filters.account || data.summary.scope === 'credit_card') && <div className="space-y-2"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Credit card activity</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"><SummaryCard label="Card purchases" amount={data.summary.creditCards.purchases} icon={CreditCard} tone="rose" /><SummaryCard label="Card payments" amount={data.summary.creditCards.payments} icon={ArrowDownLeft} tone="green" /><div className="col-span-2 sm:col-span-1"><SummaryCard label="Outstanding movement" amount={data.summary.creditCards.outstandingMovement} icon={CreditCard} tone="indigo" /></div></div></div>}
+      </CollapsibleSection>
       <AccountCategoryComparison account={filters.account} />
-      <div className="flex items-end justify-between"><div><h2 className="font-semibold text-slate-800">Transaction history</h2><p className="text-xs text-slate-400">{data.total || 0} transaction{data.total === 1 ? '' : 's'}</p></div>{ledgerLoading && <span className="text-xs text-indigo-500">Updating…</span>}</div>
+      <CollapsibleSection storageKey="account-overview-transactions" title="Transaction history" subtitle="Income, expenses and transfers in chronological order" icon={ArrowDownLeft} summary={`${data.total || 0} transaction${data.total === 1 ? '' : 's'}`} defaultOpen>
+      {ledgerLoading && <p className="mb-2 text-xs text-indigo-500">Updating...</p>}
       {error ? <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : <div className={ledgerLoading ? 'opacity-60 transition-opacity' : ''}><AccountTransactionLedger transactions={data.records} page={page} pages={data.pages} onPageChange={setPage} /></div>}
+      </CollapsibleSection>
     </div>
   );
 }

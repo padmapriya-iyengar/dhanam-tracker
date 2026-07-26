@@ -1,7 +1,8 @@
 import { format } from 'date-fns';
-import { ChevronDown, CreditCard, Edit2, Filter, Plus, ScanText, Trash2 } from 'lucide-react';
+import { CreditCard, Edit2, Filter, List, Plus, ScanText, Trash2, WalletCards } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import CollapsibleSection from '../components/CollapsibleSection';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import DirhamSymbol from '../components/DirhamSymbol';
@@ -91,7 +92,6 @@ export default function Expenses() {
   const [filterCreditCard, setFilterCreditCard] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
   // All credit cards; filtered to member when adding expense
   const [allCreditCards, setAllCreditCards] = useState([]);
   const [savingsAccounts, setSavingsAccounts] = useState([]);
@@ -543,23 +543,15 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="card p-3 sm:p-4">
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((value) => !value)}
-          className="flex w-full items-center justify-between gap-3 sm:pointer-events-none"
-        >
-          <span className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600">{activeFilterCount} active</span>
-            )}
-          </span>
-          <ChevronDown className={`text-slate-400 transition-transform sm:hidden ${filtersOpen ? 'rotate-180' : ''}`} size={18} />
-        </button>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+      <CollapsibleSection
+        storageKey="expenses-filters"
+        title="Filters"
+        subtitle="Choose a month or narrow expenses using detailed filters."
+        summary={activeFilterCount > 0 ? `${activeFilterCount} active` : `${months[filterMonth - 1]?.label} ${filterYear}`}
+        icon={Filter}
+        defaultOpen
+      >
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="filter-month" className="label">Month</label>
             <select id="filter-month" className="input w-full" value={filterMonth} onChange={(e) => setFilterMonth(+e.target.value)} disabled={usingCustomDateRange}>
@@ -574,7 +566,7 @@ export default function Expenses() {
           </div>
         </div>
 
-        <div className={`${filtersOpen ? 'grid' : 'hidden'} mt-3 grid-cols-1 gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5`}>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <div>
             <label htmlFor="filter-start-date" className="label">From Date</label>
             <input id="filter-start-date" type="date" className="input w-full" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
@@ -641,10 +633,18 @@ export default function Expenses() {
             </div>
           )}
         </div>
-      </div>
+      </CollapsibleSection>
 
       {!loading && records.length > 0 && (
-        <div className="space-y-3">
+        <CollapsibleSection
+          storageKey="expenses-summary"
+          title="Spending summary"
+          subtitle="Gross spending, recoveries, net total, and payment-source breakdown."
+          summary={`${total} records · Net ${fmt(netTotalAmount)}`}
+          icon={WalletCards}
+          defaultOpen
+          contentClassName="space-y-3"
+        >
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-lg border border-slate-100 bg-white px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Records</p>
@@ -687,7 +687,7 @@ export default function Expenses() {
               );
             })}
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {loading && <LoadingSpinner />}
@@ -701,7 +701,15 @@ export default function Expenses() {
         </div>
       )}
       {!loading && records.length > 0 && (
-        <>
+        <CollapsibleSection
+          storageKey="expenses-transactions"
+          title="Expense transactions"
+          subtitle="Review, recover, edit, or delete individual expenses."
+          summary={`${total} records`}
+          icon={List}
+          defaultOpen
+          contentClassName="space-y-4"
+        >
           {/* Mobile card list */}
           <div className="md:hidden space-y-2">
             {records.map((rec) => {
@@ -880,7 +888,7 @@ export default function Expenses() {
               <button className="btn-secondary py-1 px-3" disabled={page === pages} onClick={() => load(page + 1)}>Next →</button>
             </div>
           )}
-        </>
+        </CollapsibleSection>
       )}
 
       <Modal isOpen={recoveryModalOpen} onClose={() => setRecoveryModalOpen(false)} title="Add Recovery" size="md">

@@ -304,6 +304,14 @@ export default function Subscriptions() {
     );
   };
 
+  const paymentSourceLabel = (record) => {
+    if (record.paymentMethod === 'credit_card') {
+      return `${record.creditCardId?.bankName || 'Credit Card'}${record.creditCardId?.lastFourDigits ? ` •••• ${record.creditCardId.lastFourDigits}` : ''}`;
+    }
+    if (record.paymentMethod === 'savings') return record.savingsAccountId?.name || 'Savings account';
+    return record.paymentMethod.replaceAll('_', ' ');
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -378,7 +386,8 @@ export default function Subscriptions() {
           <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Recurring Expense</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <>
+        <div className="space-y-3 md:hidden">
           {records.map((record) => {
             const created = Boolean(record.generatedExpenseId);
             return (
@@ -406,7 +415,7 @@ export default function Subscriptions() {
                       <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(record.amount)}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {record.paymentMethod === 'credit_card' ? `${record.creditCardId?.bankName || 'Credit Card'}` : record.paymentMethod.replace('_', ' ')}
+                      {paymentSourceLabel(record)}
                     </p>
                   </div>
                   {created ? (
@@ -425,6 +434,76 @@ export default function Subscriptions() {
             );
           })}
         </div>
+        <div className="hidden overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 text-left">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Recurring expense</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Schedule</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Owner &amp; category</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment source</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Amount</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {records.map((record) => {
+                  const created = Boolean(record.generatedExpenseId);
+                  return (
+                    <tr key={record._id} className="transition-colors hover:bg-slate-50">
+                      <td className="max-w-[240px] px-4 py-3">
+                        <div className="flex items-start gap-2.5">
+                          <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: record.categoryId?.color || '#6366f1' }} />
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-slate-800">{record.name}</p>
+                            {record.description && <p className="mt-0.5 truncate text-xs text-slate-400">{record.description}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <p className="font-medium text-slate-700">Day {record.dayOfMonth}</p>
+                        <p className="text-xs text-slate-400">Every month</p>
+                      </td>
+                      <td className="max-w-[220px] px-4 py-3">
+                        <p className="truncate font-medium text-slate-700">{record.memberId?.name || 'Unassigned'}</p>
+                        <p className="truncate text-xs text-slate-400">
+                          {record.categoryId?.name || 'Uncategorized'}{record.subCategoryId ? ` / ${record.subCategoryId.name}` : ''}
+                        </p>
+                      </td>
+                      <td className="max-w-[180px] px-4 py-3">
+                        <p className="truncate capitalize text-slate-600">{paymentSourceLabel(record)}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-base font-bold text-rose-600">
+                        <DirhamSymbol className="mr-0.5 inline h-[0.8em] w-auto align-middle" />{fmt(record.amount)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {created ? (
+                          <span className="badge inline-flex items-center gap-1 bg-emerald-50 text-emerald-700"><CheckCircle2 size={12} /> Created</span>
+                        ) : (
+                          <span className="badge bg-amber-50 text-amber-700">Pending</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {!created && (
+                            <button className="btn-primary whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => generateExpense(record)} disabled={generatingId === record._id}>
+                              {generatingId === record._id ? 'Creating...' : 'Create Expense'}
+                            </button>
+                          )}
+                          <button onClick={() => openEdit(record)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600" title="Edit"><Edit2 size={14} /></button>
+                          <button onClick={() => deleteSubscription(record)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600" title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Recurring Expense' : 'Add Recurring Expense'} size="lg">

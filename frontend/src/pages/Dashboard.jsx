@@ -6,6 +6,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CategoryGoalsWidget from '../components/CategoryGoalsWidget';
+import CollapsibleSection from '../components/CollapsibleSection';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
@@ -239,14 +240,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="card p-0 overflow-hidden xl:col-span-2">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-            <Scale size={16} className="text-indigo-500" />
-            <div>
-              <h2 className="font-semibold text-slate-700">Accounting Reality</h2>
-              <p className="text-xs text-slate-400">Compact monthly view without double-counting card payments</p>
-            </div>
-          </div>
+        <CollapsibleSection
+          storageKey="dashboard-accounting-reality"
+          title="Accounting Reality"
+          subtitle="Compact monthly view without double-counting card payments."
+          summary={`Result ${fmt(monthResult)}`}
+          icon={Scale}
+          defaultOpen
+          className="xl:col-span-2"
+          contentClassName="p-0 sm:p-0"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <tbody>
@@ -262,17 +265,19 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
 
-        <div className="card p-0 overflow-hidden xl:col-span-3">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <CreditCard size={16} className="text-violet-500" />
-              <div>
-                <h2 className="font-semibold text-slate-700">Monthly Card Budgets</h2>
-                <p className="text-xs text-slate-400">Net spend after recoveries for {selectedLabel}</p>
-              </div>
-            </div>
+        <CollapsibleSection
+          storageKey="dashboard-card-budgets"
+          title="Monthly Card Budgets"
+          subtitle={`Net spend after recoveries for ${selectedLabel}.`}
+          summary={`${budgetConsumed}% consumed`}
+          icon={CreditCard}
+          defaultOpen
+          className="xl:col-span-3"
+          contentClassName="p-0 sm:p-0"
+        >
+          <div className="flex justify-end border-b border-slate-100 px-4 py-2">
             <Link to="/credit-cards" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium">
               Manage <ArrowRight size={13} />
             </Link>
@@ -359,18 +364,19 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       </div>
 
-      <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays size={16} className="text-emerald-500" />
-            <div>
-              <h2 className="font-semibold text-slate-700">Account Balances</h2>
-              <p className="text-xs text-slate-400">As of {balances[0]?.asOf ? format(new Date(balances[0].asOf), 'dd MMM yyyy') : selectedLabel}</p>
-            </div>
-          </div>
+      <CollapsibleSection
+        storageKey="dashboard-account-balances"
+        title="Account Balances"
+        subtitle={`As of ${balances[0]?.asOf ? format(new Date(balances[0].asOf), 'dd MMM yyyy') : selectedLabel}.`}
+        summary={`Available ${fmt(availableFunds)}`}
+        icon={CalendarDays}
+        defaultOpen={false}
+        contentClassName="p-0 sm:p-0"
+      >
+        <div className="flex justify-end border-b border-slate-100 px-4 py-2">
           <button onClick={openBalanceEdit} className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap">
             <Edit2 size={12} /> Opening Balances
           </button>
@@ -451,7 +457,7 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+      </CollapsibleSection>
 
       <CategoryGoalsWidget expenseByCategory={expenseByCategory} />
 

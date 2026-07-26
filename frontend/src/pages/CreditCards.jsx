@@ -10,6 +10,7 @@ import Modal from '../components/Modal';
 import DirhamSymbol from '../components/DirhamSymbol';
 import { useApp } from '../context/AppContext';
 import { creditCardsApi, fmt } from '../services/api';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444'];
 const MONTH_OPTIONS = [3, 6, 12];
@@ -371,6 +372,7 @@ export default function CreditCards() {
 
       {/* Current statement-cycle totals per card */}
       {summary.length > 0 && (
+        <CollapsibleSection storageKey="credit-cards-active-cards" title="Active cards" subtitle="Current statement-cycle position for every card" icon={CreditCard} summary={`${summary.length} cards · Outstanding ${fmt(outstandingTotal)}`} defaultOpen>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {summary.map((card) => (
             <div key={card._id} className="card hover:shadow-md transition-shadow">
@@ -415,6 +417,7 @@ export default function CreditCards() {
             </div>
           ))}
         </div>
+        </CollapsibleSection>
       )}
 
       {summary.length === 0 && (
@@ -426,14 +429,14 @@ export default function CreditCards() {
       )}
 
       {summary.length > 0 && (
-        <div className="space-y-3">
+        <CollapsibleSection storageKey="credit-cards-budgets" title="Monthly card budgets" subtitle="Track selected-month spend against each card's budget" icon={Target} summary={`${budgetConsumed}% consumed · Balance ${fmt(budgetTotals.balance)}`} defaultOpen contentClassName="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Target size={16} className="text-indigo-500" />
-                <h2 className="font-semibold text-slate-700">Monthly Card Budgets</h2>
+                <h2 className="font-semibold text-slate-700">Budget period</h2>
               </div>
-              <p className="text-sm text-slate-500 mt-0.5">Track selected-month credit card spend against each card&apos;s budget.</p>
+              <p className="text-sm text-slate-500 mt-0.5">Change the month and year to review another period.</p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:flex sm:items-end">
               <div>
@@ -605,15 +608,15 @@ export default function CreditCards() {
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Monthly breakdown section */}
       {summary.length > 0 && (
-        <>
+        <CollapsibleSection storageKey="credit-cards-monthly-breakdown" title="Monthly breakdown by card" subtitle="Trend chart and card-by-card monthly totals" icon={CalendarDays} summary={`${monthCount} months · Total ${fmt(monthlyGrandTotals.reduce((sum, value) => sum + value, 0))}`} defaultOpen={false} contentClassName="space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-semibold text-slate-700">Monthly Breakdown by Card</h2>
+              <h2 className="font-semibold text-slate-700">Breakdown controls</h2>
               <span className="text-sm font-semibold text-slate-500">Outstanding: <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(outstandingTotal)}</span>
             </div>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
@@ -751,15 +754,15 @@ export default function CreditCards() {
               </tfoot>
             </table>
           </div>
-        </>
+        </CollapsibleSection>
       )}
 
       {summary.length > 0 && (
-        <div className="space-y-3">
+        <CollapsibleSection storageKey="credit-cards-reconciliation" title="Credit card reconciliation" subtitle="Compare bank statements with recorded card activity" icon={Save} summary={reconciliationDifference > 0.5 ? `Difference ${fmt(reconciliationDifference)}` : 'Reconciled'} defaultOpen={false} contentClassName="space-y-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="font-semibold text-slate-700">Credit Card Reconciliation</h2>
-              <p className="text-sm text-slate-500">Compare each bank statement cycle with recorded card expenses.</p>
+              <h2 className="font-semibold text-slate-700">Statement selection</h2>
+              <p className="text-sm text-slate-500">Choose a card and statement period to review.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0 md:min-w-[520px]">
               <div>
@@ -943,7 +946,7 @@ export default function CreditCards() {
               </form>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       <Modal isOpen={budgetModalOpen} onClose={() => setBudgetModalOpen(false)} title="Set Card Budget" size="sm">
