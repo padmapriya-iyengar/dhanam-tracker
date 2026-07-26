@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { apiErrorMessage, mobileApi } from '../api';
 import { useData } from '../DataContext';
 import { Button, Card, Choice, ErrorBox, Field, Option, Page, PageTitle, today } from '../components/MobileUI';
@@ -18,10 +19,11 @@ const payments: Option[] = [
 const accountType = (key: string) => key.split(':')[0];
 const accountId = (key: string) => key.split(':')[1];
 
-export function AddRecordScreen({ navigation }: any) {
+export function AddRecordScreen({ navigation, route }: any) {
   const { members, categories, cards, savings, accounts, refresh } = useData();
   const { colors: theme } = useTheme();
-  const [kind, setKind] = useState<Kind>('expense');
+  const fixedKind = route?.params?.kind as Kind | undefined;
+  const [kind, setKind] = useState<Kind>(fixedKind || 'expense');
   const [form, setForm] = useState<Record<string, string>>({ date: today(), paymentMethod: 'current_account', dayOfMonth: String(new Date().getDate()) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -78,8 +80,8 @@ export function AddRecordScreen({ navigation }: any) {
   }
 
   return <Page>
-    <PageTitle title="Add" subtitle="Record a new financial activity" />
-    <Choice label="What would you like to add?" value={kind} options={kinds} onChange={value => reset(value as Kind)} />
+    <PageTitle title={kind === 'income' ? 'Add income' : 'Add expense'} subtitle="Record a new financial activity" />
+    {!fixedKind ? <Choice label="What would you like to add?" value={kind} options={kinds} onChange={value => reset(value as Kind)} /> : null}
     <ErrorBox message={error} />
     {success ? <Text style={[styles.success, { color: theme.positive, backgroundColor: theme.positiveSoft }]}>{success}</Text> : null}
     {kind === 'expense' ? <Card>

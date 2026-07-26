@@ -67,7 +67,7 @@ export const colors = lightColors;
 
 // Keep typography aligned with the existing web application's Tailwind theme.
 export const typography = {
-  fontFamily: 'Trebuchet MS',
+  fontFamily: 'Roboto',
 } as const;
 
 export const shadow = {

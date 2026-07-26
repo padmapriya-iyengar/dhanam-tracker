@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { apiErrorMessage, Entity, mobileApi } from '../api';
 import { useAuth } from '../AuthContext';
 import { useData } from '../DataContext';

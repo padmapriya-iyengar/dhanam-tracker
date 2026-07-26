@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { apiErrorMessage, mobileApi } from '../api';
 import { Button, Card, ErrorBox, Field, Page, PageTitle } from '../components/MobileUI';
 import { colors, typography } from '../theme';

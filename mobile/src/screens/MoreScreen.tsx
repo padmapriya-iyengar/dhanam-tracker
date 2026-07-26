@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import {
   Bot, Building2, ChevronRight, CircleGauge, CreditCard, FileCheck2, Landmark, Lightbulb, LogOut, Scale, Tags, Target, UserCog, Users,
 } from 'lucide-react-native';

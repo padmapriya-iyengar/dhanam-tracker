@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { Edit3, Plus, Trash2 } from 'lucide-react-native';
 import { apiErrorMessage, Entity, mobileApi } from '../api';
 import { useAuth } from '../AuthContext';

@@ -1,11 +1,12 @@
 import { PropsWithChildren, ReactNode, useMemo } from 'react';
 import {
-  ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { shadow, ThemeColors, typography } from '../theme';
 import { useTheme } from '../ThemeContext';
+import { Text, TextInput } from './Typography';
 
 export const today = () => new Date().toISOString().slice(0, 10);
 

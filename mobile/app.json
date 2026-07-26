@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.dhanam.tracker",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +27,35 @@
     },
     "scheme": "dhanam",
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "android": {
+            "fonts": [
+              {
+                "fontFamily": "Roboto",
+                "fontDefinitions": [
+                  { "path": "./node_modules/@expo-google-fonts/roboto/400Regular/Roboto_400Regular.ttf", "weight": 400 },
+                  { "path": "./node_modules/@expo-google-fonts/roboto/500Medium/Roboto_500Medium.ttf", "weight": 500 },
+                  { "path": "./node_modules/@expo-google-fonts/roboto/600SemiBold/Roboto_600SemiBold.ttf", "weight": 600 },
+                  { "path": "./node_modules/@expo-google-fonts/roboto/700Bold/Roboto_700Bold.ttf", "weight": 700 },
+                  { "path": "./node_modules/@expo-google-fonts/roboto/800ExtraBold/Roboto_800ExtraBold.ttf", "weight": 800 }
+                ]
+              }
+            ]
+          },
+          "ios": {
+            "fonts": [
+              "./node_modules/@expo-google-fonts/roboto/400Regular/Roboto_400Regular.ttf",
+              "./node_modules/@expo-google-fonts/roboto/500Medium/Roboto_500Medium.ttf",
+              "./node_modules/@expo-google-fonts/roboto/600SemiBold/Roboto_600SemiBold.ttf",
+              "./node_modules/@expo-google-fonts/roboto/700Bold/Roboto_700Bold.ttf",
+              "./node_modules/@expo-google-fonts/roboto/800ExtraBold/Roboto_800ExtraBold.ttf"
+            ]
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

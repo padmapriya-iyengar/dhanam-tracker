@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Edit3, RotateCcw, Play, Trash2 } from 'lucide-react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
+import { Edit3, Plus, RotateCcw, Play, Trash2 } from 'lucide-react-native';
 import { Entity, mobileApi, apiErrorMessage } from '../api';
 import { useAuth } from '../AuthContext';
 import { Busy, Button, Card, Choice, Empty, ErrorBox, Field, money, Page, PageTitle, Sheet, today } from '../components/MobileUI';
@@ -26,10 +27,10 @@ function detailFor(item: Entity, kind: Kind) {
   return `${from} → ${to}`;
 }
 
-export function ActivityScreen() {
+export function ActivityScreen({ navigation, fixedKind }: any) {
   const { user } = useAuth();
   const { colors: theme } = useTheme();
-  const [kind, setKind] = useState<Kind>('expenses');
+  const [kind, setKind] = useState<Kind>(fixedKind || 'expenses');
   const [records, setRecords] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,8 +113,12 @@ export function ActivityScreen() {
   }
 
   return <Page refreshing={refreshing} onRefresh={() => load(true)}>
-    <PageTitle title="Activity" subtitle="Income, spending, transfers and recurring expenses" />
-    <View style={styles.tabs}>{types.map(type => <Pressable key={type} onPress={() => setKind(type)} style={[styles.tab, { backgroundColor: theme.surface, borderColor: theme.border }, kind === type && { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}><Text style={[styles.tabText, { color: theme.textMuted }, kind === type && { color: theme.primaryDark }]}>{type === 'subscriptions' ? 'Recurring' : type[0].toUpperCase() + type.slice(1)}</Text></Pressable>)}</View>
+    <PageTitle
+      title={fixedKind === 'income' ? 'Income' : fixedKind === 'expenses' ? 'Expenses' : 'Activity'}
+      subtitle={fixedKind === 'income' ? 'Money received and recorded' : fixedKind === 'expenses' ? 'Monthly spending and recoveries' : 'Income, spending, transfers and recurring expenses'}
+      action={fixedKind ? <Pressable accessibilityLabel={`Add ${fixedKind === 'income' ? 'income' : 'expense'}`} onPress={() => navigation.navigate('AddRecord', { kind: fixedKind === 'income' ? 'income' : 'expense' })} style={[styles.addButton, { backgroundColor: theme.primary }]}><Plus size={19} color="#fff" /></Pressable> : undefined}
+    />
+    {!fixedKind ? <View style={styles.tabs}>{types.map(type => <Pressable key={type} onPress={() => setKind(type)} style={[styles.tab, { backgroundColor: theme.surface, borderColor: theme.border }, kind === type && { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}><Text style={[styles.tabText, { color: theme.textMuted }, kind === type && { color: theme.primaryDark }]}>{type === 'subscriptions' ? 'Recurring' : type[0].toUpperCase() + type.slice(1)}</Text></Pressable>)}</View> : null}
     <ErrorBox message={error} />
     {loading ? <Busy /> : records.length === 0 ? <Empty text={`No ${kind} found.`} /> : records.map(item => <Card key={item._id}>
       <View style={styles.row}>
@@ -145,6 +150,7 @@ export function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
+  addButton: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   tabs: { flexDirection: 'row', gap: 5, marginBottom: 14 },
   tab: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border },
   tabActive: { backgroundColor: colors.primarySoft, borderColor: '#A5B4FC' },

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react-native';
 import { apiErrorMessage, MessageAnalysis, MessageDraft, mobileApi } from '../api';
 import { useAuth } from '../AuthContext';
