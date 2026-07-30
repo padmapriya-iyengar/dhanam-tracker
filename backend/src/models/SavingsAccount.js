@@ -17,6 +17,8 @@ const savingsAccountSchema = new mongoose.Schema(
     memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
     color: { type: String, default: '#6366f1' },
     notes: { type: String, trim: true },
+    isActive: { type: Boolean, default: true },
+    archivedAt: { type: Date, default: null },
     balanceUpdatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

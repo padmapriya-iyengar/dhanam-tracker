@@ -348,17 +348,21 @@ router.get('/trend', async (req, res) => {
   try {
     const months = parseInt(req.query.months) || 12;
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    const anchorYear = parseInt(req.query.year, 10) || now.getFullYear();
+    const anchorMonth = parseInt(req.query.month, 10) || now.getMonth() + 1;
+    const anchor = new Date(anchorYear, anchorMonth - 1, 1);
+    const start = new Date(anchor.getFullYear(), anchor.getMonth() - months + 1, 1);
+    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 23, 59, 59, 999);
     const recurringFilter = await recurringExpenseFilter(req.user._id, req.query);
 
     const [expenseTrend, incomeTrend] = await Promise.all([
       Expense.aggregate([
-        ...netExpenseStages({ userId: req.user._id, date: { $gte: start }, ...recurringFilter }),
+        ...netExpenseStages({ userId: req.user._id, date: { $gte: start, $lte: end }, ...recurringFilter }),
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$netAmount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       Income.aggregate([
-        { $match: { userId: req.user._id, date: { $gte: start } } },
+        { $match: { userId: req.user._id, date: { $gte: start, $lte: end } } },
         { $group: { _id: { month: '$month', year: '$year' }, total: { $sum: '$amount' } } },
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
@@ -368,7 +372,7 @@ router.get('/trend', async (req, res) => {
     const trendMap = {};
 
     for (let i = 0; i < months; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - months + 1 + i, 1);
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - months + 1 + i, 1);
       const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
       trendMap[key] = { label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`, income: 0, expenses: 0, savings: 0 };
     }

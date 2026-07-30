@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const AuthSession = require('../models/AuthSession');
 const crypto = require('crypto');
 
 const DEFAULT_USER_EMAIL = process.env.DEFAULT_USER_EMAIL || 'padmapriya@example.com';
@@ -21,9 +22,10 @@ function verifyPassword(password, user) {
   return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
 }
 
-function createToken(user) {
+function createToken(user, sessionId = null) {
   const payload = {
     userId: user._id.toString(),
+    ...(sessionId ? { sessionId: sessionId.toString() } : {}),
     exp: Date.now() + (1000 * 60 * 60 * 12),
   };
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -190,7 +192,23 @@ async function currentUser(req, res, next) {
     const user = await User.findOne({ _id: payload.userId, isActive: true });
     if (!user) return res.status(401).json({ error: 'Please log in to continue' });
 
+    if (payload.sessionId) {
+      const session = await AuthSession.findOne({
+        _id: payload.sessionId,
+        userId: user._id,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() },
+      });
+      if (!session) return res.status(401).json({ error: 'This session is no longer active. Please sign in again.' });
+      req.authSession = session;
+      if (Date.now() - session.lastSeenAt.getTime() > 60000) {
+        session.lastSeenAt = new Date();
+        session.save().catch(() => {});
+      }
+    }
+
     req.user = user;
+    req.authPayload = payload;
     next();
   } catch (err) {
     res.status(500).json({ error: err.message });

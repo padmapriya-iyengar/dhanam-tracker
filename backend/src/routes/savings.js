@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
     const asOf = isCurrentMonth
       ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
       : new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
-    const accounts = await SavingsAccount.find({ userId: req.user._id })
+    const accounts = await SavingsAccount.find({ userId: req.user._id, isActive: { $ne: false } })
       .populate('memberId', 'name color role')
       .sort({ memberId: 1, createdAt: 1 });
     res.json(await withCalculatedBalances(req.user._id, accounts, asOf));
@@ -107,9 +107,13 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const account = await SavingsAccount.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    const account = await SavingsAccount.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { isActive: false, archivedAt: new Date() },
+      { new: true }
+    );
     if (!account) return res.status(404).json({ error: 'Account not found' });
-    res.json({ message: 'Account deleted' });
+    res.json({ message: 'Account archived' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

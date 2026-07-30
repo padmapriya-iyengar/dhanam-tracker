@@ -1,7 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const AuthSession = require('../models/AuthSession');
 const { createToken, currentUser, ensureDefaultUser, ensureDemoUser, verifyPassword } = require('../middleware/currentUser');
+
+function safeUser(user) {
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    color: user.color,
+    currency: user.currency || 'AED',
+    locale: user.locale || 'en-AE',
+    isDemo: user.isDemo,
+    onboardingCompleted: user.isDemo ? true : Boolean(user.onboardingCompleted),
+    notificationPreferences: user.notificationPreferences || {
+      enabled: true, recurring: true, cardDue: true, budgets: true,
+    },
+  };
+}
 
 router.post('/login', async (req, res) => {
   try {
@@ -13,31 +30,64 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    res.json({
-      token: createToken(user),
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        color: user.color,
-        currency: user.currency || 'AED',
-        isDemo: user.isDemo,
-      },
+    const expiresAt = new Date(Date.now() + (1000 * 60 * 60 * 12));
+    const session = await AuthSession.create({
+      userId: user._id,
+      deviceName: String(req.body.deviceName || 'Web browser').slice(0, 120),
+      platform: String(req.body.platform || 'web').slice(0, 40),
+      expiresAt,
     });
+
+    res.json({ token: createToken(user, session._id), user: safeUser(user) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 router.get('/me', currentUser, async (req, res) => {
-  res.json({
-    _id: req.user._id,
-    name: req.user.name,
-    email: req.user.email,
-    color: req.user.color,
-    currency: req.user.currency || 'AED',
-    isDemo: req.user.isDemo,
-  });
+  res.json(safeUser(req.user));
+});
+
+router.patch('/me', currentUser, async (req, res) => {
+  try {
+    const allowed = ['currency', 'locale', 'onboardingCompleted', 'notificationPreferences'];
+    const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+    res.json(safeUser(user));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/logout', currentUser, async (req, res) => {
+  if (req.authSession) await AuthSession.updateOne({ _id: req.authSession._id }, { revokedAt: new Date() });
+  res.json({ message: 'Signed out' });
+});
+
+router.get('/sessions', currentUser, async (req, res) => {
+  const sessions = await AuthSession.find({
+    userId: req.user._id,
+    revokedAt: null,
+    expiresAt: { $gt: new Date() },
+  }).sort({ lastSeenAt: -1 });
+  res.json(sessions.map((session) => ({
+    id: session._id,
+    deviceName: session.deviceName,
+    platform: session.platform,
+    createdAt: session.createdAt,
+    lastSeenAt: session.lastSeenAt,
+    current: String(session._id) === String(req.authSession?._id),
+  })));
+});
+
+router.delete('/sessions/:id', currentUser, async (req, res) => {
+  const session = await AuthSession.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user._id, revokedAt: null },
+    { revokedAt: new Date() },
+    { new: true }
+  );
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  res.json({ message: 'Session revoked' });
 });
 
 module.exports = router;

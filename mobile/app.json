@@ -2,60 +2,36 @@
   "expo": {
     "name": "Dhanam",
     "slug": "dhanam-mobile",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
+    "scheme": "dhanam",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111827"
+    },
     "ios": {
       "bundleIdentifier": "com.dhanam.tracker",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID to protect your Dhanam financial information."
+      }
     },
     "android": {
       "package": "com.dhanam.tracker",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#111827"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
-    },
-    "scheme": "dhanam",
     "plugins": [
-      "expo-secure-store",
-      [
-        "expo-font",
-        {
-          "android": {
-            "fonts": [
-              {
-                "fontFamily": "Roboto",
-                "fontDefinitions": [
-                  { "path": "./node_modules/@expo-google-fonts/roboto/400Regular/Roboto_400Regular.ttf", "weight": 400 },
-                  { "path": "./node_modules/@expo-google-fonts/roboto/500Medium/Roboto_500Medium.ttf", "weight": 500 },
-                  { "path": "./node_modules/@expo-google-fonts/roboto/600SemiBold/Roboto_600SemiBold.ttf", "weight": 600 },
-                  { "path": "./node_modules/@expo-google-fonts/roboto/700Bold/Roboto_700Bold.ttf", "weight": 700 },
-                  { "path": "./node_modules/@expo-google-fonts/roboto/800ExtraBold/Roboto_800ExtraBold.ttf", "weight": 800 }
-                ]
-              }
-            ]
-          },
-          "ios": {
-            "fonts": [
-              "./node_modules/@expo-google-fonts/roboto/400Regular/Roboto_400Regular.ttf",
-              "./node_modules/@expo-google-fonts/roboto/500Medium/Roboto_500Medium.ttf",
-              "./node_modules/@expo-google-fonts/roboto/600SemiBold/Roboto_600SemiBold.ttf",
-              "./node_modules/@expo-google-fonts/roboto/700Bold/Roboto_700Bold.ttf",
-              "./node_modules/@expo-google-fonts/roboto/800ExtraBold/Roboto_800ExtraBold.ttf"
-            ]
-          }
-        }
-      ]
+      ["expo-secure-store", { "configureAndroidBackup": false }],
+      ["expo-local-authentication", { "faceIDPermission": "Use Face ID to protect your Dhanam financial information." }],
+      "./app.plugin.js"
     ],
     "extra": {
       "eas": {

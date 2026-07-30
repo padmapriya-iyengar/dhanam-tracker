@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const ExpenseRecovery = require('../models/ExpenseRecovery');
 
-function shouldAffectCurrentBalance(paymentMethod) {
-  return paymentMethod === 'current_account';
+function shouldAffectCurrentBalance(paymentMethod, requested) {
+  return paymentMethod === 'current_account' && requested !== false;
 }
 
 function aggregateFilterFrom(filter) {
@@ -168,12 +168,34 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const record = await Expense.findOne({ _id: req.params.id, userId: req.user._id })
+      .populate('memberId', 'name color role').populate('categoryId', 'name color icon')
+      .populate('subCategoryId', 'name').populate('creditCardId', 'name bankName color')
+      .populate('savingsAccountId', 'name bankName');
+    if (!record) return res.status(404).json({ error: 'Expense not found' });
+    res.json((await attachRecoveries([record]))[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/:id/recoveries', async (req, res) => {
   try {
+    if (req.body.clientMutationId) {
+      const existingRecovery = await ExpenseRecovery.findOne({ userId: req.user._id, clientMutationId: req.body.clientMutationId });
+      if (existingRecovery) return res.json(existingRecovery);
+    }
     const expense = await Expense.findOne({ _id: req.params.id, userId: req.user._id });
     if (!expense) return res.status(404).json({ error: 'Expense not found' });
     const payload = sanitizeRecovery(req.body);
     if (!Number.isFinite(payload.amount) || payload.amount <= 0) return res.status(400).json({ error: 'Recovery amount must be greater than zero' });
+    const recovered = await ExpenseRecovery.aggregate([
+      { $match: { userId: req.user._id, expenseId: expense._id, budgetTreatment: 'reduce_expense' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+    if (payload.budgetTreatment === 'reduce_expense' && payload.amount > expense.amount - (recovered[0]?.total || 0)) {
+      return res.status(400).json({ error: 'Recovery cannot exceed the remaining expense amount' });
+    }
 
     const recovery = await ExpenseRecovery.create({
       ...payload,
@@ -202,12 +224,18 @@ router.delete('/:id/recoveries/:recoveryId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    if (req.body.clientMutationId) {
+      const existing = await Expense.findOne({ userId: req.user._id, clientMutationId: req.body.clientMutationId })
+        .populate('memberId', 'name color role').populate('categoryId', 'name color icon')
+        .populate('subCategoryId', 'name').populate('savingsAccountId', 'name bankName');
+      if (existing) return res.json(existing);
+    }
     const date = new Date(req.body.date);
     const expense = new Expense({
       ...req.body,
       userId: req.user._id,
       savingsAccountId: req.body.savingsAccountId || null,
-      affectsCurrentBalance: shouldAffectCurrentBalance(req.body.paymentMethod),
+      affectsCurrentBalance: shouldAffectCurrentBalance(req.body.paymentMethod, req.body.affectsCurrentBalance),
       month: date.getMonth() + 1,
       year: date.getFullYear(),
     });
@@ -229,10 +257,12 @@ router.put('/:id', async (req, res) => {
     const old = await Expense.findOne({ _id: req.params.id, userId: req.user._id });
     if (!old) return res.status(404).json({ error: 'Expense not found' });
 
+    if (req.body.expectedUpdatedAt && old.updatedAt.toISOString() !== new Date(req.body.expectedUpdatedAt).toISOString()) return res.status(409).json({ error: 'This expense changed on another device', conflict: old });
     const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
+    delete updates.expectedUpdatedAt;
     delete updates.userId;
     if (req.body.paymentMethod) {
-      updates.affectsCurrentBalance = shouldAffectCurrentBalance(req.body.paymentMethod);
+      updates.affectsCurrentBalance = shouldAffectCurrentBalance(req.body.paymentMethod, req.body.affectsCurrentBalance);
     }
     if (req.body.date) {
       const date = new Date(req.body.date);

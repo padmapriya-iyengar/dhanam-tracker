@@ -41,6 +41,8 @@ app.use('/api/transfers', currentUser, require('./routes/transfers'));
 app.use('/api/accounts', currentUser, require('./routes/accounts'));
 app.use('/api/subscriptions', currentUser, require('./routes/subscriptions'));
 app.use('/api/category-goals', require('./routes/category-goals'));
+app.use('/api/mobile/home', currentUser, require('./routes/mobile-home'));
+app.use('/api/mobile/capture', currentUser, require('./routes/mobile-capture'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

@@ -1,0 +1,141 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
+import { CreditCard, Landmark, Pencil, PiggyBank, Plus, Scale, TrendingUp } from 'lucide-react-native';
+import { api, errorMessage } from '../api';
+import { Button, Card, Field, Screen, StateView, Title } from '../components/ui';
+import { useAuth } from '../state/AuthContext';
+import { usePreferences } from '../state/PreferencesContext';
+import { radius, useAppTheme } from '../theme';
+
+const ref = (value: any) => String(value?._id || value || '');
+const date = () => new Date().toISOString().slice(0, 10);
+
+export function AccountsScreen({ navigation }: any) {
+  const { colors } = useAppTheme(); const { user } = useAuth(); const prefs = usePreferences();
+  const [accounts, setAccounts] = useState<any[]>([]); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState('');
+  const [type, setType] = useState('all'); const [member, setMember] = useState('');
+  const money = (amount: number) => new Intl.NumberFormat(user?.locale || 'en-AE', { style: 'currency', currency: user?.currency || 'AED', maximumFractionDigits: 0 }).format(amount || 0);
+  const load = useCallback(async () => { setError(''); try { setAccounts((await api.home(new Date().getMonth() + 1, new Date().getFullYear())).data.accounts.accounts); } catch (cause) { setError(errorMessage(cause)); } finally { setLoading(false); setRefreshing(false); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const visible = accounts.filter((item) => (type === 'all' || item.type === type) && (!member || item.owner === member));
+  const assets = accounts.filter((item) => item.type !== 'credit_card').reduce((sum, item) => sum + item.balance, 0);
+  const liabilities = accounts.filter((item) => item.type === 'credit_card').reduce((sum, item) => sum + item.balance, 0);
+  if (loading) return <Screen scroll={false}><StateView kind="loading" title="Loading accounts…" /></Screen>;
+  return <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
+    <Title subtitle="Current accounts, savings, investments, deposits, and cards.">Accounts & balances</Title>
+    {!!error && <StateView kind="error" message={error} onAction={load} />}
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      {[['Assets', assets, colors.success], ['Card liability', liabilities, colors.danger], ['Net position', assets - liabilities, colors.primary]].map(([label, amount, tone]: any) => <View key={label} style={{ minWidth: '30%', flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 13 }}><Text style={{ color: colors.textMuted }}>{label}</Text><Text style={{ color: tone, fontWeight: '900', fontSize: 18 }}>{prefs.privacyMode ? '••••' : money(amount)}</Text></View>)}
+    </View>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{['all', 'current', 'savings', 'credit_card'].map((value) => <Button key={value} label={value === 'all' ? 'All' : value.replace('_', ' ')} variant={type === value ? 'primary' : 'secondary'} onPress={() => setType(value)} />)}</View>
+    {[...new Set(accounts.map((item) => item.owner).filter(Boolean))].map((owner) => <Button key={String(owner)} label={String(owner)} variant={member === owner ? 'primary' : 'secondary'} onPress={() => setMember(member === owner ? '' : String(owner))} />)}
+    {visible.map((account) => {
+      const Icon = account.type === 'credit_card' ? CreditCard : account.type === 'savings' ? PiggyBank : Landmark;
+      return <Pressable key={account.key} accessibilityRole="button" onPress={() => navigation.navigate(account.type === 'credit_card' ? 'CardDetail' : 'AccountDetail', { account: account.key, title: account.name, data: account })}><Card><View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}><View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: account.color || colors.primary, alignItems: 'center', justifyContent: 'center' }}><Icon color="#fff" /></View><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{account.name}</Text><Text style={{ color: colors.textMuted }}>{account.owner} · {account.type.replace('_', ' ')}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={{ color: account.type === 'credit_card' ? colors.danger : colors.text, fontWeight: '900' }}>{prefs.privacyMode ? '••••' : money(account.balance)}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{account.recentMovement >= 0 ? '+' : ''}{prefs.privacyMode ? '••' : money(account.recentMovement)} this month</Text></View></View></Card></Pressable>;
+    })}
+    <Button label="Add savings or investment account" onPress={() => navigation.navigate('AccountForm')} icon={<Plus size={17} />} />
+    <Button label="Add credit card" variant="secondary" onPress={() => navigation.navigate('CardForm')} icon={<CreditCard size={17} color={colors.text} />} />
+    <Button label="Set opening balances" variant="secondary" onPress={() => navigation.navigate('OpeningBalances')} icon={<Scale size={17} color={colors.text} />} />
+  </Screen>;
+}
+
+export function AccountDetailScreen({ route, navigation }: any) {
+  const { colors } = useAppTheme(); const { user } = useAuth(); const prefs = usePreferences();
+  const [records, setRecords] = useState<any[]>([]); const [summary, setSummary] = useState<any>(null); const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState({ startDate: '', endDate: '' }); const [type, setType] = useState('all');
+  const money = (amount: number) => new Intl.NumberFormat(user?.locale || 'en-AE', { style: 'currency', currency: user?.currency || 'AED' }).format(amount || 0);
+  async function load() { setLoading(true); try { const { data } = await api.accountTransactions({ account: route.params.account, limit: 100, ...range }); setRecords(data.records); setSummary(data.summary); } catch (cause) { Alert.alert('Could not load ledger', errorMessage(cause)); } finally { setLoading(false); } }
+  useEffect(() => { load(); }, [route.params.account]);
+  const visible = type === 'all' ? records : records.filter((item) => item.type === type);
+  const current = records[0]?.balanceAfter ?? route.params.data?.balance;
+  return <Screen>
+    <Title subtitle={`${route.params.data?.owner || ''} · calculated from opening balance and ledger`}>{route.params.title || 'Account'}</Title>
+    <Card><Text style={{ color: colors.textMuted }}>Current balance</Text><Text style={{ color: colors.text, fontSize: 30, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(current)}</Text>
+      {summary?.scope === 'credit_card' ? <Text style={{ color: colors.textMuted }}>Purchases {money(summary.creditCards.purchases)} · payments {money(summary.creditCards.payments)} · movement {money(summary.creditCards.outstandingMovement)}</Text> : summary && <Text style={{ color: colors.textMuted }}>Money in {money(summary.cash.totalIn)} · money out {money(summary.cash.totalOut)} · net {money(summary.cash.net)}</Text>}
+    </Card>
+    <View style={{ flexDirection: 'row', gap: 10 }}><View style={{ flex: 1 }}><Field label="From" value={range.startDate} onChangeText={(startDate) => setRange({ ...range, startDate })} placeholder="YYYY-MM-DD" /></View><View style={{ flex: 1 }}><Field label="To" value={range.endDate} onChangeText={(endDate) => setRange({ ...range, endDate })} placeholder="YYYY-MM-DD" /></View></View>
+    <Button label="Apply date range" variant="secondary" onPress={load} />
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{['all', 'expense', 'income', 'transfer'].map((value) => <Button key={value} label={value} variant={type === value ? 'primary' : 'secondary'} onPress={() => setType(value)} />)}</View>
+    {loading && <StateView kind="loading" />}{!loading && !visible.length && <StateView kind="empty" message="No ledger records in this range." />}
+    {visible.map((item) => <Pressable key={`${item.type}:${item.id}`} onPress={() => navigation.navigate('ActivityDetail', { item })}><Card><View style={{ flexDirection: 'row' }}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{item.description || item.title}</Text><Text style={{ color: colors.textMuted }}>{new Date(item.date).toLocaleDateString()} · {item.type}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={{ color: item.signedAmount < 0 ? colors.danger : colors.success, fontWeight: '900' }}>{prefs.privacyMode ? '••••' : money(item.signedAmount)}</Text>{item.balanceAfter != null && <Text style={{ color: colors.textMuted, fontSize: 12 }}>Balance {prefs.privacyMode ? '••••' : money(item.balanceAfter)}</Text>}</View></View></Card></Pressable>)}
+    <Button label="Transfer money" onPress={() => navigation.navigate('TransferForm', { preset: { from: route.params.account } })} />
+    <Button label="Compare categories" variant="secondary" onPress={() => navigation.navigate('CategoryComparison', { account: route.params.account, title: route.params.title })} />
+    {route.params.data?.type === 'savings' && <Button label="Edit account" variant="secondary" onPress={() => navigation.navigate('AccountForm', { account: route.params.data })} icon={<Pencil size={17} color={colors.text} />} />}
+  </Screen>;
+}
+
+export function AccountFormScreen({ navigation, route }: any) {
+  const account = route.params?.account; const [members, setMembers] = useState<any[]>([]);
+  const [form, setForm] = useState<any>({ name: account?.name || '', bankName: account?.bankName || '', lastFourDigits: account?.lastFourDigits || '', accountType: account?.accountType || 'savings', memberId: ref(account?.memberId), openingBalance: String(account?.openingBalance ?? 0), color: account?.color || '#2563EB', notes: account?.notes || '' });
+  useEffect(() => { api.members().then(({ data }) => { setMembers(data); if (!form.memberId && data[0]) setForm((value: any) => ({ ...value, memberId: data[0]?._id || '' })); }); }, []);
+  async function save() { if (!form.name || !form.memberId) return Alert.alert('Name and member are required'); try { const payload = { ...form, openingBalance: Number(form.openingBalance), lastFourDigits: form.lastFourDigits.slice(-4) }; account ? await api.updateAccount(account.id || account._id, payload) : await api.createAccount(payload); navigation.goBack(); } catch (cause) { Alert.alert('Could not save account', errorMessage(cause)); } }
+  return <Screen><Title subtitle="Calculated balance is kept separate from the opening balance.">{account ? 'Edit account' : 'Add account'}</Title>
+    <Field label="Account name" value={form.name} onChangeText={(name) => setForm({ ...form, name })} /><Field label="Bank" value={form.bankName} onChangeText={(bankName) => setForm({ ...form, bankName })} /><Field label="Last four digits" value={form.lastFourDigits} onChangeText={(lastFourDigits) => setForm({ ...form, lastFourDigits: lastFourDigits.replace(/\D/g, '').slice(0, 4) })} keyboardType="number-pad" />
+    <Card><Text>Account type</Text>{['savings', 'current', 'fixed_deposit', 'investment'].map((value) => <Button key={value} label={value.replace('_', ' ')} variant={form.accountType === value ? 'primary' : 'secondary'} onPress={() => setForm({ ...form, accountType: value })} />)}</Card>
+    <Card><Text>Member</Text>{members.map((item) => <Button key={item._id} label={item.name} variant={form.memberId === item._id ? 'primary' : 'secondary'} onPress={() => setForm({ ...form, memberId: item._id })} />)}</Card>
+    <Field label="Opening balance" value={form.openingBalance} onChangeText={(openingBalance) => setForm({ ...form, openingBalance })} keyboardType="decimal-pad" /><Field label="Color" value={form.color} onChangeText={(color) => setForm({ ...form, color })} /><Field label="Notes" value={form.notes} onChangeText={(notes) => setForm({ ...form, notes })} multiline />
+    <Button label="Save account" onPress={save} />{account && <Button label="Archive account" variant="danger" onPress={() => Alert.alert('Archive account?', 'Historical transactions remain available.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Archive', style: 'destructive', onPress: async () => { try { await api.archiveAccount(account.id || account._id); navigation.pop(2); } catch (cause) { Alert.alert('Could not archive', errorMessage(cause)); } } }])} />}
+  </Screen>;
+}
+
+export function OpeningBalancesScreen() {
+  const { colors } = useAppTheme(); const [rows, setRows] = useState<any[]>([]); const [editing, setEditing] = useState<Record<string, string>>({});
+  async function load() { try { const { data } = await api.balances(); setRows(Array.isArray(data) ? data : data.balances || []); } catch (cause) { Alert.alert('Could not load balances', errorMessage(cause)); } }
+  useEffect(() => { load(); }, []);
+  async function save(row: any) { const memberId = ref(row.memberId); const before = Number(row.openingBalance || 0); const after = Number(editing[memberId] ?? before); Alert.alert('Replace opening balance?', `Before: ${before}\nAfter: ${after}\nCalculated transactions are not changed.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Replace', onPress: async () => { try { await api.updateOpeningBalance(memberId, { openingBalance: after }); load(); } catch (cause) { Alert.alert('Could not update balance', errorMessage(cause)); } } }]); }
+  return <Screen><Title subtitle="Opening balances are the starting point; transactions are applied after them.">Opening balances</Title>{rows.map((row) => { const id = ref(row.memberId); return <Card key={id}><Text style={{ color: colors.text, fontWeight: '900' }}>{row.memberId?.name || row.memberName}</Text><Text style={{ color: colors.textMuted }}>Last updated {row.updatedAt ? new Date(row.updatedAt).toLocaleString() : 'never'}</Text><Field label="Opening balance" value={editing[id] ?? String(row.openingBalance || 0)} onChangeText={(value) => setEditing({ ...editing, [id]: value })} keyboardType="decimal-pad" /><Button label="Preview and save" onPress={() => save(row)} /></Card>; })}</Screen>;
+}
+
+export function CategoryComparisonScreen({ route }: any) {
+  const { colors } = useAppTheme(); const { user } = useAuth(); const [months, setMonths] = useState<string[]>(() => { const now = new Date(); return [0, 1, 2].map((offset) => `${new Date(now.getFullYear(), now.getMonth() - offset).getFullYear()}-${String(new Date(now.getFullYear(), now.getMonth() - offset).getMonth() + 1).padStart(2, '0')}`); }); const [data, setData] = useState<any>(null);
+  const money = (amount: number) => new Intl.NumberFormat(user?.locale || 'en-AE', { style: 'currency', currency: user?.currency || 'AED', maximumFractionDigits: 0 }).format(amount || 0);
+  async function load() { try { setData((await api.accountCategoryComparison({ account: route.params.account, months: months.join(',') })).data); } catch (cause) { Alert.alert('Could not compare categories', errorMessage(cause)); } }
+  useEffect(() => { load(); }, []);
+  return <Screen><Title subtitle="A ranked mobile view across up to three selected months.">{route.params.title} comparison</Title><Field label="Months (comma separated YYYY-MM)" value={months.join(',')} onChangeText={(value) => setMonths(value.split(',').map((part) => part.trim()).filter(Boolean).slice(0, 3))} /><Button label="Compare" onPress={load} />{data?.rows?.sort((a: any, b: any) => (Object.values(b.values) as number[]).reduce((x, y) => x + y, 0) - (Object.values(a.values) as number[]).reduce((x, y) => x + y, 0)).map((row: any) => <Card key={row.id}><Text style={{ color: colors.text, fontWeight: '900' }}>{row.name}</Text>{months.map((month) => <Text key={month} style={{ color: colors.textMuted }}>{month}: {money(row.values[month] || 0)}</Text>)}{row.subcategories?.map((sub: any) => <Text key={sub.id} style={{ color: colors.text, fontSize: 13 }}>{sub.name} · {months.map((month) => money(sub.values[month] || 0)).join(' / ')}</Text>)}</Card>)}</Screen>;
+}
+
+export function CardsScreen({ navigation }: any) {
+  const { colors } = useAppTheme(); const [cards, setCards] = useState<any[]>([]); const [summary, setSummary] = useState<any>(null);
+  async function load() { try { const [list, totals] = await Promise.all([api.creditCards(), api.cardSummary({})]); setCards(list.data); const rows = Array.isArray(totals.data) ? totals.data : []; setSummary({ purchases: rows.reduce((sum: number, item: any) => sum + (item.cyclePurchases || 0), 0), payments: rows.reduce((sum: number, item: any) => sum + (item.cyclePayments || 0), 0), outstanding: rows.reduce((sum: number, item: any) => sum + (item.cycleOutstanding || 0), 0) }); } catch (cause) { Alert.alert('Could not load cards', errorMessage(cause)); } }
+  useEffect(() => { load(); }, []);
+  return <Screen><Title subtitle="Budgets, due dates, statements, and trends.">Credit cards</Title>{summary && <Card><Text style={{ color: colors.text, fontWeight: '900' }}>Household card position</Text><Text style={{ color: colors.textMuted }}>Purchases {summary.purchases} · payments {summary.payments} · outstanding {summary.outstanding}</Text></Card>}{cards.map((card) => <Pressable key={card._id} onPress={() => navigation.navigate('CardDetail', { card, account: `credit_card:${card._id}` })}><Card><View style={{ flexDirection: 'row', gap: 12 }}><CreditCard color={card.color || colors.primary} /><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{card.name}</Text><Text style={{ color: colors.textMuted }}>{card.bankName} · •••• {card.lastFourDigits || '----'} · {card.memberId?.name}</Text></View></View></Card></Pressable>)}<Button label="Add card" onPress={() => navigation.navigate('CardForm')} /></Screen>;
+}
+
+export function CardDetailScreen({ route, navigation }: any) {
+  const { colors } = useAppTheme(); const card = route.params.card || route.params.data; const now = new Date(); const [budget, setBudget] = useState<any>(null); const [summary, setSummary] = useState<any>(null);
+  async function load() { try { const [budgets, totals] = await Promise.all([api.cardBudgets({ month: now.getMonth() + 1, year: now.getFullYear() }), api.cardSummary({})]); setBudget(budgets.data.rows?.find((item: any) => ref(item._id) === ref(card?._id || card?.id))); setSummary((Array.isArray(totals.data) ? totals.data : []).find((item: any) => ref(item._id) === ref(card?._id || card?.id))); } catch {} }
+  useEffect(() => { if (card) load(); }, [ref(card?._id || card?.id)]);
+  return <Screen><Title subtitle={`${card?.bankName || ''} · •••• ${card?.lastFourDigits || '----'}`}>{card?.name || route.params.title}</Title><Card><Text style={{ color: colors.text, fontWeight: '900' }}>Current cycle</Text><Text style={{ color: colors.textMuted }}>Statement day {card?.statementDay || '—'} · due day {card?.paymentDueDay || '—'} · cycle {card?.cycleStartDay || '—'}–{card?.cycleEndDay || '—'}</Text>{summary && <Text style={{ color: colors.text }}>Purchases {summary.cyclePurchases || 0} · payments {summary.cyclePayments || 0} · outstanding {summary.cycleOutstanding || 0}</Text>}{budget && <Text style={{ color: colors.warning }}>Budget {budget.budgeted || 0} · {budget.consumedPercent || 0}% used · recovered {budget.recoveredAmount || 0}</Text>}</Card>
+    <Button label="Record card payment" onPress={() => navigation.navigate('TransferForm', { preset: { to: `credit_card:${card?._id || card?.id}`, description: `${card?.name} payment` } })} />
+    <Button label="Card budget" variant="secondary" onPress={() => navigation.navigate('CardBudget', { card })} /><Button label="Reconcile statement" variant="secondary" onPress={() => navigation.navigate('CardReconciliation', { card })} /><Button label="View trends" variant="secondary" onPress={() => navigation.navigate('CardTrends', { card })} /><Button label="View ledger" variant="secondary" onPress={() => navigation.navigate('AccountDetail', { account: `credit_card:${card?._id || card?.id}`, title: card?.name, data: { ...card, type: 'credit_card' } })} /><Button label="Edit card" variant="secondary" onPress={() => navigation.navigate('CardForm', { card })} />
+  </Screen>;
+}
+
+export function CardFormScreen({ route, navigation }: any) {
+  const card = route.params?.card; const [members, setMembers] = useState<any[]>([]); const [form, setForm] = useState<any>({ name: card?.name || '', bankName: card?.bankName || '', memberId: ref(card?.memberId), lastFourDigits: card?.lastFourDigits || '', cycleStartDay: String(card?.cycleStartDay || 1), cycleEndDay: String(card?.cycleEndDay || 30), statementDay: String(card?.statementDay || 1), paymentDueDay: String(card?.paymentDueDay || 15), color: card?.color || '#7C3AED', isActive: card?.isActive ?? true });
+  useEffect(() => { api.members().then(({ data }) => { setMembers(data); if (!form.memberId && data[0]) setForm((value: any) => ({ ...value, memberId: data[0]?._id || '' })); }); }, []);
+  async function save() { try { const payload = { ...form, lastFourDigits: form.lastFourDigits.slice(-4), cycleStartDay: Number(form.cycleStartDay), cycleEndDay: Number(form.cycleEndDay), statementDay: Number(form.statementDay), paymentDueDay: Number(form.paymentDueDay) }; card ? await api.updateCreditCard(card._id, payload) : await api.createCreditCard(payload); navigation.goBack(); } catch (cause) { Alert.alert('Could not save card', errorMessage(cause)); } }
+  return <Screen><Title subtitle="Only the last four digits are stored for display.">{card ? 'Edit card' : 'Add card'}</Title><Field label="Card name" value={form.name} onChangeText={(name) => setForm({ ...form, name })} /><Field label="Bank" value={form.bankName} onChangeText={(bankName) => setForm({ ...form, bankName })} /><Field label="Last four digits" value={form.lastFourDigits} onChangeText={(lastFourDigits) => setForm({ ...form, lastFourDigits: lastFourDigits.replace(/\D/g, '').slice(0, 4) })} keyboardType="number-pad" /><Card><Text>Member</Text>{members.map((item) => <Button key={item._id} label={item.name} variant={form.memberId === item._id ? 'primary' : 'secondary'} onPress={() => setForm({ ...form, memberId: item._id })} />)}</Card>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{([['Cycle start', 'cycleStartDay'], ['Cycle end', 'cycleEndDay'], ['Statement day', 'statementDay'], ['Due day', 'paymentDueDay']] as const).map(([label, key]) => <View key={key} style={{ width: '47%' }}><Field label={label} value={form[key]} onChangeText={(value) => setForm({ ...form, [key]: value.replace(/\D/g, '') })} keyboardType="number-pad" /></View>)}</View><Field label="Color" value={form.color} onChangeText={(color) => setForm({ ...form, color })} /><Button label="Save card" onPress={save} />{card && <Button label="Archive card" variant="danger" onPress={() => Alert.alert('Archive card?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Archive', style: 'destructive', onPress: async () => { await api.archiveCreditCard(card._id); navigation.pop(2); } }])} />}</Screen>;
+}
+
+export function CardBudgetScreen({ route }: any) {
+  const card = route.params.card; const now = new Date(); const [goal, setGoal] = useState(''); const [threshold, setThreshold] = useState('80');
+  async function save() { try { await api.updateCardBudget(card._id, { month: now.getMonth() + 1, year: now.getFullYear(), budgetAmount: Number(goal), notes: `Custom warning threshold: ${threshold}%` }); Alert.alert('Card budget saved'); } catch (cause) { Alert.alert('Could not save budget', errorMessage(cause)); } }
+  return <Screen><Title subtitle="Warnings are shown at 50%, 80%, 100%, and your custom threshold.">{card.name} budget</Title><Field label="Monthly budget" value={goal} onChangeText={setGoal} keyboardType="decimal-pad" /><Field label="Custom warning percentage" value={threshold} onChangeText={setThreshold} keyboardType="number-pad" /><Button label="Save budget" onPress={save} /></Screen>;
+}
+
+export function CardReconciliationScreen({ route, navigation }: any) {
+  const card = route.params.card; const [form, setForm] = useState<any>({ creditCardId: card._id, cycleStart: date(), cycleEnd: date(), openingBalance: '', fees: '', interest: '', refunds: '', statementAmount: '', notes: '' }); const [comparison, setComparison] = useState<any>(null);
+  async function compare() { try { setComparison((await api.cardReconciliation({ cardId: card._id, cycleStart: form.cycleStart, cycleEnd: form.cycleEnd })).data); } catch (cause) { Alert.alert('Could not compare statement', errorMessage(cause)); } }
+  async function save() { try { await api.saveCardStatement({ ...form, openingBalance: Number(form.openingBalance), fees: Number(form.fees), interest: Number(form.interest), refunds: Number(form.refunds), statementAmount: Number(form.statementAmount) }); Alert.alert('Statement saved'); } catch (cause) { Alert.alert('Could not save statement', errorMessage(cause)); } }
+  return <Screen><Title subtitle="Enter statement figures and compare them with recorded activity.">Reconcile {card.name}</Title>{([['Cycle start', 'cycleStart'], ['Cycle end', 'cycleEnd'], ['Opening balance', 'openingBalance'], ['Fees', 'fees'], ['Interest', 'interest'], ['Refunds/credits', 'refunds'], ['Statement closing amount', 'statementAmount']] as const).map(([label, key]) => <Field key={key} label={label} value={form[key]} onChangeText={(value) => setForm({ ...form, [key]: value })} keyboardType={key.includes('cycle') ? 'default' : 'decimal-pad'} />)}<Field label="Notes" value={form.notes} onChangeText={(notes) => setForm({ ...form, notes })} /><Button label="Compare recorded activity" variant="secondary" onPress={compare} />{comparison && <Card><Text>Recorded purchases: {comparison.purchases || 0}</Text><Text>Recorded payments: {comparison.payments || 0}</Text><Text>Calculated closing: {comparison.calculatedClosing || 0}</Text><Text>Difference: {comparison.difference || 0}</Text></Card>}<Button label="Save statement" onPress={save} /><Button label="Investigate in card ledger" variant="secondary" onPress={() => navigation.navigate('AccountDetail', { account: `credit_card:${card._id}`, title: card.name, data: { ...card, type: 'credit_card' } })} /></Screen>;
+}
+
+export function CardTrendsScreen({ route }: any) {
+  const { colors } = useAppTheme(); const card = route.params.card; const [months, setMonths] = useState(6); const [rows, setRows] = useState<any[]>([]);
+  async function load(value = months) { try { const data = (await api.cardTrends({ months: value })).data; const selected = data.cards?.find((item: any) => ref(item._id) === ref(card._id)); setRows((data.months || []).map((month: any, index: number) => ({ label: month.label, amount: selected?.monthlyTotals?.[index] || 0, payments: selected?.monthlyPayments?.[index] || 0 }))); } catch (cause) { Alert.alert('Could not load trends', errorMessage(cause)); } }
+  useEffect(() => { load(); }, []);
+  const max = Math.max(...rows.map((row) => row.amount || row.spend || row.total || 0), 1);
+  return <Screen><Title subtitle="Ranked spend with a compact relative bar chart.">{card.name} trends</Title><View style={{ flexDirection: 'row', gap: 8 }}>{[3, 6, 12].map((value) => <Button key={value} label={`${value} months`} variant={months === value ? 'primary' : 'secondary'} onPress={() => { setMonths(value); load(value); }} />)}</View>{rows.map((row, index) => { const value = row.amount || row.spend || row.total || 0; return <Card key={row.month || index}><View style={{ flexDirection: 'row' }}><Text style={{ color: colors.text, flex: 1, fontWeight: '800' }}>{row.month || row.label}</Text><Text style={{ color: colors.text }}>{value}</Text></View><View style={{ height: 9, borderRadius: 6, backgroundColor: colors.border }}><View style={{ width: `${value / max * 100}%`, height: 9, borderRadius: 6, backgroundColor: card.color || colors.primary }} /></View></Card>; })}</Screen>;
+}

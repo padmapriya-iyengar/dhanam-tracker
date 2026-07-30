@@ -11,6 +11,8 @@ const incomeSchema = new mongoose.Schema(
     month: { type: Number, required: true, min: 1, max: 12 },
     year: { type: Number, required: true },
     savingsAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavingsAccount', default: null },
+    imported: { type: Boolean, default: false },
+    clientMutationId: { type: String, trim: true, default: null },
   },
   { timestamps: true }
 );
@@ -18,5 +20,6 @@ const incomeSchema = new mongoose.Schema(
 incomeSchema.index({ date: -1 });
 incomeSchema.index({ month: 1, year: 1 });
 incomeSchema.index({ userId: 1, memberId: 1 });
+incomeSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Income', incomeSchema);

@@ -7,6 +7,7 @@ const CreditCard = require('../models/CreditCard');
 const Income = require('../models/Income');
 const Expense = require('../models/Expense');
 const Transfer = require('../models/Transfer');
+const ExpenseRecovery = require('../models/ExpenseRecovery');
 
 const CURRENT_EXPENSE_METHODS = ['cash', 'card', 'current_account', 'debit_card', 'netbanking', 'upi', 'other'];
 
@@ -171,19 +172,42 @@ router.get('/transactions', async (req, res) => {
         .populate('fromMemberId', 'name color').populate('fromSavingsAccountId', 'name bankName color').populate('fromCreditCardId', 'name bankName color lastFourDigits')
         .populate('toMemberId', 'name color').populate('toSavingsAccountId', 'name bankName color').populate('toCreditCardId', 'name bankName color lastFourDigits'),
     ]);
+    const recoveries = selectedId ? [] : await ExpenseRecovery.find({
+      userId: req.user._id,
+      ...(date ? { date } : {}),
+    }).populate({
+      path: 'expenseId',
+      populate: [
+        { path: 'memberId', select: 'name color' },
+        { path: 'categoryId', select: 'name color icon' },
+        { path: 'creditCardId', select: 'name' },
+        { path: 'savingsAccountId', select: 'name' },
+      ],
+    });
+    const recoveryTotals = expenses.length ? await ExpenseRecovery.aggregate([
+      { $match: { userId: req.user._id, expenseId: { $in: expenses.map((expense) => expense._id) }, budgetTreatment: 'reduce_expense' } },
+      { $group: { _id: '$expenseId', amount: { $sum: '$amount' } } },
+    ]) : [];
+    const recoveryByExpense = new Map(recoveryTotals.map((entry) => [String(entry._id), entry.amount]));
 
     const records = [
       ...incomes.map((item) => ({
-        id: item._id, type: 'income', direction: 'in', date: item.date, createdAt: item.createdAt, amount: item.amount, signedAmount: item.amount,
+        id: item._id, type: 'income', direction: 'in', date: item.date, createdAt: item.createdAt, updatedAt: item.updatedAt, amount: item.amount, signedAmount: item.amount,
         title: item.source, description: item.description || '', owner: item.memberId?.name || '',
-        account: item.savingsAccountId?.name || `${item.memberId?.name || ''} Current Account`, paymentMethod: 'Income', notes: '',
+        memberId: idOf(item.memberId), accountId: idOf(item.savingsAccountId) || idOf(item.memberId),
+        account: item.savingsAccountId?.name || `${item.memberId?.name || ''} Current Account`, paymentMethod: 'Income', notes: '', imported: !!item.imported,
       })),
       ...expenses.map((item) => ({
-        id: item._id, type: 'expense', direction: 'out', date: item.date, createdAt: item.createdAt, amount: item.amount, signedAmount: -item.amount,
+        recoveredAmount: Math.min(recoveryByExpense.get(String(item._id)) || 0, item.amount),
+        netAmount: Math.max(item.amount - (recoveryByExpense.get(String(item._id)) || 0), 0),
+        id: item._id, type: 'expense', direction: 'out', date: item.date, createdAt: item.createdAt, updatedAt: item.updatedAt, amount: item.amount, signedAmount: -item.amount,
         title: item.categoryId?.name || 'Uncategorized', description: item.description || '', owner: item.memberId?.name || '',
+        memberId: idOf(item.memberId), categoryId: idOf(item.categoryId), subCategoryId: idOf(item.subCategoryId),
+        accountId: idOf(item.creditCardId) || idOf(item.savingsAccountId) || idOf(item.memberId),
         account: item.creditCardId?.name || item.savingsAccountId?.name || `${item.memberId?.name || ''} Current Account`,
         category: item.subCategoryId?.name ? `${item.categoryId?.name} / ${item.subCategoryId.name}` : item.categoryId?.name,
         categoryColor: item.categoryId?.color, paymentMethod: item.paymentMethod, notes: item.notes || '',
+        recurring: !!item.subscriptionId, subscriptionId: idOf(item.subscriptionId), imported: !!item.imported,
       })),
       ...transfers.map((item) => {
         const from = transferAccount(item, 'from');
@@ -191,14 +215,24 @@ router.get('/transactions', async (req, res) => {
         const isIncoming = selectedKey && to.key === selectedKey;
         const isOutgoing = selectedKey && from.key === selectedKey;
         return {
-          id: item._id, type: 'transfer', direction: isIncoming ? 'in' : isOutgoing ? 'out' : 'transfer', date: item.date, createdAt: item.createdAt, amount: item.amount,
+          id: item._id, type: 'transfer', direction: isIncoming ? 'in' : isOutgoing ? 'out' : 'transfer', date: item.date, createdAt: item.createdAt, updatedAt: item.updatedAt, amount: item.amount,
           signedAmount: isIncoming ? item.amount : isOutgoing ? -item.amount : 0,
           title: 'Transfer', description: item.description || '', owner: '',
           account: `${accountLabel(from.type, from.value)} → ${accountLabel(to.type, to.value)}`,
           fromAccount: accountLabel(from.type, from.value), toAccount: accountLabel(to.type, to.value),
-          fromAccountType: from.type, toAccountType: to.type, paymentMethod: 'Transfer', notes: item.notes || '',
+          fromAccountType: from.type, toAccountType: to.type, paymentMethod: 'Transfer', notes: item.notes || '', imported: !!item.imported,
         };
       }),
+      ...recoveries.filter((item) => item.expenseId).map((item) => ({
+        id: item._id, expenseId: item.expenseId._id, type: 'recovery', direction: 'in',
+        date: item.date, createdAt: item.createdAt, updatedAt: item.updatedAt,
+        amount: item.amount, signedAmount: item.amount, title: 'Expense recovery',
+        description: item.notes || item.expenseId.description || 'Recovery',
+        owner: item.expenseId.memberId?.name || '', memberId: idOf(item.expenseId.memberId),
+        account: item.expenseId.creditCardId?.name || item.expenseId.savingsAccountId?.name || `${item.expenseId.memberId?.name || ''} Current Account`,
+        category: item.expenseId.categoryId?.name || '', categoryId: idOf(item.expenseId.categoryId),
+        paymentMethod: 'Recovery', notes: item.notes || '', recoverySource: item.source,
+      })),
     ];
 
     if (selectedId) {
@@ -223,9 +257,31 @@ router.get('/transactions', async (req, res) => {
         });
     }
 
-    const visibleRecords = records
-      .filter((record) => !req.query.startDate || new Date(record.date) >= new Date(`${req.query.startDate}T00:00:00.000`))
-      .sort((a, b) => new Date(b.date) - new Date(a.date)
+    const queryText = String(req.query.query || '').trim().toLowerCase();
+    const typeFilter = String(req.query.type || 'all');
+    const filteredRecords = records.filter((record) => {
+      if (req.query.startDate && new Date(record.date) < new Date(`${req.query.startDate}T00:00:00.000`)) return false;
+      if (req.query.endDate && new Date(record.date) > new Date(`${req.query.endDate}T23:59:59.999`)) return false;
+      if (typeFilter !== 'all' && record.type !== typeFilter) return false;
+      if (req.query.member && String(record.memberId) !== String(req.query.member) && !String(record.owner).toLowerCase().includes(String(req.query.member).toLowerCase())) return false;
+      if (req.query.category && String(record.categoryId) !== String(req.query.category) && !String(record.category).toLowerCase().includes(String(req.query.category).toLowerCase())) return false;
+      if (req.query.subcategory && String(record.subCategoryId) !== String(req.query.subcategory)) return false;
+      if (req.query.account && String(record.accountId) !== String(req.query.account) && !String(record.account).toLowerCase().includes(String(req.query.account).toLowerCase())) return false;
+      if (req.query.minAmount && record.amount < Number(req.query.minAmount)) return false;
+      if (req.query.maxAmount && record.amount > Number(req.query.maxAmount)) return false;
+      if (String(req.query.recurring) === 'true' && !record.recurring) return false;
+      if (String(req.query.imported) === 'true' && !record.imported) return false;
+      if (queryText) {
+        const searchable = [record.description, record.title, record.notes, record.account, record.category, record.owner, record.amount].join(' ').toLowerCase();
+        if (!searchable.includes(queryText)) return false;
+      }
+      return true;
+    });
+    const visibleRecords = filteredRecords.sort(req.query.sortBy === 'amount_desc'
+      ? (a, b) => b.amount - a.amount
+        || new Date(b.date) - new Date(a.date)
+        || String(b.id).localeCompare(String(a.id))
+      : (a, b) => new Date(b.date) - new Date(a.date)
         || new Date(b.createdAt) - new Date(a.createdAt)
         || String(b.id).localeCompare(String(a.id)));
 
@@ -253,6 +309,19 @@ router.get('/transactions', async (req, res) => {
     const cardPayments = visibleRecords
       .filter((record) => record.type === 'transfer' && record.toAccountType === 'credit_card')
       .reduce((sum, record) => sum + record.amount, 0);
+    const activitySummary = visibleRecords.reduce((summary, record) => {
+      summary.count += 1;
+      if (record.type === 'expense') {
+        summary.grossExpenses += record.amount;
+        summary.recoveriesApplied += record.recoveredAmount || 0;
+        summary.expenses += record.netAmount ?? record.amount;
+      }
+      else if (record.type === 'income') summary.income += record.amount;
+      else if (record.type === 'recovery') summary.recoveries += record.amount;
+      else if (record.type === 'transfer') summary.transfers += record.amount;
+      return summary;
+    }, { count: 0, income: 0, grossExpenses: 0, recoveriesApplied: 0, expenses: 0, recoveries: 0, transfers: 0 });
+    activitySummary.net = activitySummary.income - activitySummary.expenses;
 
     res.json({
       records: visibleRecords.slice((page - 1) * limit, page * limit), total: visibleRecords.length, page, pages: Math.ceil(visibleRecords.length / limit),
@@ -260,6 +329,7 @@ router.get('/transactions', async (req, res) => {
         scope: isCardSelection ? 'credit_card' : 'cash',
         cash: { totalIn: cashIn, totalOut: cashOut, net: cashIn - cashOut },
         creditCards: { purchases: cardPurchases, payments: cardPayments, outstandingMovement: cardPurchases - cardPayments },
+        activity: activitySummary,
       },
     });
   } catch (err) {

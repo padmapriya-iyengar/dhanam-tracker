@@ -22,6 +22,8 @@ const expenseSchema = new mongoose.Schema(
     subscriptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription', default: null },
     affectsCurrentBalance: { type: Boolean, default: true },
     notes: { type: String, trim: true },
+    imported: { type: Boolean, default: false },
+    clientMutationId: { type: String, trim: true, default: null },
   },
   { timestamps: true }
 );
@@ -30,5 +32,6 @@ expenseSchema.index({ date: -1, _id: -1, createdAt: -1 });
 expenseSchema.index({ month: 1, year: 1 });
 expenseSchema.index({ userId: 1, memberId: 1 });
 expenseSchema.index({ categoryId: 1 });
+expenseSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Expense', expenseSchema);

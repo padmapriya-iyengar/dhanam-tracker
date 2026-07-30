@@ -82,9 +82,18 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.get('/:id', async (req, res) => {
+  const record = await populateTransfer(Transfer.findOne({ _id: req.params.id, userId: req.user._id }));
+  if (!record) return res.status(404).json({ error: 'Transfer not found' });
+  res.json(record);
+});
 
 router.post('/', async (req, res) => {
   try {
+    if (req.body.clientMutationId) {
+      const existing = await populateTransfer(Transfer.findOne({ userId: req.user._id, clientMutationId: req.body.clientMutationId }));
+      if (existing) return res.json(existing);
+    }
     const payload = normalizeAccountFields(req.body);
     const dateParts = parseDateParts(payload.date);
     const transfer = new Transfer({
@@ -108,7 +117,9 @@ router.put('/:id', async (req, res) => {
     const old = await Transfer.findOne({ _id: req.params.id, userId: req.user._id });
     if (!old) return res.status(404).json({ error: 'Transfer not found' });
 
+    if (req.body.expectedUpdatedAt && old.updatedAt.toISOString() !== new Date(req.body.expectedUpdatedAt).toISOString()) return res.status(409).json({ error: 'This transfer changed on another device', conflict: old });
     const updates = normalizeAccountFields(req.body);
+    delete updates.expectedUpdatedAt;
     delete updates.userId;
     if (updates.date) Object.assign(updates, parseDateParts(updates.date));
 

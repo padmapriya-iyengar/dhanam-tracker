@@ -323,4 +323,34 @@ router.post('/feedback', async (req, res) => {
   }
 });
 
+router.get('/learnings', async (req, res) => {
+  try {
+    const rows = await MessageCategoryLearning.find({ userId: req.user._id })
+      .populate('categoryId', 'name')
+      .populate('subCategoryId', 'name')
+      .sort({ lastConfirmedAt: -1 })
+      .lean();
+    res.json(rows.map((item) => ({
+      id: String(item._id),
+      merchant: item.merchantLabel,
+      description: item.descriptionHint,
+      category: item.categoryId?.name || 'Unknown',
+      subcategory: item.subCategoryId?.name || '',
+      confirmations: item.confirmationCount,
+      lastConfirmedAt: item.lastConfirmedAt,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/learnings', async (req, res) => {
+  try {
+    const result = await MessageCategoryLearning.deleteMany({ userId: req.user._id });
+    res.json({ cleared: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

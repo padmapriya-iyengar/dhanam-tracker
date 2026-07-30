@@ -17,11 +17,13 @@ const expenseRecoverySchema = new mongoose.Schema(
       default: 'reduce_expense',
     },
     notes: { type: String, trim: true },
+    clientMutationId: { type: String, trim: true, default: null },
   },
   { timestamps: true }
 );
 
 expenseRecoverySchema.index({ userId: 1, date: -1 });
 expenseRecoverySchema.index({ expenseId: 1, budgetTreatment: 1 });
+expenseRecoverySchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('ExpenseRecovery', expenseRecoverySchema);

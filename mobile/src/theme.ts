@@ -1,79 +1,35 @@
+import { Platform, useColorScheme } from 'react-native';
+import { usePreferences } from './state/PreferencesContext';
+
 export const lightColors = {
-  background: '#EEF1F8',
-  surface: '#FCFCFF',
-  surfaceMuted: '#F4F5FA',
-  text: '#182033',
-  textMuted: '#697086',
-  textSoft: '#98A2B3',
-  border: '#E0E3EE',
-  primary: '#4F46E5',
-  primaryDark: '#3730A3',
-  primarySoft: '#EEF2FF',
-  positive: '#047857',
-  positiveSoft: '#ECFDF3',
-  negative: '#BE123C',
-  negativeSoft: '#FFF1F2',
-  violet: '#7C3AED',
-  violetSoft: '#F5F3FF',
-  cyan: '#087E8B',
-  cyanSoft: '#ECFEFF',
-  amber: '#B45309',
-  amberSoft: '#FFFBEB',
-  backdrop: '#111827',
-  nav: '#FCFCFF',
-  input: '#FFFFFF',
-  card: 'rgba(252,252,255,0.94)',
-  divider: '#F0F2F5',
-  gradient: ['#F5F2FF', '#EDF3FA', '#ECF8F5'] as const,
+  background: '#F7F8FA', surface: '#FFFFFF', surfaceRaised: '#FFFFFF', text: '#18212F',
+  textMuted: '#5C6878', border: '#DCE1E8', primary: '#087F72', primarySoft: '#DDF5F1',
+  accent: '#B86600', danger: '#B42318', dangerSoft: '#FEE4E2', success: '#067647',
+  warning: '#A15C00', overlay: 'rgba(17,24,39,.56)',
 };
 
-export type ThemeColors = {
-  [Key in Exclude<keyof typeof lightColors, 'gradient'>]: string;
-} & {
-  gradient: readonly [string, string, string];
+export const darkColors = {
+  background: '#0B1220', surface: '#111B2C', surfaceRaised: '#172338', text: '#F4F7FB',
+  textMuted: '#AFBAC9', border: '#2B3A50', primary: '#5EEAD4', primarySoft: '#123B3A',
+  accent: '#FBBF24', danger: '#FDA29B', dangerSoft: '#4B1F24', success: '#6CE9A6',
+  warning: '#FEC84B', overlay: 'rgba(0,0,0,.7)',
 };
 
-export const darkColors: ThemeColors = {
-  background: '#0D1220',
-  surface: '#151B2C',
-  surfaceMuted: '#1B2235',
-  text: '#F4F6FC',
-  textMuted: '#A7B0C4',
-  textSoft: '#778198',
-  border: '#293249',
-  primary: '#818CF8',
-  primaryDark: '#C7D2FE',
-  primarySoft: '#252A52',
-  positive: '#5EE0A0',
-  positiveSoft: '#12372C',
-  negative: '#FB7185',
-  negativeSoft: '#3B1824',
-  violet: '#B69AF8',
-  violetSoft: '#2D2048',
-  cyan: '#66D9E8',
-  cyanSoft: '#12353B',
-  amber: '#FBBF69',
-  amberSoft: '#382A15',
-  backdrop: '#080B13',
-  nav: '#121827',
-  input: '#1A2133',
-  card: 'rgba(21,27,44,0.96)',
-  divider: '#252E43',
-  gradient: ['#121529', '#101827', '#102621'] as const,
-};
+export type AppColors = typeof lightColors;
 
-// Kept as the light palette for non-rendering helpers and legacy imports.
-export const colors = lightColors;
+export function useAppTheme() {
+  const system = useColorScheme();
+  const { themeMode } = usePreferences();
+  const dark = themeMode === 'dark' || (themeMode === 'system' && system === 'dark');
+  return { colors: dark ? darkColors : lightColors, dark };
+}
 
-// Keep typography aligned with the existing web application's Tailwind theme.
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
+export const radius = { sm: 10, md: 16, lg: 24, round: 999 };
+
 export const typography = {
-  fontFamily: 'Roboto',
-} as const;
-
-export const shadow = {
-  shadowColor: '#30356B',
-  shadowOffset: { width: 0, height: 7 },
-  shadowOpacity: 0.08,
-  shadowRadius: 16,
-  elevation: 3,
+  family: Platform.select({
+    web: 'Roboto, "Trebuchet MS", Calibri, Verdana, sans-serif',
+    default: 'Roboto',
+  }),
 };

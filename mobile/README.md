@@ -1,110 +1,80 @@
-# Dhanam mobile
+# Dhanam Mobile
 
-React Native/Expo mobile client for Dhanam Tracker.
+Fresh Expo/React Native application for Dhanam. The mobile product is intentionally separate from the web interface.
 
-## Available features
+## Epic 1 implemented
 
-- Secure login, session restoration, demo mode, and logout
-- Native dashboard with monthly navigation and pull-to-refresh
-- Expense, income, transfer, and recurring-expense creation
-- Unified activity history, editing, deletion, expense recoveries, and recurring generation
-- Account transaction overview
-- Savings account, credit-card, member, and user management
-- Categories and sub-categories
-- Card budgets, statement reconciliation, and statement entry
-- Opening balances and category goals
-- Monthly reports, category breakdown, and 12-month trend
-- AI insights, the read-only Dhanam assistant, and bank-message import with editable review
-- Responsive five-tab mobile navigation
-- Persisted Light, Dark, and System appearance modes under More → Appearance
+- Native splash and launcher/adaptive icon configuration
+- Safe-area and keyboard-aware screen primitives
+- Light, dark, and system appearance
+- Accessible scalable text, labels, touch targets, and reusable application states
+- Network awareness and consistent offline/error/retry presentation
+- Native haptic feedback
+- Email/password and clearly labelled demo login
+- Keychain/Keystore-backed authentication token
+- Session restoration, expiry handling, logout, and cache clearing
+- Optional biometric and PIN lock with configurable timeouts
+- Privacy-value toggle, sensitive app-switcher shield, and optional screenshot blocking
+- Signed-in device list and remote revocation
+- Progressive onboarding for region, household member, account, optional card, and alert preferences
 
-### Importing a bank message
+## Epic 2 implemented
 
-Configure `OPENAI_API_KEY` in `backend/.env` and restart the backend. Optionally set
-`OPENAI_MESSAGE_MODEL`; otherwise `OPENAI_MODEL` is used. Open **More → Import bank
-message**, paste the full notification, analyze it, review the editable draft, and confirm.
-Pending reminders and unknown messages are not saved. A foreign-currency alert must be
-converted and confirmed in the user's base currency before creation.
-Confirmed expense categories and subcategories are remembered per user. Relevant past
-choices are supplied to later analyses, while the original bank message is not retained.
+- Greeting, avatar, privacy toggle, notification inbox, and member/household scope
+- Tap and swipe month navigation with jump-to-current-month
+- Pull-to-refresh, local Home cache, offline snapshot, and last-updated time
+- Recovery-aware income, net expense, savings, savings rate, and previous-month comparison
+- Spending pace, safe-to-spend estimate, top categories, and goal warnings
+- Current-account, savings/investment, and card-liability summaries
+- Horizontal account carousel linked to native ledgers
+- Actionable card, budget, recurring, goal, duplicate, unusual-expense, and stale-account alerts
+- Recent unified activity with transaction details and swipe-to-edit affordance
+- Persisted section ordering, visibility, collapsed state, dismissed alerts, and snoozes
 
-## Windows browser preview
+## Epic 3 implemented
 
-Run the existing MongoDB and backend first:
+- Universal Add surface with expense, income, transfer, message import, and recovery
+- Recent/frequent expense actions and recent income-source shortcuts
+- Amount-first expense entry with member, category, subcategory, payment source, notes, and balance behavior
+- Merchant-history/category-learning suggestions and duplicate warnings
+- Income repeat-last action and destination accounts
+- Transfer validation, card-payment explanation, and predicted balances
+- Recovery caps, gross/recovered/net presentation, history, and deletion
+- Local drafts plus offline create queue with automatic and manual retry
+- Edit/delete detail actions and optimistic-concurrency conflict choice
+- Android long-press launcher shortcuts and `dhanam://add/*` deep links
+
+## Epics 4–12 implemented
+
+- Native bank-message sharing, editable analysis, uncertainty and duplicate review, a local import inbox, and learned merchant mappings
+- A unified, infinitely scrolling Activity timeline with search, advanced filters, saved presets, details, edit, duplicate, recovery, delete, and undo
+- Account and savings dashboards, native ledgers, balance-affecting filters, transfers, opening balances, and category comparison
+- Credit-card creation, budgets, statement reconciliation, due-date guidance, payments as transfers, and trend views
+- Category goals, recurring-expense management, monthly planning, reports, AI insights, and a read-only finance assistant
+- Household members, categories, subcategories, users, regional preferences, notification controls, diagnostics, and scrubbed diagnostics sharing
+- Session-expiry handling, idempotent mobile creates, offline queue visibility, conflict handling, archive-safe account management, and accessible native states
+
+## Deliberately gated native services
+
+Push delivery, widgets, notification-listener ingestion, screenshot OCR, receipt attachments, and device analytics require service credentials, explicit OS permissions, retention rules, or backend infrastructure. Their controls explain this boundary; Dhanam does not silently request or simulate these capabilities.
+
+## Run
 
 ```powershell
-cd ..\backend
-npm start
-```
-
-In another terminal:
-
-```powershell
-cd mobile
 Copy-Item .env.example .env
-npm run web
-```
-
-Open the URL printed by Expo. The browser preview uses the same React Native components as Android and is intended for quick Windows UI testing.
-
-Demo credentials:
-
-```text
-demo@example.com
-demo
-```
-
-The browser build is a React Native Web preview. Use an Android emulator or physical Android device to validate native behavior, safe areas, the software keyboard, secure storage, and back navigation.
-
-## Android emulator
-
-Start an Android Virtual Device in Android Studio, then use:
-
-```powershell
-cd mobile
-$env:EXPO_PUBLIC_API_URL='http://10.0.2.2:5000/api'
+npm install
 npm run android
 ```
 
-`10.0.2.2` is the Android emulator alias for the Windows host machine.
+Android emulator uses `http://10.0.2.2:5000/api` by default. Set `EXPO_PUBLIC_API_URL` for a physical device or staging API.
 
-## Physical Android phone
+Demo credentials are built into the **Open demo** action. Demo data is explicitly marked as non-private sample data.
 
-SDK 57 should be tested with a Dhanam development build rather than the public Expo Go app. Install EAS CLI once, sign in, and build the private APK:
-
-```powershell
-npm install --global eas-cli
-eas login
-eas build --platform android --profile development
-```
-
-When the build finishes, open the installation link or scan its QR code on the Android phone and install the APK. This is a private development build and is not released to Google Play.
-
-Connect the phone and computer to the same network. Replace the example with the computer's IPv4 address, then start the development server:
-
-```powershell
-$env:EXPO_PUBLIC_API_URL='http://192.168.1.25:5000/api'
-npm run start:dev-client
-```
-
-Open the installed Dhanam development app and select the local development server. Windows Firewall must allow the backend port. For testing outside the local network, point `EXPO_PUBLIC_API_URL` at a staging HTTPS deployment.
-
-## Quality checks
+## Checks
 
 ```powershell
 npm run typecheck
 npm run export:web
 ```
 
-## Manual smoke-test checklist
-
-1. Sign in and restart the app to verify session restoration.
-2. Move between all five bottom tabs.
-3. Add an expense, income, transfer, and recurring expense.
-4. Pull down on Activity and verify the new records.
-5. Record a recovery against an expense.
-6. Generate an expense from a recurring rule.
-7. Open More and test accounts, savings, cards, categories, members, budgets, balances, goals, and reconciliation.
-8. Change the dashboard and report month.
-9. Generate AI insights and ask the assistant a question when `OPENAI_API_KEY` is configured in the backend.
-10. Sign out and confirm the login screen returns.
+Biometrics, Keychain/Keystore, screenshot blocking, app-switcher privacy, and hardware back behavior must be validated in a native development build rather than only React Native Web.

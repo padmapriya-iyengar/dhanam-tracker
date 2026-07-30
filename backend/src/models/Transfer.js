@@ -19,6 +19,8 @@ const transferSchema = new mongoose.Schema(
     toCreditCardId: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditCard', default: null },
     description: { type: String, trim: true },
     notes: { type: String, trim: true },
+    imported: { type: Boolean, default: false },
+    clientMutationId: { type: String, trim: true, default: null },
   },
   { timestamps: true }
 );
@@ -26,5 +28,6 @@ const transferSchema = new mongoose.Schema(
 transferSchema.index({ userId: 1, date: -1 });
 transferSchema.index({ userId: 1, month: 1, year: 1 });
 transferSchema.index({ userId: 1, toCreditCardId: 1 });
+transferSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Transfer', transferSchema);

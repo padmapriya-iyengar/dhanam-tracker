@@ -26,9 +26,19 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.get('/:id', async (req, res) => {
+  const record = await Income.findOne({ _id: req.params.id, userId: req.user._id }).populate('memberId', 'name color role').populate('savingsAccountId', 'name bankName');
+  if (!record) return res.status(404).json({ error: 'Income record not found' });
+  res.json(record);
+});
 
 router.post('/', async (req, res) => {
   try {
+    if (req.body.clientMutationId) {
+      const existing = await Income.findOne({ userId: req.user._id, clientMutationId: req.body.clientMutationId })
+        .populate('memberId', 'name color role').populate('savingsAccountId', 'name bankName');
+      if (existing) return res.json(existing);
+    }
     const date = new Date(req.body.date);
     const income = new Income({
       ...req.body,
@@ -53,7 +63,9 @@ router.put('/:id', async (req, res) => {
     const old = await Income.findOne({ _id: req.params.id, userId: req.user._id });
     if (!old) return res.status(404).json({ error: 'Income record not found' });
 
+    if (req.body.expectedUpdatedAt && old.updatedAt.toISOString() !== new Date(req.body.expectedUpdatedAt).toISOString()) return res.status(409).json({ error: 'This income changed on another device', conflict: old });
     const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
+    delete updates.expectedUpdatedAt;
     delete updates.userId;
     if (req.body.date) {
       const date = new Date(req.body.date);
