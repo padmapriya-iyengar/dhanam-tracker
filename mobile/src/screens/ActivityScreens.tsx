@@ -9,7 +9,7 @@ import { Button, Card, Field, Screen, StateView, Title } from '../components/ui'
 import { ActivityPreset, loadActivityPresets, saveActivityPreset } from '../storage';
 import { useAuth } from '../state/AuthContext';
 import { usePreferences } from '../state/PreferencesContext';
-import { radius, spacing, useAppTheme } from '../theme';
+import { moneyTone, radius, spacing, useAppTheme } from '../theme';
 
 type RecordItem = Record<string, any> & { id: string; type: 'expense' | 'income' | 'transfer' | 'recovery'; date: string; amount: number; signedAmount: number };
 type Filters = {
@@ -147,7 +147,7 @@ export function ActivityScreen({ route, navigation }: any) {
       ListEmptyComponent={<StateView kind="empty" message="No transactions match these filters." />}
       renderItem={({ item, index }) => {
         const previous = visible[index - 1]; const Icon = icon(item.type); const showDay = sortBy === 'date_desc' && (!previous || dayLabel(previous.date) !== dayLabel(item.date));
-        const amountColor = item.type === 'expense' ? colors.danger : item.type === 'transfer' ? colors.primary : colors.success;
+        const amountColor = moneyTone(colors, item.type === 'expense' ? 'expense' : item.type === 'transfer' ? 'transfer' : item.type === 'recovery' ? 'recovery' : 'income');
         return <View style={{ gap: 8 }}>{showDay && <Text style={{ color: colors.text, fontWeight: '900', marginTop: 10 }}>{dayLabel(item.date)}</Text>}<Pressable accessibilityRole="button" onPress={() => open(item)} style={{ borderRadius: radius.lg }}>
           <Card><View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}><Icon size={22} color={amountColor} /><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{item.description || item.title}</Text><Text style={{ color: colors.textMuted }}>{item.category || typeLabels[item.type]} · {item.account}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.owner || 'Household'} · {item.syncState || 'Synced'}{item.recurring ? ' · Recurring' : ''}{item.imported ? ' · Imported' : ''}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={{ color: amountColor, fontWeight: '900' }}>{prefs.privacyMode ? '••••' : `${item.type === 'expense' ? '−' : item.type === 'transfer' ? '↔ ' : '+'}${money(item.amount)}`}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{sortBy === 'amount_desc' ? new Date(item.date).toLocaleDateString() : new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text></View></View></Card>
         </Pressable></View>;
@@ -185,7 +185,7 @@ export function ActivityDetailScreen({ route, navigation }: any) {
   }
   return <Screen>
     <Title subtitle={`${typeLabels[item.type]} · ${new Date(item.date).toLocaleString()}`}>{item.description || item.title}</Title>
-    <Card><Text style={{ color: colors.textMuted }}>Amount</Text><Text style={{ color: colors.text, fontSize: 30, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(item.amount)}</Text>
+    <Card><Text style={{ color: colors.textMuted }}>Amount</Text><Text style={{ color: moneyTone(colors, item.type === 'expense' ? 'expense' : item.type === 'transfer' ? 'transfer' : item.type === 'recovery' ? 'recovery' : 'income'), fontSize: 30, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(item.amount)}</Text>
       {[
         ['Type', typeLabels[item.type]], ['Category', record.category || record.categoryId?.name], ['Account / card', record.account],
         ['Member', record.owner || record.memberId?.name], ['Payment method', record.paymentMethod], ['Notes', record.notes],

@@ -15,7 +15,7 @@ import { readCache, writeCache } from '../storage';
 import { useAuth } from '../state/AuthContext';
 import { useNetwork } from '../state/NetworkContext';
 import { usePreferences } from '../state/PreferencesContext';
-import { radius, spacing, useAppTheme } from '../theme';
+import { moneyTone, radius, spacing, useAppTheme } from '../theme';
 import { HomeAccount, HomeActivity, HomeAttention, HomeData, Member } from '../types';
 
 const sectionLabels: Record<string, string> = {
@@ -145,12 +145,12 @@ export function HomeScreen({ navigation }: any) {
     if (id === 'spendPulse' && pulse) return <Section key={id} id={id} title="Spend pulse" subtitle="Actual pace, goals, and room to spend" collapsed={collapsed} toggle={toggleSection}>
       <Card>
         <View style={{ flexDirection: 'row', gap: 14 }}>
-          <View style={{ flex: 1 }}><Text style={{ color: colors.textMuted }}>Spent so far</Text><Text style={{ color: colors.text, fontSize: 22, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.actual)}</Text></View>
-          <View style={{ flex: 1 }}><Text style={{ color: colors.textMuted }}>Projected pace</Text><Text style={{ color: pulse.expectedPace > (summary?.totalIncome || 0) ? colors.danger : colors.text, fontSize: 22, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.expectedPace)}</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ color: colors.textMuted }}>Spent so far</Text><Text style={{ color: moneyTone(colors, 'expense'), fontSize: 22, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.actual)}</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ color: colors.textMuted }}>Projected pace</Text><Text style={{ color: moneyTone(colors, 'expense'), fontSize: 22, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.expectedPace)}</Text></View>
         </View>
         <View style={{ borderRadius: radius.md, backgroundColor: colors.primarySoft, padding: 14, gap: 5 }}>
           <Text style={{ color: colors.textMuted, fontWeight: '700' }}>Safe to spend</Text>
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.safeToSpend)}</Text>
+          <Text style={{ color: moneyTone(colors, 'net', pulse.safeToSpend), fontSize: 28, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.safeToSpend)}</Text>
           <Text style={{ color: colors.textMuted, lineHeight: 19 }}>After recorded spending, recurring commitments, and category goals.</Text>
         </View>
       </Card>
@@ -161,7 +161,7 @@ export function HomeScreen({ navigation }: any) {
           const goalPercent = category.goalPercent || 0;
           const statusColor = goalPercent >= 100 ? colors.danger : goalPercent >= 80 ? colors.warning : category.color || colors.primary;
           return <Pressable key={category.categoryId} accessibilityRole="button" onPress={() => navigation.navigate('Activity', { filter: 'expense', categoryId: category.categoryId, title: category.name })} style={{ gap: 7, paddingVertical: 5 }}>
-            <View style={{ flexDirection: 'row', gap: 10 }}><View style={{ width: 10, height: 10, marginTop: 5, borderRadius: 5, backgroundColor: category.color }} /><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '800' }}>{category.name}</Text><Text style={{ color: colors.textMuted }}>{category.count} transaction{category.count === 1 ? '' : 's'}</Text></View><Text style={{ color: colors.text, fontWeight: '800' }}>{prefs.privacyMode ? '••••' : money(category.total)}</Text></View>
+            <View style={{ flexDirection: 'row', gap: 10 }}><View style={{ width: 10, height: 10, marginTop: 5, borderRadius: 5, backgroundColor: category.color }} /><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '800' }}>{category.name}</Text><Text style={{ color: colors.textMuted }}>{category.count} transaction{category.count === 1 ? '' : 's'}</Text></View><Text style={{ color: moneyTone(colors, 'expense'), fontWeight: '800' }}>{prefs.privacyMode ? '••••' : money(category.total)}</Text></View>
             {category.goal && <><Progress value={goalPercent} color={statusColor} /><Text style={{ color: statusColor, fontSize: 12, fontWeight: '700' }}>{goalPercent}% of {prefs.privacyMode ? '••••' : money(category.goal)}</Text></>}
           </Pressable>;
         })}
@@ -170,17 +170,17 @@ export function HomeScreen({ navigation }: any) {
     </Section>;
     if (id === 'accounts' && accountSummary) return <Section key={id} id={id} title="Accounts" subtitle="Cash, savings, and card liability" collapsed={collapsed} toggle={toggleSection}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        <Metric label="Combined cash" amount={money(accountSummary.combinedCash)} hint="Current accounts" tone={colors.primary} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
-        <Metric label="Savings & investments" amount={money(accountSummary.savingsInvestments)} hint="All savings assets" tone={colors.success} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
-        <Metric label="Card outstanding" amount={money(accountSummary.cardOutstanding)} hint="Recorded purchases less payments" tone={colors.danger} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Combined cash" amount={money(accountSummary.combinedCash)} hint="Current accounts" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Savings & investments" amount={money(accountSummary.savingsInvestments)} hint="All savings assets" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Card outstanding" amount={money(accountSummary.cardOutstanding)} hint="Recorded purchases less payments" tone={moneyTone(colors, 'liability')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={224} contentContainerStyle={{ gap: 10, paddingHorizontal: 2, paddingVertical: 2 }}>
         {accountSummary.accounts.map((account: HomeAccount) => {
-          const tone = account.type === 'credit_card' ? colors.danger : account.type === 'savings' ? colors.success : colors.primary;
+          const tone = moneyTone(colors, account.type === 'credit_card' ? 'liability' : 'asset');
           return <Pressable key={account.key} accessibilityRole="button" onPress={() => navigation.navigate('AccountDetail', { account: account.key, title: account.name })} style={{ width: 214, minHeight: 128, borderRadius: radius.lg, padding: 14, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: tone, justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.text, fontWeight: '900', fontSize: 16, flex: 1 }}>{account.name}</Text>{account.type === 'credit_card' ? <CreditCard size={21} color={tone} /> : <Landmark size={21} color={tone} />}</View>
             <View><Text style={{ color: colors.textMuted }}>{account.type === 'credit_card' ? 'Outstanding' : 'Balance'}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={{ color: tone, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(account.balance)}</Text></View>
-            <Text numberOfLines={1} style={{ color: colors.textMuted }}>{account.recentMovement >= 0 ? '+' : ''}{prefs.privacyMode ? '••••' : money(account.recentMovement)} this month</Text>
+            <Text numberOfLines={1} style={{ color: moneyTone(colors, 'net', account.recentMovement) }}>{account.recentMovement >= 0 ? '+' : ''}{prefs.privacyMode ? '••••' : money(account.recentMovement)} this month</Text>
           </Pressable>;
         })}
       </ScrollView>
@@ -219,9 +219,9 @@ export function HomeScreen({ navigation }: any) {
     {summary && <View style={{ gap: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}><View><Text style={{ color: colors.text, fontSize: 20, fontWeight: '900' }}>Monthly snapshot</Text><Text style={{ color: colors.textMuted }}>{scopeName} · Updated {relativeTime(data?.generatedAt || '')}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Customize Home" onPress={() => navigation.navigate('HomeSettings', { members })} style={{ padding: 9 }}><Settings2 size={21} color={colors.primary} /></Pressable></View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        <Metric label="Income" amount={money(summary.totalIncome)} hint={`${summary.previous.income ? `${Math.round(((summary.totalIncome - summary.previous.income) / summary.previous.income) * 100)}% vs last month` : 'No prior comparison'}`} tone={colors.success} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'income' })} />
-        <Metric label="Net expenses" amount={money(summary.netExpense)} hint="After recoveries" tone={colors.danger} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'expense' })} />
-        <Metric label="Net savings" amount={money(summary.netSavings)} hint={`${summary.savingsRate}% savings rate${summary.savingsChange === null ? '' : ` · ${summary.savingsChange >= 0 ? '+' : ''}${summary.savingsChange}%`}`} tone={summary.netSavings >= 0 ? colors.primary : colors.danger} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'all' })} />
+        <Metric label="Income" amount={money(summary.totalIncome)} hint={`${summary.previous.income ? `${Math.round(((summary.totalIncome - summary.previous.income) / summary.previous.income) * 100)}% vs last month` : 'No prior comparison'}`} tone={moneyTone(colors, 'income')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'income' })} />
+        <Metric label="Net expenses" amount={money(summary.netExpense)} hint="After recoveries" tone={moneyTone(colors, 'expense')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'expense' })} />
+        <Metric label="Net savings" amount={money(summary.netSavings)} hint={`${summary.savingsRate}% savings rate${summary.savingsChange === null ? '' : ` · ${summary.savingsChange >= 0 ? '+' : ''}${summary.savingsChange}%`}`} tone={moneyTone(colors, 'net', summary.netSavings)} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'all' })} />
       </View>
       <Card><View style={{ flexDirection: 'row', gap: 12 }}><ArrowLeftRight size={21} color={colors.primary} /><Text style={{ color: colors.textMuted, lineHeight: 20, flex: 1 }}>Credit-card purchases count as expenses when made. Card payments are transfers, so they are not counted again.</Text></View></Card>
     </View>}
@@ -242,6 +242,7 @@ function AttentionCard({ item, onAction, onDismiss, onSnooze }: { item: HomeAtte
 function ActivityRow({ item, privacy, money, onPress, onEdit }: { item: HomeActivity; privacy: boolean; money: (amount: number) => string; onPress: () => void; onEdit: () => void }) {
   const { colors } = useAppTheme();
   const Icon = item.type === 'expense' ? ReceiptText : item.type === 'income' ? TrendingUp : item.type === 'transfer' ? ArrowLeftRight : ArrowDownLeft;
+  const amountTone = moneyTone(colors, item.type === 'expense' ? 'expense' : item.type === 'transfer' ? 'transfer' : item.type === 'recovery' ? 'recovery' : 'income');
   const signed = item.type === 'transfer' ? money(item.transferAmount || 0) : `${item.amount > 0 ? '+' : ''}${money(item.amount)}`;
   const translateX = useRef(new Animated.Value(0)).current;
   const swipe = useRef(PanResponder.create({
@@ -258,9 +259,9 @@ function ActivityRow({ item, privacy, money, onPress, onEdit }: { item: HomeActi
     {item.editable && <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${item.title}`} onPress={onEdit} style={{ position: 'absolute', right: 0, top: 4, bottom: 4, width: 72, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.background, fontWeight: '900' }}>Edit</Text></Pressable>}
     <Animated.View {...swipe.panHandlers} style={{ transform: [{ translateX }], backgroundColor: colors.surface }}>
       <Pressable accessibilityRole="button" accessibilityHint={item.editable ? 'Swipe left to edit' : undefined} onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64 }}>
-        <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: item.type === 'expense' ? colors.dangerSoft : colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}><Icon size={19} color={item.type === 'expense' ? colors.danger : colors.primary} /></View>
+        <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: item.type === 'expense' ? colors.dangerSoft : colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}><Icon size={19} color={amountTone} /></View>
         <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ color: colors.text, fontWeight: '800' }}>{item.title}</Text><Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: 12 }}>{item.account} · {new Date(item.date).toLocaleDateString()}</Text></View>
-        <Text style={{ color: item.type === 'expense' ? colors.danger : item.type === 'income' || item.type === 'recovery' ? colors.success : colors.text, fontWeight: '900' }}>{privacy ? '••••' : signed}</Text><ArrowRight size={15} color={colors.textMuted} />
+        <Text style={{ color: amountTone, fontWeight: '900' }}>{privacy ? '••••' : signed}</Text><ArrowRight size={15} color={colors.textMuted} />
       </Pressable>
     </Animated.View>
   </View>;

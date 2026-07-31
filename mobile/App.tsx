@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-  Lato_400Regular,
-  Lato_700Bold,
-  Lato_900Black,
-  useFonts,
-} from '@expo-google-fonts/lato';
+import { Carlito_400Regular } from '@expo-google-fonts/carlito/400Regular';
+import { Carlito_700Bold } from '@expo-google-fonts/carlito/700Bold';
+import { useFonts } from '@expo-google-fonts/carlito/useFonts';
 import { AppState, Image, StyleSheet, View } from 'react-native';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as SplashScreen from 'expo-splash-screen';
@@ -31,9 +28,8 @@ function Root() {
   const { colors, dark } = useAppTheme();
   const [obscured, setObscured] = useState(false);
   const [fontsLoaded] = useFonts({
-    Lato: Lato_400Regular,
-    LatoBold: Lato_700Bold,
-    LatoBlack: Lato_900Black,
+    Carlito: Carlito_400Regular,
+    CarlitoBold: Carlito_700Bold,
   });
 
   useEffect(() => {

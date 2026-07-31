@@ -31,10 +31,10 @@ export function ProfileScreen({ navigation }: any) {
     </Card>
     <Card>
       <Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Money configuration</Text>
-      <Button label="Accounts & balances" variant="secondary" onPress={() => navigation.navigate('Accounts')} icon={<Landmark size={18} color={colors.text} />} />
-      <Button label="Credit cards" variant="secondary" onPress={() => navigation.navigate('Cards')} icon={<CreditCard size={18} color={colors.text} />} />
-      <Button label="Household & categories" variant="secondary" onPress={() => navigation.navigate('Household')} icon={<UsersRound size={18} color={colors.text} />} />
-      <Button label="All preferences & diagnostics" variant="secondary" onPress={() => navigation.navigate('Preferences')} icon={<SlidersHorizontal size={18} color={colors.text} />} />
+      <Button label="Accounts & balances" variant="secondary" align="left" onPress={() => navigation.navigate('Accounts')} icon={<Landmark size={18} color={colors.text} />} />
+      <Button label="Credit cards" variant="secondary" align="left" onPress={() => navigation.navigate('Cards')} icon={<CreditCard size={18} color={colors.text} />} />
+      <Button label="Household & categories" variant="secondary" align="left" onPress={() => navigation.navigate('Household')} icon={<UsersRound size={18} color={colors.text} />} />
+      <Button label="All preferences & diagnostics" variant="secondary" align="left" onPress={() => navigation.navigate('Preferences')} icon={<SlidersHorizontal size={18} color={colors.text} />} />
     </Card>
     <Card>
       <View style={{ flexDirection: 'row', gap: 10 }}><Palette size={20} color={colors.primary} /><Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Appearance</Text></View>

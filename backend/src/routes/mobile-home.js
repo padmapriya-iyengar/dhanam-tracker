@@ -181,7 +181,7 @@ async function attentionFeed(userId, memberId, window, summary, accounts) {
     CreditCard.find({ userId, isActive: true, ...(memberId ? { memberId } : {}) }),
     CreditCardBudget.find({ userId, month: window.month, year: window.year }),
     Subscription.find({ userId, isActive: true, ...(memberId ? { memberId } : {}) }),
-    CategoryGoal.find(),
+    CategoryGoal.find({ userId }),
   ]);
   const items = [];
   const today = new Date();
@@ -237,7 +237,7 @@ router.get('/', async (req, res) => {
       monthlySummary(req.user._id, memberId, window),
       accountSnapshot(req.user._id, memberId, window),
       recentActivity(req.user._id, memberId),
-      CategoryGoal.find(),
+      CategoryGoal.find({ userId: req.user._id }),
     ]);
     const goalMap = new Map(goals.map((goal) => [id(goal.categoryId), goal.goal]));
     const categories = summary.categories.slice(0, 3).map((category) => ({

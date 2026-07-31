@@ -7,18 +7,24 @@ import {
   TextProps,
 } from 'react-native';
 
+const FONT_SCALE = 0.92;
+
 function fontFor(style: TextProps['style']) {
   const weight = String(StyleSheet.flatten(style)?.fontWeight || '400');
-  if (weight === '800' || weight === '900') return 'LatoBlack';
-  if (weight === '600' || weight === '700' || weight === 'bold') return 'LatoBold';
-  return 'Lato';
+  if (weight === '600' || weight === '700' || weight === '800' || weight === '900' || weight === 'bold') return 'CarlitoBold';
+  return 'Carlito';
 }
 
 function typographyFor(style: TextProps['style']) {
   const flattened = StyleSheet.flatten(style);
+  const declaredSize = Number(flattened?.fontSize || 14);
+  const bold = fontFor(style) === 'CarlitoBold';
   return {
     fontFamily: fontFor(style),
-    fontSize: Math.max(Number(flattened?.fontSize || 14) - 2, 9),
+    fontWeight: '400' as const,
+    fontSize: Math.max(declaredSize * FONT_SCALE, 9),
+    letterSpacing: flattened?.letterSpacing ?? (bold ? -0.1 : -0.15),
+    ...(!flattened?.lineHeight ? { lineHeight: declaredSize * FONT_SCALE * 1.34 } : {}),
   };
 }
 

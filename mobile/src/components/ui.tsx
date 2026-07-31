@@ -41,8 +41,8 @@ export function Field({ label, error, ...props }: TextInputProps & { label: stri
   </View>;
 }
 
-export function Button({ label, onPress, variant = 'primary', disabled, icon, compact = false }: {
-  label: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean; icon?: ReactNode; compact?: boolean;
+export function Button({ label, onPress, variant = 'primary', disabled, icon, compact = false, align = 'center' }: {
+  label: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean; icon?: ReactNode; compact?: boolean; align?: 'left' | 'center';
 }) {
   const { colors } = useAppTheme();
   const background = variant === 'primary' ? colors.primary : variant === 'danger' ? colors.dangerSoft : colors.surface;
@@ -50,9 +50,9 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, co
   return <Pressable
     accessibilityRole="button" accessibilityLabel={label} disabled={disabled}
     onPress={() => { Haptics.selectionAsync(); onPress(); }}
-    style={({ pressed }) => [styles.button, compact && styles.compactButton, { backgroundColor: background, borderColor: variant === 'secondary' ? colors.border : background, opacity: disabled ? .45 : pressed ? .8 : 1 }]}
+    style={({ pressed }) => [styles.button, compact && styles.compactButton, align === 'left' && styles.leftButton, { backgroundColor: background, borderColor: variant === 'secondary' ? colors.border : background, opacity: disabled ? .45 : pressed ? .8 : 1 }]}
   >
-    {icon}<Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.buttonText, compact && styles.compactButtonText, { color }]}>{label}</Text>
+    {icon}<Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.buttonText, compact && styles.compactButtonText, align === 'left' && styles.leftButtonText, { color }]}>{label}</Text>
   </Pressable>;
 }
 
@@ -83,6 +83,8 @@ export const styles = StyleSheet.create({
   error: { fontFamily: typography.family, fontSize: 13, lineHeight: 18 },
   button: { minHeight: 46, borderRadius: radius.md, borderWidth: 1, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   buttonText: { fontFamily: typography.bold, fontSize: 14, fontWeight: '700' },
+  leftButton: { justifyContent: 'flex-start' },
+  leftButtonText: { flex: 1, textAlign: 'left' },
   compactButton: { minHeight: 44, paddingHorizontal: 6 },
   compactButtonText: { fontSize: 13 },
   card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md },

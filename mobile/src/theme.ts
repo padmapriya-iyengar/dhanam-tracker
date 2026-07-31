@@ -16,6 +16,14 @@ export const darkColors = {
 };
 
 export type AppColors = typeof lightColors;
+export type MoneySemantic = 'asset' | 'income' | 'recovery' | 'expense' | 'liability' | 'transfer' | 'net';
+
+export function moneyTone(colors: AppColors, semantic: MoneySemantic, value = 0) {
+  if (semantic === 'asset' || semantic === 'income' || semantic === 'recovery') return colors.success;
+  if (semantic === 'expense' || semantic === 'liability') return colors.danger;
+  if (semantic === 'net') return value >= 0 ? colors.success : colors.danger;
+  return colors.primary;
+}
 
 export function useAppTheme() {
   const system = useColorScheme();
@@ -29,10 +37,10 @@ export const radius = { sm: 10, md: 16, lg: 24, round: 999 };
 
 export const typography = {
   family: Platform.select({
-    web: 'Lato, sans-serif',
-    default: 'Lato',
+    web: 'Carlito, sans-serif',
+    default: 'Carlito',
   }),
-  medium: 'Lato',
-  bold: 'LatoBold',
-  black: 'LatoBlack',
+  medium: 'Carlito',
+  bold: 'CarlitoBold',
+  black: 'CarlitoBold',
 };
