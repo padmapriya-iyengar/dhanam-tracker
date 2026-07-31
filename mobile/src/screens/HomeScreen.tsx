@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, PanResponder, Pressable, RefreshControl, ScrollView, Text, View,
+  Animated, PanResponder, Pressable, RefreshControl, ScrollView, View,
 } from 'react-native';
+import { Text } from '../components/Typography';
 import * as Haptics from 'expo-haptics';
 import {
   AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Bell,
@@ -173,12 +174,15 @@ export function HomeScreen({ navigation }: any) {
         <Metric label="Savings & investments" amount={money(accountSummary.savingsInvestments)} hint="All savings assets" tone={colors.success} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
         <Metric label="Card outstanding" amount={money(accountSummary.cardOutstanding)} hint="Recorded purchases less payments" tone={colors.danger} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-        {accountSummary.accounts.map((account: HomeAccount) => <Pressable key={account.key} accessibilityRole="button" onPress={() => navigation.navigate('AccountDetail', { account: account.key, title: account.name })} style={{ width: 238, minHeight: 150, borderRadius: radius.lg, padding: 17, backgroundColor: account.color || colors.primary, justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, maxWidth: 175 }}>{account.name}</Text>{account.type === 'credit_card' ? <CreditCard color="#fff" /> : <Landmark color="#fff" />}</View>
-          <View><Text style={{ color: 'rgba(255,255,255,.75)' }}>{account.type === 'credit_card' ? 'Outstanding' : 'Balance'}</Text><Text style={{ color: '#fff', fontWeight: '900', fontSize: 25 }}>{prefs.privacyMode ? '••••••' : money(account.balance)}</Text></View>
-          <Text style={{ color: 'rgba(255,255,255,.85)' }}>{account.recentMovement >= 0 ? '+' : ''}{prefs.privacyMode ? '••••' : money(account.recentMovement)} this month</Text>
-        </Pressable>)}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={224} contentContainerStyle={{ gap: 10, paddingHorizontal: 2, paddingVertical: 2 }}>
+        {accountSummary.accounts.map((account: HomeAccount) => {
+          const tone = account.type === 'credit_card' ? colors.danger : account.type === 'savings' ? colors.success : colors.primary;
+          return <Pressable key={account.key} accessibilityRole="button" onPress={() => navigation.navigate('AccountDetail', { account: account.key, title: account.name })} style={{ width: 214, minHeight: 128, borderRadius: radius.lg, padding: 14, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: tone, justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.text, fontWeight: '900', fontSize: 16, flex: 1 }}>{account.name}</Text>{account.type === 'credit_card' ? <CreditCard size={21} color={tone} /> : <Landmark size={21} color={tone} />}</View>
+            <View><Text style={{ color: colors.textMuted }}>{account.type === 'credit_card' ? 'Outstanding' : 'Balance'}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={{ color: tone, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(account.balance)}</Text></View>
+            <Text numberOfLines={1} style={{ color: colors.textMuted }}>{account.recentMovement >= 0 ? '+' : ''}{prefs.privacyMode ? '••••' : money(account.recentMovement)} this month</Text>
+          </Pressable>;
+        })}
       </ScrollView>
     </Section>;
     if (id === 'attention') return <Section key={id} id={id} title="Needs attention" subtitle={`${visibleAttention.length} actionable item${visibleAttention.length === 1 ? '' : 's'}`} collapsed={collapsed} toggle={toggleSection}>
@@ -222,15 +226,6 @@ export function HomeScreen({ navigation }: any) {
       <Card><View style={{ flexDirection: 'row', gap: 12 }}><ArrowLeftRight size={21} color={colors.primary} /><Text style={{ color: colors.textMuted, lineHeight: 20, flex: 1 }}>Credit-card purchases count as expenses when made. Card payments are transfers, so they are not counted again.</Text></View></Card>
     </View>}
     {prefs.homeSections.map(renderSection)}
-    <Card>
-      <Text style={{ color: colors.textMuted, textAlign: 'center', fontSize: 12 }}>PRIMARY NAVIGATION</Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <View style={{ flex: 1, minWidth: 0 }}><Button compact label="Activity" variant="secondary" onPress={() => navigation.navigate('Activity', { filter: 'all' })} /></View>
-        <View style={{ flex: 1, minWidth: 0 }}><Button compact label="Add" onPress={() => navigation.navigate('Add')} /></View>
-        <View style={{ flex: 1, minWidth: 0 }}><Button compact label="Plan" variant="secondary" onPress={() => navigation.navigate('Plan')} /></View>
-        <View style={{ flex: 1, minWidth: 0 }}><Button compact label="Profile" variant="secondary" onPress={() => navigation.navigate('Profile')} /></View>
-      </View>
-    </Card>
   </Screen>;
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell, Landmark, ReceiptText } from 'lucide-react-native';
 import { api, errorMessage } from '../api';
 import { Button, Card, Screen, StateView, Title } from '../components/ui';

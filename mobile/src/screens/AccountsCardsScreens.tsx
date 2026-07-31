@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { CreditCard, Landmark, Pencil, PiggyBank, Plus, Scale, TrendingUp } from 'lucide-react-native';
 import { api, errorMessage } from '../api';
 import { Button, Card, Field, Screen, StateView, Title } from '../components/ui';
@@ -25,7 +26,7 @@ export function AccountsScreen({ navigation }: any) {
     <Title subtitle="Current accounts, savings, investments, deposits, and cards.">Accounts & balances</Title>
     {!!error && <StateView kind="error" message={error} onAction={load} />}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-      {[['Assets', assets, colors.success], ['Card liability', liabilities, colors.danger], ['Net position', assets - liabilities, colors.primary]].map(([label, amount, tone]: any) => <View key={label} style={{ minWidth: '30%', flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 13 }}><Text style={{ color: colors.textMuted }}>{label}</Text><Text style={{ color: tone, fontWeight: '900', fontSize: 18 }}>{prefs.privacyMode ? '••••' : money(amount)}</Text></View>)}
+      {[['Assets', assets, colors.success], ['Card liability', liabilities, colors.danger], ['Net position', assets - liabilities, colors.primary]].map(([label, amount, tone]: any) => <View key={label} style={{ minWidth: 0, flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 12 }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ color: colors.textMuted }}>{label}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={{ color: tone, fontWeight: '900', fontSize: 18 }}>{prefs.privacyMode ? '••••' : money(amount)}</Text></View>)}
     </View>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{['all', 'current', 'savings', 'credit_card'].map((value) => <Button key={value} label={value === 'all' ? 'All' : value.replace('_', ' ')} variant={type === value ? 'primary' : 'secondary'} onPress={() => setType(value)} />)}</View>
     {[...new Set(accounts.map((item) => item.owner).filter(Boolean))].map((owner) => <Button key={String(owner)} label={String(owner)} variant={member === owner ? 'primary' : 'secondary'} onPress={() => setMember(member === owner ? '' : String(owner))} />)}

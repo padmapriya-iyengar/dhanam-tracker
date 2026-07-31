@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { Camera, CheckCircle2, Inbox, MessageSquareText, Share2, Trash2, TriangleAlert } from 'lucide-react-native';
 import { api, errorMessage } from '../api';
 import { Button, Card, Field, Screen, StateView, Title } from '../components/ui';

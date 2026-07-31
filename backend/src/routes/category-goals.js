@@ -5,7 +5,7 @@ const CategoryGoal = require('../models/CategoryGoal');
 // GET /api/category-goals — returns { [categoryId]: goal } map
 router.get('/', async (req, res) => {
   try {
-    const goals = await CategoryGoal.find();
+    const goals = await CategoryGoal.find({ userId: req.user._id });
     const map = {};
     goals.forEach((g) => { map[g.categoryId.toString()] = g.goal; });
     res.json(map);
@@ -23,8 +23,8 @@ router.put('/:categoryId', async (req, res) => {
       return res.status(400).json({ error: 'Goal must be a number greater than 0' });
     }
     const doc = await CategoryGoal.findOneAndUpdate(
-      { categoryId: req.params.categoryId },
-      { goal: parsed },
+      { userId: req.user._id, categoryId: req.params.categoryId },
+      { userId: req.user._id, categoryId: req.params.categoryId, goal: parsed },
       { upsert: true, new: true, runValidators: true }
     );
     res.json({ categoryId: doc.categoryId, goal: doc.goal });

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, Switch, View } from 'react-native';
+import { Text } from '../components/Typography';
 import * as Haptics from 'expo-haptics';
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Clock3, MessageSquareText, Plus,
-  ReceiptText, RotateCcw, Sparkles, Undo2, WalletCards,
+  ReceiptText, RotateCcw, Sparkles, Undo2, WalletCards, X,
 } from 'lucide-react-native';
 import { api, errorMessage } from '../api';
 import { Button, Card, Field, Screen, StateView, Title } from '../components/ui';
@@ -50,13 +51,13 @@ export function AddMenuScreen({ navigation }: any) {
     ['Recovery', 'RecoveryPicker', Undo2, colors.accent],
   ] as const;
   return <Screen>
-    <Title subtitle="Record money in a few focused steps.">Add to Dhanam</Title>
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ flex: 1 }}><Title subtitle="Record money in a few focused steps.">Add to Dhanam</Title></View><Pressable accessibilityRole="button" accessibilityLabel="Close Add" onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}><X size={20} color={colors.text} /></Pressable></View>
     {queue.length > 0 && <Card><Text style={{ color: colors.warning, fontWeight: '900' }}>{queue.length} change{queue.length === 1 ? '' : 's'} waiting to sync</Text><Text style={{ color: colors.textMuted }}>{queue.filter((item) => item.status === 'failed').length} failed and can be retried.</Text><Button label="Retry sync" variant="secondary" onPress={sync} /></Card>}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-      {actions.map(([label, screen, Icon, color]) => <Pressable key={screen} accessibilityRole="button" onPress={() => navigation.navigate(screen)} style={{ width: '48%', minHeight: 112, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 16, justifyContent: 'space-between' }}><Icon size={27} color={color} /><Text style={{ color: colors.text, fontSize: 16, fontWeight: '900' }}>{label}</Text></Pressable>)}
+      {actions.map(([label, screen, Icon, color], index) => <Pressable key={screen} accessibilityRole="button" onPress={() => navigation.navigate(screen)} style={{ width: index === actions.length - 1 ? '100%' : '48%', minHeight: 72, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 13, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}><Icon size={23} color={color} /><Text numberOfLines={2} style={{ color: colors.text, fontSize: 15, fontWeight: '900', flex: 1 }}>{label}</Text></Pressable>)}
     </View>
     {!!error && <StateView kind="error" message={error} onAction={load} />}
-    {!!options?.frequent.length && <Card><Text style={{ color: colors.text, fontSize: 17, fontWeight: '900' }}>Frequent actions</Text>{options.frequent.map((item, index) => <Button key={`${item.label}-${index}`} label={item.label} variant="secondary" onPress={() => navigation.navigate('ExpenseForm', { preset: item.values })} icon={<Clock3 size={17} color={colors.text} />} />)}</Card>}
+    {!!options?.frequent.length && <Card><Text style={{ color: colors.text, fontSize: 17, fontWeight: '900' }}>Frequent actions</Text><View>{options.frequent.map((item, index) => <Pressable key={`${item.label}-${index}`} accessibilityRole="button" onPress={() => navigation.navigate('ExpenseForm', { preset: item.values })} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: index ? 1 : 0, borderTopColor: colors.border }}><Clock3 size={17} color={colors.primary} /><Text numberOfLines={2} style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{item.label}</Text><Plus size={16} color={colors.textMuted} /></Pressable>)}</View></Card>}
     {!!drafts.length && <Card><Text style={{ color: colors.text, fontSize: 17, fontWeight: '900' }}>Drafts</Text>{drafts.map((draft) => <Button key={draft.id} label={`${draft.kind} · ${new Date(draft.updatedAt).toLocaleString()}`} variant="secondary" onPress={() => navigation.navigate(`${draft.kind}Form`, { draft })} />)}</Card>}
   </Screen>;
 }

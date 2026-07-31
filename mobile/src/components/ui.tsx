@@ -1,12 +1,13 @@
 import { PropsWithChildren, ReactElement, ReactNode } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet,
-  RefreshControlProps, Text, TextInput, TextInputProps, View, ViewStyle,
+  RefreshControlProps, TextInputProps, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { AlertCircle, Inbox, RefreshCw, WifiOff } from 'lucide-react-native';
 import { radius, spacing, typography, useAppTheme } from '../theme';
+import { Text, TextInput } from './Typography';
 
 export function Screen({ children, scroll = true, style, refreshControl }: PropsWithChildren<{ scroll?: boolean; style?: ViewStyle; refreshControl?: ReactElement<RefreshControlProps> }>) {
   const { colors } = useAppTheme();
@@ -75,17 +76,17 @@ export function StateView({ kind, title, message, actionLabel, onAction }: {
 
 export const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, flexGrow: 1 },
-  title: { fontFamily: typography.family, fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: -.5 },
+  title: { fontFamily: typography.black, fontSize: 32, lineHeight: 38, fontWeight: '900', letterSpacing: -.5 },
   body: { fontFamily: typography.family, fontSize: 16, lineHeight: 24 },
-  label: { fontFamily: typography.family, fontSize: 14, fontWeight: '700' },
+  label: { fontFamily: typography.bold, fontSize: 14, fontWeight: '700' },
   input: { fontFamily: typography.family, minHeight: 52, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 15, fontSize: 16 },
   error: { fontFamily: typography.family, fontSize: 13, lineHeight: 18 },
   button: { minHeight: 46, borderRadius: radius.md, borderWidth: 1, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
-  buttonText: { fontFamily: typography.family, fontSize: 14, fontWeight: '700' },
+  buttonText: { fontFamily: typography.bold, fontSize: 14, fontWeight: '700' },
   compactButton: { minHeight: 44, paddingHorizontal: 6 },
   compactButtonText: { fontSize: 13 },
   card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md },
   state: { minHeight: 260, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
-  stateTitle: { fontFamily: typography.family, fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  stateTitle: { fontFamily: typography.bold, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   stateMessage: { fontFamily: typography.family, fontSize: 15, lineHeight: 22, textAlign: 'center', maxWidth: 330 },
 });

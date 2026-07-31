@@ -78,7 +78,7 @@ export function AppNavigator() {
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification controls' }} />
       <Stack.Screen name="Preferences" component={PreferencesScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
-      <Stack.Screen name="Add" component={AddMenuScreen} options={{ title: 'Add' }} />
+      <Stack.Screen name="Add" component={AddMenuScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExpenseForm" component={ExpenseFormScreen} options={{ title: 'Expense' }} />
       <Stack.Screen name="IncomeForm" component={IncomeFormScreen} options={{ title: 'Income' }} />
       <Stack.Screen name="TransferForm" component={TransferFormScreen} options={{ title: 'Transfer' }} />

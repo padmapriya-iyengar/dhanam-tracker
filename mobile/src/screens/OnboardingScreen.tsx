@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../components/Typography';
 import * as Haptics from 'expo-haptics';
 import { BellRing, CreditCard, Landmark, MessageSquareText, ShieldCheck, Sparkles, Users } from 'lucide-react-native';
 import { api, errorMessage } from '../api';

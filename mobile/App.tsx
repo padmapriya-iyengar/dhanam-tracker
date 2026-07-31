@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  Roboto_400Regular,
-  Roboto_500Medium,
-  Roboto_700Bold,
-  Roboto_900Black,
+  Lato_400Regular,
+  Lato_700Bold,
+  Lato_900Black,
   useFonts,
-} from '@expo-google-fonts/roboto';
+} from '@expo-google-fonts/lato';
 import { AppState, Image, StyleSheet, View } from 'react-native';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as SplashScreen from 'expo-splash-screen';
@@ -32,10 +31,9 @@ function Root() {
   const { colors, dark } = useAppTheme();
   const [obscured, setObscured] = useState(false);
   const [fontsLoaded] = useFonts({
-    Roboto: Roboto_400Regular,
-    RobotoMedium: Roboto_500Medium,
-    RobotoBold: Roboto_700Bold,
-    RobotoBlack: Roboto_900Black,
+    Lato: Lato_400Regular,
+    LatoBold: Lato_700Bold,
+    LatoBlack: Lato_900Black,
   });
 
   useEffect(() => {

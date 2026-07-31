@@ -5,8 +5,11 @@ import { HomeData, Member, Session, User } from './types';
 
 const defaultUrl = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || defaultUrl;
+if (!__DEV__ && !API_URL.startsWith('https://')) {
+  throw new Error('Dhanam production builds require an HTTPS EXPO_PUBLIC_API_URL.');
+}
 
-const client = axios.create({ baseURL: API_URL, timeout: 15000 });
+const client = axios.create({ baseURL: API_URL, timeout: 15000, maxContentLength: 2_000_000 });
 let authExpiredHandler: (() => void | Promise<void>) | null = null;
 export function setAuthExpiredHandler(handler: (() => void | Promise<void>) | null) {
   authExpiredHandler = handler;
@@ -42,6 +45,7 @@ export const api = {
   }),
   me: () => client.get<User>('/auth/me'),
   updateProfile: (data: Partial<User>) => client.patch<User>('/auth/me', data),
+  deleteAccount: (password: string) => client.delete('/auth/me', { data: { password } }),
   logout: () => client.post('/auth/logout'),
   sessions: () => client.get<Session[]>('/auth/sessions'),
   revokeSession: (id: string) => client.delete(`/auth/sessions/${id}`),

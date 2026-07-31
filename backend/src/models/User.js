@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
       showAmounts: { type: Boolean, default: false },
     },
     isDemo: { type: Boolean, default: false },
+    role: { type: String, enum: ['admin', 'user'], default: 'user' },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

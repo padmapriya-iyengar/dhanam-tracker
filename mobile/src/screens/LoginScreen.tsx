@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { ShieldCheck } from 'lucide-react-native';
 import { Button, Card, Field, Screen, Title } from '../components/ui';
 import { useAuth } from '../state/AuthContext';

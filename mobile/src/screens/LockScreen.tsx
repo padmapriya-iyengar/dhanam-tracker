@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { Fingerprint, LockKeyhole } from 'lucide-react-native';
 import { Button, Field, Screen, Title } from '../components/ui';
 import { useAppLock } from '../state/AppLockContext';

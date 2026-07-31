@@ -1,6 +1,9 @@
-import { Alert, Switch, Text, View } from 'react-native';
+import { Alert, Switch, View } from 'react-native';
+import { useState } from 'react';
+import { Text } from '../components/Typography';
 import { Bell, ChevronRight, CreditCard, Landmark, LogOut, Palette, Shield, SlidersHorizontal, UserRound, UsersRound } from 'lucide-react-native';
-import { Button, Card, Screen, Title } from '../components/ui';
+import { Button, Card, Field, Screen, Title } from '../components/ui';
+import { api, errorMessage } from '../api';
 import { useAuth } from '../state/AuthContext';
 import { usePreferences } from '../state/PreferencesContext';
 import { useAppTheme } from '../theme';
@@ -17,6 +20,7 @@ export function ProfileScreen({ navigation }: any) {
   const { colors } = useAppTheme();
   const { user, logout } = useAuth();
   const prefs = usePreferences();
+  const [deletionPassword, setDeletionPassword] = useState('');
   return <Screen>
     <Title subtitle="Identity, appearance, privacy, and device security.">Profile</Title>
     <Card>
@@ -48,6 +52,22 @@ export function ProfileScreen({ navigation }: any) {
       <Button label="Notification inbox" variant="secondary" onPress={() => navigation.navigate('Notifications')} />
       <Button label="Notification controls" variant="secondary" onPress={() => navigation.navigate('NotificationSettings')} />
     </Card>
+    {!user?.isDemo && <Card>
+      <Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Delete account</Text>
+      <Text style={{ color: colors.textMuted }}>Permanently deletes your account and associated financial records. This cannot be undone.</Text>
+      <Field label="Current password" value={deletionPassword} onChangeText={setDeletionPassword} secureTextEntry autoCapitalize="none" />
+      <Button label="Permanently delete account" variant="danger" disabled={!deletionPassword} onPress={() => Alert.alert('Delete account permanently?', 'All financial data associated with this account will be deleted. This cannot be undone.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete account', style: 'destructive', onPress: async () => {
+          try {
+            await api.deleteAccount(deletionPassword);
+            await logout();
+          } catch (cause) {
+            Alert.alert('Account not deleted', errorMessage(cause));
+          }
+        } },
+      ])} />
+    </Card>}
     <Button label="Sign out" variant="danger" icon={<LogOut size={18} color={colors.danger} />} onPress={() => Alert.alert('Sign out?', 'Cached financial data will be cleared from this device.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: logout }])} />
   </Screen>;
 }

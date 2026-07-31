@@ -29,7 +29,10 @@ export const radius = { sm: 10, md: 16, lg: 24, round: 999 };
 
 export const typography = {
   family: Platform.select({
-    web: 'Roboto, "Trebuchet MS", Calibri, Verdana, sans-serif',
-    default: 'Roboto',
+    web: 'Lato, sans-serif',
+    default: 'Lato',
   }),
+  medium: 'Lato',
+  bold: 'LatoBold',
+  black: 'LatoBlack',
 };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, View } from 'react-native';
+import { Text } from '../components/Typography';
 import * as Haptics from 'expo-haptics';
 import { Fingerprint, KeyRound, MonitorSmartphone, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { api, errorMessage } from '../api';

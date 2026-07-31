@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../components/Typography';
 import { ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw } from 'lucide-react-native';
 import { Button, Card, Screen, Title } from '../components/ui';
 import { usePreferences } from '../state/PreferencesContext';

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Share, Text, View } from 'react-native';
+import { Alert, Share, View } from 'react-native';
+import { Text } from '../components/Typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bot, CalendarClock, ChartNoAxesCombined, ChevronLeft, ChevronRight, Lightbulb, Repeat2, Send, Share2, Target } from 'lucide-react-native';
 import { api, errorMessage } from '../api';

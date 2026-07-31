@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const AuthSession = require('../models/AuthSession');
-const { createToken, currentUser, ensureDefaultUser, ensureDemoUser, verifyPassword } = require('../middleware/currentUser');
+const { createToken, currentUser, verifyPassword } = require('../middleware/currentUser');
 
 function safeUser(user) {
   return {
@@ -22,8 +22,6 @@ function safeUser(user) {
 
 router.post('/login', async (req, res) => {
   try {
-    await Promise.all([ensureDefaultUser(), ensureDemoUser()]);
-
     const { email, password } = req.body;
     const user = await User.findOne({ email: String(email || '').toLowerCase(), isActive: true });
     if (!user || !password || !verifyPassword(password, user)) {
@@ -62,6 +60,38 @@ router.patch('/me', currentUser, async (req, res) => {
 router.post('/logout', currentUser, async (req, res) => {
   if (req.authSession) await AuthSession.updateOne({ _id: req.authSession._id }, { revokedAt: new Date() });
   res.json({ message: 'Signed out' });
+});
+
+router.delete('/me', currentUser, async (req, res) => {
+  try {
+    if (req.user.isDemo) return res.status(403).json({ error: 'The shared demo account cannot be deleted' });
+    if (!req.body?.password || !verifyPassword(req.body.password, req.user)) {
+      return res.status(401).json({ error: 'Enter your current password to delete this account' });
+    }
+
+    const userId = req.user._id;
+    const ownedModels = [
+      require('../models/Balance'),
+      require('../models/CategoryGoal'),
+      require('../models/CreditCard'),
+      require('../models/CreditCardBudget'),
+      require('../models/CreditCardStatement'),
+      require('../models/Expense'),
+      require('../models/ExpenseRecovery'),
+      require('../models/Income'),
+      require('../models/Member'),
+      require('../models/MessageCategoryLearning'),
+      require('../models/SavingsAccount'),
+      require('../models/Subscription'),
+      require('../models/Transfer'),
+    ];
+    await Promise.all(ownedModels.map((Model) => Model.deleteMany({ userId })));
+    await AuthSession.deleteMany({ userId });
+    await User.deleteOne({ _id: userId });
+    res.json({ message: 'Account and associated financial data deleted' });
+  } catch {
+    res.status(500).json({ error: 'Account deletion could not be completed' });
+  }
 });
 
 router.get('/sessions', currentUser, async (req, res) => {

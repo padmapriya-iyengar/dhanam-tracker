@@ -72,7 +72,8 @@ export async function verifyPin(pin: string) {
 
 export async function clearFinancialCache() {
   const keys = await AsyncStorage.getAllKeys();
-  const removable = keys.filter((key) => key.startsWith(CACHE_PREFIX));
+  const accountDataKeys = new Set([DRAFTS, QUEUE, IMPORT_INBOX, ACTIVITY_PRESETS]);
+  const removable = keys.filter((key) => key.startsWith(CACHE_PREFIX) || accountDataKeys.has(key));
   if (removable.length) await AsyncStorage.multiRemove(removable);
 }
 

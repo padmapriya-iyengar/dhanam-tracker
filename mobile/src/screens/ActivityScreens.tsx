@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Text } from '../components/Typography';
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Copy, Filter, ReceiptText, RotateCcw, Search, Trash2, Undo2,
 } from 'lucide-react-native';

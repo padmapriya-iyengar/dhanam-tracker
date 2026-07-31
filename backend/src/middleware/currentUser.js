@@ -51,7 +51,7 @@ function parseToken(token) {
   }
 }
 
-async function ensureUser({ email, name, password, color = '#6366f1', currency = 'AED', isDemo = false }) {
+async function ensureUser({ email, name, password, color = '#6366f1', currency = 'AED', isDemo = false, role = 'user' }) {
   const normalizedEmail = email.toLowerCase();
   let user = await User.findOne({ email: normalizedEmail });
   if (!user) {
@@ -61,6 +61,7 @@ async function ensureUser({ email, name, password, color = '#6366f1', currency =
       color,
       currency,
       isDemo,
+      role,
       ...hashPassword(password),
     });
     return user;
@@ -70,6 +71,7 @@ async function ensureUser({ email, name, password, color = '#6366f1', currency =
   if (!user.passwordHash || !user.passwordSalt) Object.assign(updates, hashPassword(password));
   if (!user.currency) updates.currency = currency;
   if (user.isDemo !== isDemo) updates.isDemo = isDemo;
+  if (user.role !== role) updates.role = role;
   if (Object.keys(updates).length > 0) {
     user = await User.findByIdAndUpdate(user._id, updates, { new: true });
   }
@@ -82,6 +84,7 @@ async function ensureDefaultUser() {
     name: DEFAULT_USER_NAME,
     password: DEFAULT_USER_PASSWORD,
     color: '#6366f1',
+    role: 'admin',
   });
 }
 
@@ -215,6 +218,11 @@ async function currentUser(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Administrator access required' });
+  next();
+}
+
 module.exports = {
   createToken,
   currentUser,
@@ -223,4 +231,5 @@ module.exports = {
   backfillExistingDataToDefaultUser,
   hashPassword,
   verifyPassword,
+  requireAdmin,
 };

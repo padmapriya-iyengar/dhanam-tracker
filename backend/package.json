@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/seed.js",
-    "migrate": "node src/migrate.js"
+    "migrate": "node src/migrate.js",
+    "migrate:security": "node src/migrateSecurity.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

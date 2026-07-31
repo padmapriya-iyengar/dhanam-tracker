@@ -5,7 +5,10 @@ const path = require('path');
 module.exports = function withDhanamQuickActions(config) {
   config = withAndroidManifest(config, (mod) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(mod.modResults);
-    application.$['android:usesCleartextTraffic'] = 'true';
+    application.$['android:usesCleartextTraffic'] = 'false';
+    application.$['android:allowBackup'] = 'false';
+    application.$['android:fullBackupContent'] = '@xml/backup_rules';
+    application.$['android:dataExtractionRules'] = '@xml/data_extraction_rules';
     const activity = AndroidConfig.Manifest.getMainActivityOrThrow(mod.modResults);
     activity['meta-data'] = activity['meta-data'] || [];
     if (!activity['meta-data'].some((item) => item.$['android:name'] === 'android.app.shortcuts')) {
@@ -27,6 +30,31 @@ module.exports = function withDhanamQuickActions(config) {
     const valuesDirectory = path.join(resourceRoot, 'values');
     fs.mkdirSync(xmlDirectory, { recursive: true });
     fs.mkdirSync(valuesDirectory, { recursive: true });
+    fs.writeFileSync(path.join(xmlDirectory, 'backup_rules.xml'), `<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+  <exclude domain="root" path="." />
+  <exclude domain="file" path="." />
+  <exclude domain="database" path="." />
+  <exclude domain="sharedpref" path="." />
+  <exclude domain="external" path="." />
+</full-backup-content>`);
+    fs.writeFileSync(path.join(xmlDirectory, 'data_extraction_rules.xml'), `<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+  <cloud-backup>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+  </device-transfer>
+</data-extraction-rules>`);
     fs.writeFileSync(path.join(xmlDirectory, 'shortcuts.xml'), `<?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
   <shortcut android:shortcutId="add_expense" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_add_expense_short" android:shortcutLongLabel="@string/shortcut_add_expense_long">

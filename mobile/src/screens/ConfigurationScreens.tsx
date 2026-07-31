@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Share, Switch, Text, View } from 'react-native';
+import { Alert, Share, Switch, View } from 'react-native';
+import { Text } from '../components/Typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bell, Bug, Database, FolderCog, Tags, UserCog, UsersRound } from 'lucide-react-native';
 import { API_URL, api, errorMessage } from '../api';

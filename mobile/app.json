@@ -7,11 +7,6 @@
     "scheme": "dhanam",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#111827"
-    },
     "ios": {
       "bundleIdentifier": "com.dhanam.tracker",
       "supportsTablet": true,
@@ -21,7 +16,7 @@
     },
     "android": {
       "package": "com.dhanam.tracker",
-      "usesCleartextTraffic": true,
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#111827"
@@ -31,6 +26,7 @@
     "plugins": [
       ["expo-secure-store", { "configureAndroidBackup": false }],
       ["expo-local-authentication", { "faceIDPermission": "Use Face ID to protect your Dhanam financial information." }],
+      ["expo-splash-screen", { "image": "./assets/splash.png", "imageWidth": 200, "resizeMode": "contain", "backgroundColor": "#111827" }],
       "./app.plugin.js"
     ],
     "extra": {
