@@ -8,12 +8,15 @@
     "dev": "nodemon src/index.js",
     "seed": "node src/seed.js",
     "migrate": "node src/migrate.js",
-    "migrate:security": "node src/migrateSecurity.js"
+    "migrate:security": "node src/migrateSecurity.js",
+    "migrate:households": "node src/migrateHouseholds.js",
+    "backup:data": "node src/backupData.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "google-auth-library": "^11.0.0",
     "mongoose": "^8.4.0"
   },
   "devDependencies": {

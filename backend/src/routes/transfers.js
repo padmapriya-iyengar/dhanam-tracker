@@ -100,6 +100,8 @@ router.post('/', async (req, res) => {
       ...payload,
       ...dateParts,
       userId: req.user._id,
+      createdByUserId: req.actorUser?._id || req.user._id,
+      updatedByUserId: req.actorUser?._id || req.user._id,
     });
 
     await validateTransfer(req.user._id, transfer);
@@ -121,6 +123,7 @@ router.put('/:id', async (req, res) => {
     const updates = normalizeAccountFields(req.body);
     delete updates.expectedUpdatedAt;
     delete updates.userId;
+    updates.updatedByUserId = req.actorUser?._id || req.user._id;
     if (updates.date) Object.assign(updates, parseDateParts(updates.date));
 
     const next = new Transfer({ ...old.toObject(), ...updates });

@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { backfillExistingDataToDefaultUser, currentUser, requireAdmin } = require('./middleware/currentUser');
+const { backfillExistingDataToDefaultUser, currentUser, requireAdmin, householdScope } = require('./middleware/currentUser');
+const ensureHouseholds = require('./migrateHouseholds');
 const seedDemoData = require('./seedDemoData');
 
 const app = express();
@@ -11,6 +12,9 @@ if (production) {
   if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) throw new Error('AUTH_SECRET must be at least 32 characters in production');
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required in production');
   if (!process.env.CORS_ORIGIN) throw new Error('CORS_ORIGIN is required in production');
+  if (!process.env.PUBLIC_APP_URL) throw new Error('PUBLIC_APP_URL is required in production');
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) throw new Error('Transactional email configuration is required in production');
+  if (!process.env.GOOGLE_CLIENT_IDS) throw new Error('GOOGLE_CLIENT_IDS is required in production');
   if (process.env.CORS_ORIGIN.split(',').some((origin) => !origin.trim().startsWith('https://'))) {
     throw new Error('Production CORS_ORIGIN values must use HTTPS');
   }
@@ -63,24 +67,26 @@ app.use('/api/auth/login', (req, res, next) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/households', currentUser, require('./routes/households'));
 app.use('/api/users', currentUser, requireAdmin, require('./routes/users'));
-app.use('/api/members', currentUser, require('./routes/members'));
-app.use('/api/categories', currentUser, require('./routes/categories'));
-app.use('/api/income', currentUser, require('./routes/income'));
-app.use('/api/expenses', currentUser, require('./routes/expenses'));
-app.use('/api/reports', currentUser, require('./routes/reports'));
-app.use('/api/insights', currentUser, require('./routes/insights'));
-app.use('/api/message-import', currentUser, require('./routes/message-import'));
-app.use('/api/chat', currentUser, require('./routes/chat'));
-app.use('/api/balance', currentUser, require('./routes/balance'));
-app.use('/api/savings', currentUser, require('./routes/savings'));
-app.use('/api/credit-cards', currentUser, require('./routes/credit-cards'));
-app.use('/api/transfers', currentUser, require('./routes/transfers'));
-app.use('/api/accounts', currentUser, require('./routes/accounts'));
-app.use('/api/subscriptions', currentUser, require('./routes/subscriptions'));
-app.use('/api/category-goals', currentUser, require('./routes/category-goals'));
-app.use('/api/mobile/home', currentUser, require('./routes/mobile-home'));
-app.use('/api/mobile/capture', currentUser, require('./routes/mobile-capture'));
+const financial = [currentUser, householdScope];
+app.use('/api/members', financial, require('./routes/members'));
+app.use('/api/categories', financial, require('./routes/categories'));
+app.use('/api/income', financial, require('./routes/income'));
+app.use('/api/expenses', financial, require('./routes/expenses'));
+app.use('/api/reports', financial, require('./routes/reports'));
+app.use('/api/insights', financial, require('./routes/insights'));
+app.use('/api/message-import', financial, require('./routes/message-import'));
+app.use('/api/chat', financial, require('./routes/chat'));
+app.use('/api/balance', financial, require('./routes/balance'));
+app.use('/api/savings', financial, require('./routes/savings'));
+app.use('/api/credit-cards', financial, require('./routes/credit-cards'));
+app.use('/api/transfers', financial, require('./routes/transfers'));
+app.use('/api/accounts', financial, require('./routes/accounts'));
+app.use('/api/subscriptions', financial, require('./routes/subscriptions'));
+app.use('/api/category-goals', financial, require('./routes/category-goals'));
+app.use('/api/mobile/home', financial, require('./routes/mobile-home'));
+app.use('/api/mobile/capture', financial, require('./routes/mobile-capture'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -96,6 +102,7 @@ mongoose
       await seedDemoData();
       console.log('Bootstrap users are ready');
     }
+    await ensureHouseholds();
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => {

@@ -5,6 +5,8 @@ const accountTypes = ['current', 'savings', 'credit_card'];
 const transferSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    createdByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    updatedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     amount: { type: Number, required: true, min: 0.01 },
     date: { type: Date, required: true },
     month: { type: Number, required: true, min: 1, max: 12 },

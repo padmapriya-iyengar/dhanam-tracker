@@ -200,6 +200,7 @@ router.post('/:id/recoveries', async (req, res) => {
     const recovery = await ExpenseRecovery.create({
       ...payload,
       userId: req.user._id,
+      createdByUserId: req.actorUser?._id || req.user._id,
       expenseId: expense._id,
     });
     res.status(201).json(recovery);
@@ -214,6 +215,8 @@ router.delete('/:id/recoveries/:recoveryId', async (req, res) => {
       _id: req.params.recoveryId,
       expenseId: req.params.id,
       userId: req.user._id,
+      createdByUserId: req.actorUser?._id || req.user._id,
+      updatedByUserId: req.actorUser?._id || req.user._id,
     });
     if (!recovery) return res.status(404).json({ error: 'Recovery not found' });
     res.json({ message: 'Recovery deleted' });
@@ -261,6 +264,7 @@ router.put('/:id', async (req, res) => {
     const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
     delete updates.expectedUpdatedAt;
     delete updates.userId;
+    updates.updatedByUserId = req.actorUser?._id || req.user._id;
     if (req.body.paymentMethod) {
       updates.affectsCurrentBalance = shouldAffectCurrentBalance(req.body.paymentMethod, req.body.affectsCurrentBalance);
     }

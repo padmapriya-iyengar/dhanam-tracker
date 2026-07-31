@@ -16,6 +16,7 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
 }
 
 function verifyPassword(password, user) {
+  if (!user.passwordHash || !user.passwordSalt) return false;
   const { passwordHash } = hashPassword(password, user.passwordSalt);
   const expected = Buffer.from(user.passwordHash, 'hex');
   const actual = Buffer.from(passwordHash, 'hex');
@@ -223,6 +224,23 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function householdScope(req, res, next) {
+  try {
+    const HouseholdMembership = require('../models/HouseholdMembership');
+    const requested = req.get('x-household-id');
+    const filter = { userId: req.user._id, status: 'active', ...(requested ? { householdId: requested } : {}) };
+    const membership = await HouseholdMembership.findOne(filter).populate('householdId');
+    if (!membership?.householdId?.isActive) return res.status(403).json({ error: 'No active household access' });
+    req.actorUser = req.user;
+    req.householdMembership = membership;
+    req.household = membership.householdId;
+    req.user = { ...req.user.toObject(), _id: membership.householdId.dataOwnerUserId };
+    next();
+  } catch {
+    res.status(403).json({ error: 'Household access could not be verified' });
+  }
+}
+
 module.exports = {
   createToken,
   currentUser,
@@ -232,4 +250,5 @@ module.exports = {
   hashPassword,
   verifyPassword,
   requireAdmin,
+  householdScope,
 };

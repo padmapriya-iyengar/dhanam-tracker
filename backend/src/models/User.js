@@ -4,8 +4,9 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true, unique: true },
-    passwordHash: { type: String, required: true },
-    passwordSalt: { type: String, required: true },
+    passwordHash: { type: String, default: null },
+    passwordSalt: { type: String, default: null },
+    emailVerifiedAt: { type: Date, default: null },
     color: { type: String, default: '#6366f1' },
     currency: { type: String, enum: ['AED', 'INR'], default: 'AED' },
     locale: { type: String, enum: ['en-AE', 'en-IN'], default: 'en-AE' },

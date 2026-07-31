@@ -10,6 +10,7 @@ export type User = {
   locale?: string;
   isDemo: boolean;
   onboardingCompleted?: boolean;
+  hasPassword?: boolean;
   notificationPreferences?: {
     enabled: boolean;
     recurring: boolean;
@@ -21,6 +22,12 @@ export type User = {
     cardAdvanceDays?: number;
     showAmounts?: boolean;
   };
+};
+
+export type HouseholdMembership = {
+  id: string; householdId: string; householdName: string; email: string;
+  role: 'owner' | 'admin' | 'contributor'; status: 'invited' | 'active' | 'removed';
+  userId?: string; joinedAt?: string;
 };
 
 export type Member = { _id: string; name: string; role: 'self' | 'husband' | 'other'; color: string };

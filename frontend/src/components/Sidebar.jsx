@@ -48,13 +48,13 @@ const navGroups = [
     items: [
       { to: '/categories', icon: Tag, label: 'Categories' },
       { to: '/members', icon: Users, label: 'Members' },
-      { to: '/users', icon: UserCog, label: 'Users' },
+      { to: '/users', icon: UserCog, label: 'Collaborators' },
     ],
   },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, households, activeHouseholdId, selectHousehold } = useApp();
   const { mode, setMode } = useTheme();
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState(() => localStorage.getItem(NAV_STORAGE_KEY) || 'transactions');
@@ -165,6 +165,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         <div className="p-4 border-t border-slate-100">
+          {households.length > 0 && <div className="mb-3"><label className="mb-1.5 block px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Household</label><select className="input" value={activeHouseholdId} onChange={(event) => selectHousehold(event.target.value)}>{households.map((household) => <option key={household.id} value={household.householdId}>{household.householdName} · {household.role}</option>)}</select></div>}
           <div className="mb-3">
             <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Appearance</p>
             <div className="grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">

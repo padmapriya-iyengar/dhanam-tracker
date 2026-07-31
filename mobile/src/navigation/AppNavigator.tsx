@@ -72,8 +72,8 @@ export function AppNavigator() {
       <Stack.Screen name="Categories" component={CategoriesScreen} />
       <Stack.Screen name="CategoryForm" component={CategoryFormScreen} options={{ title: 'Category' }} />
       <Stack.Screen name="Subcategories" component={SubcategoriesScreen} />
-      <Stack.Screen name="Users" component={UsersScreen} />
-      <Stack.Screen name="UserForm" component={UserFormScreen} options={{ title: 'User' }} />
+      <Stack.Screen name="Users" component={UsersScreen} options={{ title: 'Collaborators' }} />
+      <Stack.Screen name="UserForm" component={UserFormScreen} options={{ title: 'Invite collaborator' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification controls' }} />
       <Stack.Screen name="Preferences" component={PreferencesScreen} />

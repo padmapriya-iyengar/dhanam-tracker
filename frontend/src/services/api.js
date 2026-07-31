@@ -9,15 +9,38 @@ export const setAuthToken = (token) => {
   else localStorage.removeItem('dhanam.authToken');
 };
 
+export const setHouseholdId = (id) => {
+  if (id) localStorage.setItem('dhanam.householdId', id);
+  else localStorage.removeItem('dhanam.householdId');
+};
+
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const householdId = localStorage.getItem('dhanam.householdId');
+  if (householdId) config.headers['X-Household-Id'] = householdId;
   return config;
 });
 
 export const authApi = {
   login: (data) => api.post('/auth/login', data),
+  signup: (data) => api.post('/auth/signup', data),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token, deviceName: 'Web browser', platform: 'web' }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  google: (idToken, inviteToken) => api.post('/auth/google', { idToken, inviteToken, deviceName: 'Web browser', platform: 'web' }),
+  methods: () => api.get('/auth/methods'),
+  linkGoogle: (idToken) => api.post('/auth/google/link', { idToken }),
   me: () => api.get('/auth/me'),
+};
+
+export const householdsApi = {
+  getAll: () => api.get('/households'),
+  members: (id) => api.get(`/households/${id}/members`),
+  invite: (id, data) => api.post(`/households/${id}/invitations`, data),
+  accept: (token) => api.post('/households/invitations/accept', { token }),
+  updateMember: (id, membershipId, data) => api.patch(`/households/${id}/members/${membershipId}`, data),
+  transferOwnership: (id, membershipId) => api.post(`/households/${id}/ownership`, { membershipId }),
 };
 
 export const usersApi = {

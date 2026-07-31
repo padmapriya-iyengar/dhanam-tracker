@@ -43,6 +43,8 @@ router.post('/', async (req, res) => {
     const income = new Income({
       ...req.body,
       userId: req.user._id,
+      createdByUserId: req.actorUser?._id || req.user._id,
+      updatedByUserId: req.actorUser?._id || req.user._id,
       savingsAccountId: req.body.savingsAccountId || null,
       month: date.getMonth() + 1,
       year: date.getFullYear(),
@@ -67,6 +69,7 @@ router.put('/:id', async (req, res) => {
     const updates = { ...req.body, savingsAccountId: req.body.savingsAccountId || null };
     delete updates.expectedUpdatedAt;
     delete updates.userId;
+    updates.updatedByUserId = req.actorUser?._id || req.user._id;
     if (req.body.date) {
       const date = new Date(req.body.date);
       updates.month = date.getMonth() + 1;

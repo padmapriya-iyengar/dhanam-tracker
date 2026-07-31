@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { Text } from '../components/Typography';
 import * as Haptics from 'expo-haptics';
+import * as Google from 'expo-auth-session/providers/google';
 import { Fingerprint, KeyRound, MonitorSmartphone, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { api, errorMessage } from '../api';
 import { Button, Card, Field, Screen, StateView, Title } from '../components/ui';
@@ -10,6 +11,13 @@ import { usePreferences } from '../state/PreferencesContext';
 import { setPin } from '../storage';
 import { Session } from '../types';
 import { useAppTheme } from '../theme';
+const googleConfigured = Boolean(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+
+function GoogleLinkButton({ linked, refresh }: { linked: boolean; refresh: () => void }) {
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({ androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID, iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, selectAccount: true });
+  useEffect(() => { if (response?.type === 'success' && response.params.id_token) api.linkGoogle(response.params.id_token).then(() => { Alert.alert('Google linked', 'You can now use Google to sign in.'); refresh(); }).catch((cause) => Alert.alert('Could not link Google', errorMessage(cause))); }, [response]);
+  return <Button label={linked ? 'Google sign-in linked ✓' : 'Link Google sign-in'} variant="secondary" disabled={linked || !request} onPress={() => promptAsync()} />;
+}
 
 export function SecurityScreen() {
   const { colors } = useAppTheme();
@@ -20,12 +28,14 @@ export function SecurityScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState('');
+  const [methods, setMethods] = useState<string[]>([]);
 
   async function loadSessions() {
     setLoading(true); setSessionError('');
     try { setSessions((await api.sessions()).data); } catch (error) { setSessionError(errorMessage(error)); } finally { setLoading(false); }
   }
-  useEffect(() => { loadSessions(); }, []);
+  const loadMethods = () => api.authMethods().then(({ data }) => setMethods(data)).catch(() => {});
+  useEffect(() => { loadSessions(); loadMethods(); }, []);
 
   async function savePin() {
     if (pin.length < 4 || pin !== confirmPin) return;
@@ -41,6 +51,11 @@ export function SecurityScreen() {
 
   return <Screen>
     <Title subtitle="Control when Dhanam locks and which devices can access your account.">Security</Title>
+    <Card>
+      <View style={{ flexDirection: 'row', gap: 10 }}><KeyRound size={21} color={colors.primary} /><Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Sign-in methods</Text></View>
+      <Text style={{ color: colors.textMuted }}>Password {methods.includes('password') ? 'linked' : 'not configured'}</Text>
+      {googleConfigured ? <GoogleLinkButton linked={methods.includes('google')} refresh={loadMethods} /> : <Text style={{ color: colors.textMuted }}>Google sign-in will appear after OAuth client IDs are configured.</Text>}
+    </Card>
     <Card>
       <View style={{ flexDirection: 'row', gap: 10 }}><Fingerprint size={21} color={colors.primary} /><Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Biometric lock</Text></View>
       <Text style={{ color: colors.textMuted, lineHeight: 21 }}>{biometricAvailable ? 'Use biometrics enrolled on this device.' : 'No enrolled biometric method is available on this device.'}</Text>

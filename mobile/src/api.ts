@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
-import { tokenStore } from './storage';
-import { HomeData, Member, Session, User } from './types';
+import { householdStore, tokenStore } from './storage';
+import { HomeData, HouseholdMembership, Member, Session, User } from './types';
 
 const defaultUrl = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || defaultUrl;
@@ -17,6 +17,8 @@ export function setAuthExpiredHandler(handler: (() => void | Promise<void>) | nu
 client.interceptors.request.use(async (config) => {
   const token = await tokenStore.get();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const householdId = await householdStore.get();
+  if (householdId) config.headers['X-Household-Id'] = householdId;
   return config;
 });
 client.interceptors.response.use(
@@ -43,12 +45,26 @@ export const api = {
   login: (email: string, password: string) => client.post<{ token: string; user: User }>('/auth/login', {
     email, password, deviceName: `${Platform.OS} device`, platform: Platform.OS,
   }),
+  signup: (data: { name: string; email: string; password: string; inviteToken?: string }) => client.post('/auth/signup', data),
+  verifyEmail: (token: string) => client.post<{ token: string; user: User }>('/auth/verify-email', { token, deviceName: `${Platform.OS} device`, platform: Platform.OS }),
+  forgotPassword: (email: string) => client.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) => client.post('/auth/reset-password', { token, password }),
+  googleLogin: (idToken: string, inviteToken?: string) => client.post<{ token: string; user: User }>('/auth/google', { idToken, ...(inviteToken ? { inviteToken } : {}), deviceName: `${Platform.OS} device`, platform: Platform.OS }),
+  authMethods: () => client.get<Array<'password' | 'google'>>('/auth/methods'),
+  linkGoogle: (idToken: string) => client.post('/auth/google/link', { idToken }),
   me: () => client.get<User>('/auth/me'),
   updateProfile: (data: Partial<User>) => client.patch<User>('/auth/me', data),
-  deleteAccount: (password: string) => client.delete('/auth/me', { data: { password } }),
+  deleteAccount: (confirmation: { password?: string; confirmEmail?: string }) => client.delete('/auth/me', { data: confirmation }),
   logout: () => client.post('/auth/logout'),
   sessions: () => client.get<Session[]>('/auth/sessions'),
   revokeSession: (id: string) => client.delete(`/auth/sessions/${id}`),
+  households: () => client.get<HouseholdMembership[]>('/households'),
+  createHousehold: (name: string) => client.post<HouseholdMembership>('/households', { name }),
+  householdMembers: (id: string) => client.get<HouseholdMembership[]>(`/households/${id}/members`),
+  inviteHouseholdMember: (id: string, email: string, role: 'admin' | 'contributor') => client.post(`/households/${id}/invitations`, { email, role }),
+  acceptHouseholdInvite: (token: string) => client.post<HouseholdMembership>('/households/invitations/accept', { token }),
+  updateHouseholdMember: (id: string, membershipId: string, data: Record<string, unknown>) => client.patch(`/households/${id}/members/${membershipId}`, data),
+  transferHouseholdOwnership: (id: string, membershipId: string) => client.post(`/households/${id}/ownership`, { membershipId }),
   members: () => client.get<Member[]>('/members'),
   createMember: (data: { name: string; role: string; color: string }) => client.post<Member>('/members', data),
   createAccount: (data: Record<string, unknown>) => client.post('/savings', data),

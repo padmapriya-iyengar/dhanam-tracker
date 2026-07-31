@@ -12,6 +12,7 @@ const DRAFTS = 'dhanam.drafts.v1';
 const QUEUE = 'dhanam.queue.v1';
 const IMPORT_INBOX = 'dhanam.importInbox.v1';
 const ACTIVITY_PRESETS = 'dhanam.activityPresets.v1';
+const ACTIVE_HOUSEHOLD = 'dhanam.activeHousehold.v1';
 
 async function secureGet(key: string) {
   return Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key);
@@ -25,6 +26,11 @@ export const tokenStore = {
   get: () => secureGet(TOKEN),
   set: (token: string) => secureSet(TOKEN, token),
   clear: () => secureSet(TOKEN),
+};
+export const householdStore = {
+  get: () => AsyncStorage.getItem(ACTIVE_HOUSEHOLD),
+  set: (id: string) => AsyncStorage.setItem(ACTIVE_HOUSEHOLD, id),
+  clear: () => AsyncStorage.removeItem(ACTIVE_HOUSEHOLD),
 };
 
 export type LocalPreferences = {
@@ -72,7 +78,7 @@ export async function verifyPin(pin: string) {
 
 export async function clearFinancialCache() {
   const keys = await AsyncStorage.getAllKeys();
-  const accountDataKeys = new Set([DRAFTS, QUEUE, IMPORT_INBOX, ACTIVITY_PRESETS]);
+  const accountDataKeys = new Set([DRAFTS, QUEUE, IMPORT_INBOX, ACTIVITY_PRESETS, ACTIVE_HOUSEHOLD]);
   const removable = keys.filter((key) => key.startsWith(CACHE_PREFIX) || accountDataKeys.has(key));
   if (removable.length) await AsyncStorage.multiRemove(removable);
 }

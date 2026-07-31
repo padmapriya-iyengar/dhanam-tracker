@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const expenseRecoverySchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    createdByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     expenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Expense', required: true, index: true },
     amount: { type: Number, required: true, min: 0.01 },
     date: { type: Date, required: true },

@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Trebuchet MS', 'sans-serif'],
+        sans: ['Trebuchet MS', 'Trebuchet', 'sans-serif'],
       },
       colors: {
         primary: {

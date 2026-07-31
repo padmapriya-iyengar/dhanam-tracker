@@ -20,7 +20,7 @@ export function ProfileScreen({ navigation }: any) {
   const { colors } = useAppTheme();
   const { user, logout } = useAuth();
   const prefs = usePreferences();
-  const [deletionPassword, setDeletionPassword] = useState('');
+  const [deletionConfirmation, setDeletionConfirmation] = useState('');
   return <Screen>
     <Title subtitle="Identity, appearance, privacy, and device security.">Profile</Title>
     <Card>
@@ -55,12 +55,12 @@ export function ProfileScreen({ navigation }: any) {
     {!user?.isDemo && <Card>
       <Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Delete account</Text>
       <Text style={{ color: colors.textMuted }}>Permanently deletes your account and associated financial records. This cannot be undone.</Text>
-      <Field label="Current password" value={deletionPassword} onChangeText={setDeletionPassword} secureTextEntry autoCapitalize="none" />
-      <Button label="Permanently delete account" variant="danger" disabled={!deletionPassword} onPress={() => Alert.alert('Delete account permanently?', 'All financial data associated with this account will be deleted. This cannot be undone.', [
+      <Field label={user?.hasPassword ? 'Current password' : 'Type your email to confirm'} value={deletionConfirmation} onChangeText={setDeletionConfirmation} secureTextEntry={Boolean(user?.hasPassword)} autoCapitalize="none" />
+      <Button label="Permanently delete account" variant="danger" disabled={!deletionConfirmation} onPress={() => Alert.alert('Delete account permanently?', 'All financial data associated with this account will be deleted. This cannot be undone.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete account', style: 'destructive', onPress: async () => {
           try {
-            await api.deleteAccount(deletionPassword);
+            await api.deleteAccount(user?.hasPassword ? { password: deletionConfirmation } : { confirmEmail: deletionConfirmation });
             await logout();
           } catch (cause) {
             Alert.alert('Account not deleted', errorMessage(cause));

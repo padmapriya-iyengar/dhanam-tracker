@@ -66,7 +66,7 @@ function Progress({ value, color }: { value: number; color: string }) {
 
 export function HomeScreen({ navigation }: any) {
   const { colors } = useAppTheme();
-  const { user } = useAuth();
+  const { user, activeHouseholdId } = useAuth();
   const { online } = useNetwork();
   const prefs = usePreferences();
   const [selectedMonth, setSelectedMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -76,7 +76,7 @@ export function HomeScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const cacheKey = `home.${selectedMonth.getFullYear()}-${selectedMonth.getMonth() + 1}.${prefs.homeMemberId || 'household'}`;
+  const cacheKey = `home.${activeHouseholdId}.${selectedMonth.getFullYear()}-${selectedMonth.getMonth() + 1}.${prefs.homeMemberId || 'household'}`;
   const money = useCallback((amount: number) => new Intl.NumberFormat(user?.locale || 'en-AE', { style: 'currency', currency: user?.currency || 'AED', maximumFractionDigits: 0 }).format(amount || 0), [user?.currency, user?.locale]);
   const visibleAttention = useMemo(() => (data?.attention || []).filter((item) => {
     if (prefs.dismissedAttentionIds.includes(item.id)) return false;
