@@ -2,7 +2,7 @@
 
 ## Required before building
 
-- Host the backend behind HTTPS and set `EXPO_PUBLIC_API_URL=https://.../api` in the EAS production environment.
+- The HTTPS backend is hosted at `https://joshikiran.com/dhanam-tracker/api`; keep this as `EXPO_PUBLIC_API_URL` in the EAS preview and production profiles.
 - Set backend `NODE_ENV=production`, a random `AUTH_SECRET` of at least 32 characters, `MONGODB_URI`, HTTPS-only `CORS_ORIGIN`, and `TRUST_PROXY=1` when behind one proxy.
 - Configure transactional email with `RESEND_API_KEY`, a verified `EMAIL_FROM`, and `PUBLIC_APP_URL`. The public URL must open the app (or redirect to its `dhanam://` deep links) for verification, password-reset, and household-invitation links.
 - Create Google OAuth clients for Android and Web. Register Android package `com.dhanam.tracker` with the SHA-1 certificate from the Play App Signing page. Set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` for mobile, `VITE_GOOGLE_WEB_CLIENT_ID` for the web build, and list every accepted client ID in backend `GOOGLE_CLIENT_IDS`. Add the production web origin to the Web OAuth client's authorized JavaScript origins.

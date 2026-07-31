@@ -13,7 +13,7 @@ WebBrowser.maybeCompleteAuthSession();
 type Mode = 'login' | 'signup' | 'verify' | 'forgot' | 'reset';
 const googleConfigured = Boolean(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
 
-function GoogleButton({ inviteToken }: { inviteToken?: string }) {
+function ConfiguredGoogleButton({ inviteToken }: { inviteToken?: string }) {
   const { googleLogin } = useAuth();
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
@@ -28,6 +28,14 @@ function GoogleButton({ inviteToken }: { inviteToken?: string }) {
     googleLogin(response.params.id_token, inviteToken).catch((cause) => Alert.alert('Google sign-in failed', errorMessage(cause))).finally(() => setBusy(false));
   }, [googleLogin, inviteToken, response]);
   return <Button label={busy ? 'Connecting Google…' : 'Continue with Google'} variant="secondary" disabled={!request || busy} onPress={() => promptAsync()} />;
+}
+
+function GoogleButton({ inviteToken }: { inviteToken?: string }) {
+  if (!googleConfigured) return <Button label="Continue with Google" variant="secondary" onPress={() => Alert.alert(
+    'Google sign-in needs configuration',
+    'Add the Android or iOS Google OAuth client ID to the mobile environment, then restart Expo.'
+  )} />;
+  return <ConfiguredGoogleButton inviteToken={inviteToken} />;
 }
 
 export function LoginScreen() {
@@ -81,11 +89,11 @@ export function LoginScreen() {
       {mode !== 'login' && <Button label="Back to sign in" variant="secondary" onPress={() => setMode('login')} />}
     </Card>
     {mode === 'login' && <Card>
-      {googleConfigured && <GoogleButton inviteToken={inviteToken || undefined} />}
+      <GoogleButton inviteToken={inviteToken || undefined} />
       <Button label="Create account with email" variant="secondary" onPress={() => setMode('signup')} icon={<UserPlus size={18} color={colors.text} />} />
       <View style={{ flexDirection: 'row', gap: 10 }}><ShieldCheck size={20} color={colors.warning} /><Text style={{ color: colors.textMuted, flex: 1 }}>Invited family members should sign up with the exact email address used in their invitation.</Text></View>
     </Card>}
-    {mode === 'signup' && googleConfigured && inviteToken && <Card><Text style={{ color: colors.textMuted }}>Use the invited Google account to join the shared household directly.</Text><GoogleButton inviteToken={inviteToken} /></Card>}
+    {mode === 'signup' && inviteToken && <Card><Text style={{ color: colors.textMuted }}>Use the invited Google account to join the shared household directly.</Text><GoogleButton inviteToken={inviteToken} /></Card>}
     {mode === 'login' && <Button label={busy ? 'Opening demo…' : 'Open demo'} disabled={busy} variant="secondary" onPress={async () => { setBusy(true); try { await loginDemo(); } finally { setBusy(false); } }} icon={<LogIn size={18} color={colors.text} />} />}
   </Screen>;
 }

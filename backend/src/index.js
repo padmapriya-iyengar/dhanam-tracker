@@ -90,6 +90,13 @@ app.use('/api/mobile/capture', financial, require('./routes/mobile-capture'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON request body' });
+  console.error('Unhandled request error:', error);
+  return res.status(500).json({ error: 'Internal server error' });
+});
+
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dhanam-tracker';
 
