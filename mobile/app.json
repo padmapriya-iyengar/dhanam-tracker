@@ -19,7 +19,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#111827"
+        "backgroundColor": "#0d3b2e"
       },
       "predictiveBackGestureEnabled": true
     },
@@ -42,7 +42,7 @@
           "image": "./assets/splash.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#111827"
+          "backgroundColor": "#0d3b2e"
         }
       ],
       "./app.plugin.js",
