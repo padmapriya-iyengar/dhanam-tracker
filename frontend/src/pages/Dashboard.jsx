@@ -131,6 +131,7 @@ export default function Dashboard() {
   if (loading) return <LoadingSpinner />;
 
   const summary = report?.summary || {};
+  const funding = report?.funding || {};
   const budgetRows = budgets?.rows || [];
   const budgetTotals = budgets?.totals || { budgeted: 0, spent: 0, recoveredAmount: 0, paid: 0, balance: 0 };
   const expenseByCategory = report?.expenseByCategory || [];
@@ -202,6 +203,13 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Salary left to use</p><p className="mt-2 text-2xl font-bold text-emerald-700"><Money value={funding.salaryRemaining} /></p><p className="mt-1 text-xs text-emerald-600">After account expenses, planned transfers and card statements</p></div>
+        <div className={`rounded-lg border p-4 ${(funding.savingsRequired || 0) > 0 ? 'border-rose-100 bg-rose-50' : 'border-slate-100 bg-white'}`}><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Borrow from savings</p><p className={`mt-2 text-2xl font-bold ${(funding.savingsRequired || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}><Money value={funding.savingsRequired} /></p><p className="mt-1 text-xs text-slate-400">Shortfall after this month's obligations</p></div>
+        <div className="rounded-lg border border-rose-100 bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-rose-600">Cards due this month</p><p className="mt-2 text-2xl font-bold text-rose-700"><Money value={funding.cardsDue} /></p><p className="mt-1 text-xs text-slate-400">Purchases assigned by statement cycle</p></div>
+        <div className="rounded-lg border border-amber-100 bg-amber-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Pending recurring transfers</p><p className="mt-2 text-2xl font-bold text-amber-700"><Money value={funding.pendingRecurring} /></p><p className="mt-1 text-xs text-amber-700">Committed items not recorded yet; reserved from salary left</p></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">

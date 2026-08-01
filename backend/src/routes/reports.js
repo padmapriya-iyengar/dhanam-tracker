@@ -5,6 +5,7 @@ const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Subscription = require('../models/Subscription');
 const SubCategory = require('../models/SubCategory');
+const monthlyFunding = require('../services/monthlyFunding');
 
 const ALWAYS_EXCLUDED_RECURRING_SUB_CATEGORIES = [
   'Foreign Transfer',
@@ -319,6 +320,9 @@ router.get('/', async (req, res) => {
     const savingsRate = totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : 0;
     const expenseChange = prevTotalExpense > 0 ? (((totalExpense - prevTotalExpense) / prevTotalExpense) * 100).toFixed(1) : 0;
     const incomeChange = prevTotalIncome > 0 ? (((totalIncome - prevTotalIncome) / prevTotalIncome) * 100).toFixed(1) : 0;
+    const funding = (req.query.period || 'monthly') === 'monthly'
+      ? await monthlyFunding(req.user._id, parseInt(req.query.month, 10) || start.getMonth() + 1, parseInt(req.query.year, 10) || start.getFullYear())
+      : null;
 
     res.json({
       period: req.query.period || 'monthly',
@@ -337,6 +341,7 @@ router.get('/', async (req, res) => {
       expenseByMember,
       incomeByMember,
       dailyTrend,
+      funding,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

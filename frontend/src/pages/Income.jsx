@@ -8,7 +8,8 @@ import { useApp } from '../context/AppContext';
 import { fmt, incomeApi, savingsApi } from '../services/api';
 
 const SOURCES = ['Salary', 'Freelance', 'Business', 'Rental Income', 'Interest', 'Dividend', 'Gift', 'Other'];
-const emptyForm = { memberId: '', amount: '', source: 'Salary', description: '', date: format(new Date(), 'yyyy-MM-dd'), savingsAccountId: '' };
+const nextFundingMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+const emptyForm = { memberId: '', amount: '', source: 'Salary', description: '', date: format(new Date(), 'yyyy-MM-dd'), savingsAccountId: '', fundingMonth: nextFundingMonth.getMonth() + 1, fundingYear: nextFundingMonth.getFullYear() };
 
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
@@ -59,6 +60,9 @@ export default function Income() {
       description: rec.description || '',
       date: format(new Date(rec.date), 'yyyy-MM-dd'),
       savingsAccountId: rec.savingsAccountId?._id || '',
+      fundingMonth: rec.fundingMonth || (/^salary$/i.test(rec.source) ? (rec.month === 12 ? 1 : rec.month + 1) : rec.month),
+      fundingYear: rec.fundingYear || (/^salary$/i.test(rec.source) && rec.month === 12 ? rec.year + 1 : rec.year),
+      fundingOverride: rec.fundingOverride === true,
     });
     setWizardStep(0);
     setSaveError('');
@@ -148,7 +152,7 @@ export default function Income() {
           <p className="text-sm font-semibold text-slate-800">What is the source?</p>
           <div className="grid grid-cols-1 gap-2">
             {SOURCES.map((source) => (
-              <button key={source} type="button" className={optionClass(form.source === source)} onClick={() => setForm({ ...form, source })}>
+              <button key={source} type="button" className={optionClass(form.source === source)} onClick={() => { const date = new Date(`${form.date}T12:00:00`); const fundingDate = source === 'Salary' ? new Date(date.getFullYear(), date.getMonth() + 1, 1) : date; setForm({ ...form, source, fundingMonth: fundingDate.getMonth() + 1, fundingYear: fundingDate.getFullYear() }); }}>
                 <span className="font-semibold">{source}</span>
               </button>
             ))}
@@ -185,6 +189,11 @@ export default function Income() {
           <label htmlFor="inc-wizard-description" className="label">Description</label>
           <input id="inc-wizard-description" type="text" className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. June salary" />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">Funds which month?</label><select className="input" value={form.fundingMonth} onChange={(e) => setForm({ ...form, fundingMonth: +e.target.value, fundingOverride: true })}>{months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
+          <div><label className="label">Funding year</label><input className="input" type="number" value={form.fundingYear} onChange={(e) => setForm({ ...form, fundingYear: +e.target.value, fundingOverride: true })} /></div>
+        </div>
+        <p className="text-xs text-slate-400">Salary automatically funds the following month. You can override it here; the bank transaction date stays unchanged.</p>
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
           <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
           <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>

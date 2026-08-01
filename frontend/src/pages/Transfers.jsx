@@ -25,6 +25,9 @@ const emptyForm = {
   toCreditCardId: '',
   description: 'Credit card payment',
   notes: '',
+  budgetTreatment: 'internal',
+  planningMonth: new Date().getMonth() + 1,
+  planningYear: new Date().getFullYear(),
 };
 
 function accountLabel(account) {
@@ -100,6 +103,9 @@ export default function Transfers() {
       toCreditCardId: transfer.toCreditCardId?._id || '',
       description: transfer.description || '',
       notes: transfer.notes || '',
+      budgetTreatment: transfer.budgetTreatment || (transfer.toAccountType === 'credit_card' ? 'card_payment' : 'internal'),
+      planningMonth: transfer.planningMonth || transfer.month,
+      planningYear: transfer.planningYear || transfer.year,
     });
     setWizardStep(0);
     setSaveError('');
@@ -259,6 +265,9 @@ export default function Transfers() {
           <label className="label">Notes</label>
           <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
+        {form.toAccountType !== 'credit_card' && <div><label className="label">Monthly-plan treatment</label><select className="input" value={form.budgetTreatment} onChange={(e) => setForm({ ...form, budgetTreatment: e.target.value })}><option value="internal">Internal transfer (not an expense)</option><option value="monthly_expense">Count as an expense</option><option value="savings_sweep">Move surplus to savings</option><option value="savings_draw">Borrow from savings</option></select></div>}
+        {form.budgetTreatment === 'monthly_expense' && <div className="grid grid-cols-2 gap-3"><div><label className="label">Expense month</label><select className="input" value={form.planningMonth} onChange={(e) => setForm({ ...form, planningMonth: +e.target.value })}>{months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div><div><label className="label">Year</label><input className="input" type="number" value={form.planningYear} onChange={(e) => setForm({ ...form, planningYear: +e.target.value })} /></div></div>}
+        {form.budgetTreatment === 'monthly_expense' && <p className="text-xs text-slate-400">This reduces that month's usable salary without changing the real transfer date.</p>}
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
           <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
           <div className="flex justify-between gap-3 py-1"><span>From</span><strong className="text-right text-slate-800">{formAccountLabel('from')}</strong></div>
@@ -509,6 +518,27 @@ export default function Transfers() {
             <label className="label">Notes</label>
             <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
+
+          {form.toAccountType !== 'credit_card' && (
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+              <div>
+                <label className="label">Monthly-plan treatment</label>
+                <select className="input" value={form.budgetTreatment} onChange={(e) => setForm({ ...form, budgetTreatment: e.target.value })}>
+                  <option value="internal">Internal transfer (not an expense)</option>
+                  <option value="monthly_expense">Count as an expense</option>
+                  <option value="savings_sweep">Move surplus to savings</option>
+                  <option value="savings_draw">Borrow from savings</option>
+                </select>
+              </div>
+              {form.budgetTreatment === 'monthly_expense' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="label">Expense month</label><select className="input" value={form.planningMonth} onChange={(e) => setForm({ ...form, planningMonth: +e.target.value })}>{months.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+                  <div><label className="label">Year</label><input className="input" type="number" value={form.planningYear} onChange={(e) => setForm({ ...form, planningYear: +e.target.value })} /></div>
+                </div>
+              )}
+              {form.budgetTreatment === 'monthly_expense' && <p className="text-xs text-slate-500">The real transfer date stays unchanged, but the selected month's usable salary is reduced.</p>}
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>

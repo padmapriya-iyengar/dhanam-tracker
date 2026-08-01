@@ -476,6 +476,13 @@ router.put('/statements', async (req, res) => {
       creditCardId: card._id,
       cycleStart,
       cycleEnd,
+      statementDate: req.body.statementDate ? normalizeCycleDate(req.body.statementDate) : dateAtDay(cycleEnd.getFullYear(), cycleEnd.getMonth(), card.statementDay || cycleEnd.getDate()),
+      dueDate: req.body.dueDate ? normalizeCycleDate(req.body.dueDate, true) : (() => {
+        const statementDate = req.body.statementDate ? normalizeCycleDate(req.body.statementDate) : dateAtDay(cycleEnd.getFullYear(), cycleEnd.getMonth(), card.statementDay || cycleEnd.getDate());
+        const dueDay = card.paymentDueDay || 5;
+        const monthOffset = dueDay > statementDate.getDate() ? 0 : 1;
+        return dateAtDay(statementDate.getFullYear(), statementDate.getMonth() + monthOffset, dueDay, true);
+      })(),
       openingBalance: parseFloat(req.body.openingBalance) || 0,
       fees: parseFloat(req.body.fees) || 0,
       interest: parseFloat(req.body.interest) || 0,

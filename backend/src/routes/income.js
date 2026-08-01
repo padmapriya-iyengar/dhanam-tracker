@@ -40,6 +40,10 @@ router.post('/', async (req, res) => {
       if (existing) return res.json(existing);
     }
     const date = new Date(req.body.date);
+    const isSalary = /^salary$/i.test(String(req.body.source || '').trim());
+    const automaticFundingDate = isSalary ? new Date(date.getFullYear(), date.getMonth() + 1, 1) : date;
+    const fundingMonth = parseInt(req.body.fundingMonth, 10) || automaticFundingDate.getMonth() + 1;
+    const fundingYear = parseInt(req.body.fundingYear, 10) || automaticFundingDate.getFullYear();
     const income = new Income({
       ...req.body,
       userId: req.user._id,
@@ -48,6 +52,9 @@ router.post('/', async (req, res) => {
       savingsAccountId: req.body.savingsAccountId || null,
       month: date.getMonth() + 1,
       year: date.getFullYear(),
+      fundingMonth,
+      fundingYear,
+      fundingOverride: req.body.fundingOverride === true,
     });
     await income.save();
 
@@ -75,6 +82,12 @@ router.put('/:id', async (req, res) => {
       updates.month = date.getMonth() + 1;
       updates.year = date.getFullYear();
     }
+    const effectiveDate = req.body.date ? new Date(req.body.date) : old.date;
+    const effectiveSource = req.body.source === undefined ? old.source : req.body.source;
+    const automaticFundingDate = /^salary$/i.test(String(effectiveSource || '').trim()) ? new Date(effectiveDate.getFullYear(), effectiveDate.getMonth() + 1, 1) : effectiveDate;
+    updates.fundingMonth = parseInt(req.body.fundingMonth, 10) || old.fundingMonth || automaticFundingDate.getMonth() + 1;
+    updates.fundingYear = parseInt(req.body.fundingYear, 10) || old.fundingYear || automaticFundingDate.getFullYear();
+    updates.fundingOverride = req.body.fundingOverride === true;
 
     const income = await Income.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role')

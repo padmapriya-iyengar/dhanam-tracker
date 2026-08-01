@@ -234,6 +234,8 @@ router.post('/', async (req, res) => {
       if (existing) return res.json(existing);
     }
     const date = new Date(req.body.date);
+    const planningMonth = parseInt(req.body.planningMonth, 10) || date.getMonth() + 1;
+    const planningYear = parseInt(req.body.planningYear, 10) || date.getFullYear();
     const expense = new Expense({
       ...req.body,
       userId: req.user._id,
@@ -241,6 +243,8 @@ router.post('/', async (req, res) => {
       affectsCurrentBalance: shouldAffectCurrentBalance(req.body.paymentMethod, req.body.affectsCurrentBalance),
       month: date.getMonth() + 1,
       year: date.getFullYear(),
+      planningMonth,
+      planningYear,
     });
     await expense.save();
 
@@ -273,6 +277,9 @@ router.put('/:id', async (req, res) => {
       updates.month = date.getMonth() + 1;
       updates.year = date.getFullYear();
     }
+    const effectiveDate = req.body.date ? new Date(req.body.date) : old.date;
+    updates.planningMonth = parseInt(req.body.planningMonth, 10) || old.planningMonth || effectiveDate.getMonth() + 1;
+    updates.planningYear = parseInt(req.body.planningYear, 10) || old.planningYear || effectiveDate.getFullYear();
 
     const expense = await Expense.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, updates, { new: true, runValidators: true })
       .populate('memberId', 'name color role')

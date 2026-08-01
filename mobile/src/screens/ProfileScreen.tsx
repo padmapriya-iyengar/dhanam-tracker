@@ -1,4 +1,4 @@
-import { Alert, Switch, View } from 'react-native';
+import { Alert, Linking, Switch, View } from 'react-native';
 import { useState } from 'react';
 import { Text } from '../components/Typography';
 import { Bell, ChevronRight, CreditCard, Landmark, LogOut, Palette, Shield, SlidersHorizontal, UserRound, UsersRound } from 'lucide-react-native';
@@ -45,6 +45,8 @@ export function ProfileScreen({ navigation }: any) {
       <SettingRow label="Hide monetary values" description="Masks amounts throughout Dhanam." value={prefs.privacyMode} onValueChange={(privacyMode) => prefs.updatePreferences({ privacyMode })} />
       <SettingRow label="Block screenshots" description="Protect sensitive screens and app-switcher previews where supported." value={prefs.screenshotBlocking} onValueChange={(screenshotBlocking) => prefs.updatePreferences({ screenshotBlocking })} />
       <Button label="App lock and devices" variant="secondary" onPress={() => navigation.navigate('Security')} icon={<ChevronRight size={18} color={colors.text} />} />
+      <Button label="Privacy policy" variant="secondary" align="left" onPress={() => Linking.openURL('https://joshikiran.com/dhanam-tracker/privacy/')} />
+      <Button label="Account deletion help" variant="secondary" align="left" onPress={() => Linking.openURL('https://joshikiran.com/dhanam-tracker/delete-account/')} />
     </Card>
     <Card>
       <View style={{ flexDirection: 'row', gap: 10 }}><Bell size={20} color={colors.primary} /><Text style={{ color: colors.text, fontWeight: '900', fontSize: 17 }}>Notifications</Text></View>

@@ -51,6 +51,7 @@ const emptyForm = {
   memberId: '', amount: '', categoryId: '', subCategoryId: '',
   description: '', date: format(new Date(), 'yyyy-MM-dd'),
   paymentMethod: 'current_account', creditCardId: '', savingsAccountId: '', notes: '',
+  planningMonth: new Date().getMonth() + 1, planningYear: new Date().getFullYear(),
 };
 
 const emptyRecoveryForm = {
@@ -198,6 +199,8 @@ export default function Expenses() {
       creditCardId: rec.creditCardId?._id || '',
       savingsAccountId: rec.savingsAccountId?._id || '',
       notes: rec.notes || '',
+      planningMonth: rec.planningMonth || rec.month,
+      planningYear: rec.planningYear || rec.year,
     });
     setWizardStep(0);
     setSaveError('');
@@ -509,6 +512,8 @@ export default function Expenses() {
           <label htmlFor="exp-wizard-notes" className="label">Notes</label>
           <textarea id="exp-wizard-notes" className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional" />
         </div>
+        {form.paymentMethod !== 'credit_card' && <div className="grid grid-cols-2 gap-3"><div><label className="label">Count in month</label><select className="input" value={form.planningMonth} onChange={(e) => setForm({ ...form, planningMonth: +e.target.value })}>{months.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div><div><label className="label">Year</label><input className="input" type="number" value={form.planningYear} onChange={(e) => setForm({ ...form, planningYear: +e.target.value })} /></div></div>}
+        {form.paymentMethod !== 'credit_card' && <p className="text-xs text-slate-400">Changes the salary-planning month only; the real expense date remains unchanged.</p>}
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
           <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
           <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>
@@ -1141,6 +1146,16 @@ export default function Expenses() {
             <textarea id="exp-notes" className="input resize-none" rows={2} value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Any additional notes..." />
           </div>
+
+          {form.paymentMethod !== 'credit_card' && (
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="label">Count in month</label><select className="input" value={form.planningMonth} onChange={(e) => setForm({ ...form, planningMonth: +e.target.value })}>{months.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+                <div><label className="label">Year</label><input className="input" type="number" value={form.planningYear} onChange={(e) => setForm({ ...form, planningYear: +e.target.value })} /></div>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Use next month when this expense should reduce next month's salary. Its transaction date remains unchanged.</p>
+            </div>
+          )}
 
           {(() => {
             const idleLabel = editing ? 'Update' : 'Add Expense';

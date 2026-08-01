@@ -6,6 +6,8 @@ const creditCardStatementSchema = new mongoose.Schema(
     creditCardId: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditCard', required: true, index: true },
     cycleStart: { type: Date, required: true },
     cycleEnd: { type: Date, required: true },
+    statementDate: { type: Date },
+    dueDate: { type: Date },
     openingBalance: { type: Number, default: 0 },
     fees: { type: Number, default: 0 },
     interest: { type: Number, default: 0 },

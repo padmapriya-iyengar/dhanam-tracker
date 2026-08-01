@@ -56,6 +56,11 @@ export type HomeData = {
     actual: number; expectedPace: number; safeToSpend: number; recurringCommitments: number;
     goalCommitments: number; categories: Array<{ categoryId: string; name: string; color: string; total: number; count: number; goal: number | null; goalPercent: number | null }>;
   };
+  funding: {
+    incomeAvailable: number; accountExpenses: number; transferExpenses: number; pendingRecurring: number; cardsDue: number;
+    plannedOutflow: number; salaryRemaining: number; savingsRequired: number;
+    cardDues: Array<{ creditCardId: string; name: string; dueDate: string; amount: number; paid: number; remaining: number; estimated: boolean }>;
+  };
   accounts: { combinedCash: number; savingsInvestments: number; cardOutstanding: number; accounts: HomeAccount[] };
   attention: HomeAttention[];
   recentActivity: HomeActivity[];

@@ -136,6 +136,7 @@ export function HomeScreen({ navigation }: any) {
 
   const summary = data?.summary;
   const pulse = data?.spendPulse;
+  const funding = data?.funding;
   const accountSummary = data?.accounts;
   const scopeName = prefs.homeMemberId ? members.find((member) => member._id === prefs.homeMemberId)?.name || 'Member' : 'Household';
 
@@ -143,6 +144,7 @@ export function HomeScreen({ navigation }: any) {
     if (prefs.hiddenHomeSections.includes(id)) return null;
     const collapsed = prefs.collapsedHomeSections.includes(id);
     if (id === 'spendPulse' && pulse) return <Section key={id} id={id} title="Spend pulse" subtitle="Actual pace, goals, and room to spend" collapsed={collapsed} toggle={toggleSection}>
+      {funding && <Card><Text style={{ color: colors.text, fontWeight: '900', fontSize: 16 }}>Monthly funding</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}><View style={{ flex: 1, minWidth: 130 }}><Text style={{ color: colors.textMuted }}>Salary left</Text><Text style={{ color: colors.success, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(funding.salaryRemaining)}</Text></View><View style={{ flex: 1, minWidth: 130 }}><Text style={{ color: colors.textMuted }}>Savings needed</Text><Text style={{ color: funding.savingsRequired > 0 ? colors.danger : colors.success, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(funding.savingsRequired)}</Text></View><View style={{ flex: 1, minWidth: 130 }}><Text style={{ color: colors.textMuted }}>Cards due</Text><Text style={{ color: colors.danger, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(funding.cardsDue)}</Text></View><View style={{ flex: 1, minWidth: 130 }}><Text style={{ color: colors.textMuted }}>Pending recurring</Text><Text style={{ color: colors.warning, fontWeight: '900', fontSize: 22 }}>{prefs.privacyMode ? '••••••' : money(funding.pendingRecurring)}</Text></View></View><Text style={{ color: colors.textMuted }}>Pending recurring commitments are reserved; generated expenses and card payments are not counted twice.</Text></Card>}
       <Card>
         <View style={{ flexDirection: 'row', gap: 14 }}>
           <View style={{ flex: 1 }}><Text style={{ color: colors.textMuted }}>Spent so far</Text><Text style={{ color: moneyTone(colors, 'expense'), fontSize: 22, fontWeight: '900' }}>{prefs.privacyMode ? '••••••' : money(pulse.actual)}</Text></View>

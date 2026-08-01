@@ -20,6 +20,9 @@ function normalizeAccountFields(data) {
   payload.toSavingsAccountId = payload.toAccountType === 'savings' ? payload.toSavingsAccountId || null : null;
   payload.toCreditCardId = payload.toAccountType === 'credit_card' ? payload.toCreditCardId || null : null;
 
+  if (payload.toAccountType === 'credit_card') payload.budgetTreatment = 'card_payment';
+  payload.budgetTreatment = payload.budgetTreatment || 'internal';
+
   return payload;
 }
 
@@ -96,6 +99,8 @@ router.post('/', async (req, res) => {
     }
     const payload = normalizeAccountFields(req.body);
     const dateParts = parseDateParts(payload.date);
+    payload.planningMonth = parseInt(payload.planningMonth, 10) || dateParts.month;
+    payload.planningYear = parseInt(payload.planningYear, 10) || dateParts.year;
     const transfer = new Transfer({
       ...payload,
       ...dateParts,
@@ -125,6 +130,9 @@ router.put('/:id', async (req, res) => {
     delete updates.userId;
     updates.updatedByUserId = req.actorUser?._id || req.user._id;
     if (updates.date) Object.assign(updates, parseDateParts(updates.date));
+    const effectiveDate = updates.date ? new Date(updates.date) : old.date;
+    updates.planningMonth = parseInt(updates.planningMonth, 10) || old.planningMonth || effectiveDate.getMonth() + 1;
+    updates.planningYear = parseInt(updates.planningYear, 10) || old.planningYear || effectiveDate.getFullYear();
 
     const next = new Transfer({ ...old.toObject(), ...updates });
     await validateTransfer(req.user._id, next);

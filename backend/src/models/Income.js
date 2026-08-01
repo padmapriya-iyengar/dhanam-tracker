@@ -12,6 +12,9 @@ const incomeSchema = new mongoose.Schema(
     date: { type: Date, required: true },
     month: { type: Number, required: true, min: 1, max: 12 },
     year: { type: Number, required: true },
+    fundingMonth: { type: Number, min: 1, max: 12 },
+    fundingYear: { type: Number },
+    fundingOverride: { type: Boolean, default: false },
     savingsAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavingsAccount', default: null },
     imported: { type: Boolean, default: false },
     clientMutationId: { type: String, trim: true, default: null },
@@ -21,6 +24,7 @@ const incomeSchema = new mongoose.Schema(
 
 incomeSchema.index({ date: -1 });
 incomeSchema.index({ month: 1, year: 1 });
+incomeSchema.index({ userId: 1, fundingYear: 1, fundingMonth: 1 });
 incomeSchema.index({ userId: 1, memberId: 1 });
 incomeSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 

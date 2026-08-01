@@ -13,6 +13,8 @@ const expenseSchema = new mongoose.Schema(
     date: { type: Date, required: true },
     month: { type: Number, required: true, min: 1, max: 12 },
     year: { type: Number, required: true },
+    planningMonth: { type: Number, min: 1, max: 12 },
+    planningYear: { type: Number },
     paymentMethod: {
       type: String,
       // Legacy values are kept so old records remain readable until startup migration normalizes them.
@@ -32,6 +34,7 @@ const expenseSchema = new mongoose.Schema(
 
 expenseSchema.index({ date: -1, _id: -1, createdAt: -1 });
 expenseSchema.index({ month: 1, year: 1 });
+expenseSchema.index({ userId: 1, planningYear: 1, planningMonth: 1 });
 expenseSchema.index({ userId: 1, memberId: 1 });
 expenseSchema.index({ categoryId: 1 });
 expenseSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });

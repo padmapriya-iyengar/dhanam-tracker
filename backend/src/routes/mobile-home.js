@@ -12,6 +12,7 @@ const CategoryGoal = require('../models/CategoryGoal');
 const Member = require('../models/Member');
 const Balance = require('../models/Balance');
 const SavingsAccount = require('../models/SavingsAccount');
+const monthlyFunding = require('../services/monthlyFunding');
 
 const CURRENT_METHODS = ['cash', 'card', 'current_account', 'debit_card', 'netbanking', 'upi', 'other'];
 const id = (value) => String(value?._id || value || '');
@@ -233,11 +234,12 @@ router.get('/', async (req, res) => {
     const memberId = mongoose.Types.ObjectId.isValid(req.query.memberId)
       ? new mongoose.Types.ObjectId(req.query.memberId)
       : null;
-    const [summary, accounts, activity, goals] = await Promise.all([
+    const [summary, accounts, activity, goals, funding] = await Promise.all([
       monthlySummary(req.user._id, memberId, window),
       accountSnapshot(req.user._id, memberId, window),
       recentActivity(req.user._id, memberId),
       CategoryGoal.find({ userId: req.user._id }),
+      monthlyFunding(req.user._id, window.month, window.year, memberId),
     ]);
     const goalMap = new Map(goals.map((goal) => [id(goal.categoryId), goal.goal]));
     const categories = summary.categories.slice(0, 3).map((category) => ({
@@ -251,13 +253,14 @@ router.get('/', async (req, res) => {
     ]);
     const totalGoals = goals.reduce((total, goal) => total + goal.goal, 0);
     const expectedPace = window.daysInMonth ? summary.netExpense * (window.daysInMonth / Math.max(window.elapsedDays, 1)) : summary.netExpense;
-    const safeToSpend = Math.max(summary.totalIncome - sum(recurringCommitments) - totalGoals - summary.netExpense, 0);
+    const safeToSpend = funding.salaryRemaining;
     const attention = await attentionFeed(req.user._id, memberId, window, summary, accounts);
     res.json({
       month: window.month, year: window.year, isCurrentMonth: window.isCurrent,
       generatedAt: new Date(),
       summary: { ...summary, categories: undefined },
       spendPulse: { actual: summary.netExpense, expectedPace, safeToSpend, recurringCommitments: sum(recurringCommitments), goalCommitments: totalGoals, categories },
+      funding,
       accounts,
       attention,
       recentActivity: activity,

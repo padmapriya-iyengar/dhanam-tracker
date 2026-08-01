@@ -11,6 +11,9 @@ const transferSchema = new mongoose.Schema(
     date: { type: Date, required: true },
     month: { type: Number, required: true, min: 1, max: 12 },
     year: { type: Number, required: true },
+    budgetTreatment: { type: String, enum: ['internal', 'monthly_expense', 'card_payment', 'savings_sweep', 'savings_draw'], default: 'internal' },
+    planningMonth: { type: Number, min: 1, max: 12 },
+    planningYear: { type: Number },
     fromAccountType: { type: String, enum: accountTypes, required: true },
     fromMemberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', default: null },
     fromSavingsAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavingsAccount', default: null },
@@ -29,6 +32,7 @@ const transferSchema = new mongoose.Schema(
 
 transferSchema.index({ userId: 1, date: -1 });
 transferSchema.index({ userId: 1, month: 1, year: 1 });
+transferSchema.index({ userId: 1, planningYear: 1, planningMonth: 1, budgetTreatment: 1 });
 transferSchema.index({ userId: 1, toCreditCardId: 1 });
 transferSchema.index({ userId: 1, clientMutationId: 1 }, { unique: true, sparse: true });
 
