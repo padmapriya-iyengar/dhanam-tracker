@@ -758,7 +758,7 @@ export default function CreditCards() {
       )}
 
       {summary.length > 0 && (
-        <CollapsibleSection storageKey="credit-cards-reconciliation" title="Credit card reconciliation" subtitle="Compare bank statements with recorded card activity" icon={Save} summary={reconciliationDifference > 0.5 ? `Difference ${fmt(reconciliationDifference)}` : 'Reconciled'} defaultOpen={false} contentClassName="space-y-3">
+        <CollapsibleSection storageKey="credit-cards-reconciliation" title="Credit card reconciliation" subtitle="Compare card statements with recorded activity" icon={Save} summary={reconciliationDifference > 0.5 ? `Difference ${fmt(reconciliationDifference)}` : 'Reconciled'} defaultOpen={false} contentClassName="space-y-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="font-semibold text-slate-700">Statement selection</h2>

@@ -193,7 +193,7 @@ export default function Income() {
           <div><label className="label">Funds which month?</label><select className="input" value={form.fundingMonth} onChange={(e) => setForm({ ...form, fundingMonth: +e.target.value, fundingOverride: true })}>{months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
           <div><label className="label">Funding year</label><input className="input" type="number" value={form.fundingYear} onChange={(e) => setForm({ ...form, fundingYear: +e.target.value, fundingOverride: true })} /></div>
         </div>
-        <p className="text-xs text-slate-400">Salary automatically funds the following month. You can override it here; the bank transaction date stays unchanged.</p>
+        <p className="text-xs text-slate-400">Salary automatically funds the following month. You can override it here; the actual transaction date stays unchanged.</p>
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
           <div className="flex justify-between gap-3 py-1"><span>Amount</span><strong className="text-slate-800"><DirhamSymbol className="h-[0.8em] w-auto inline align-middle mr-0.5" />{fmt(form.amount || 0)}</strong></div>
           <div className="flex justify-between gap-3 py-1"><span>Member</span><strong className="text-slate-800">{selectedMember?.name || '-'}</strong></div>

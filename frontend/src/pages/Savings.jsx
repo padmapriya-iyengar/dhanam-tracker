@@ -8,7 +8,7 @@ import { fmt, savingsApi } from '../services/api';
 
 const ACCOUNT_TYPES = [
   { value: 'savings', label: 'Savings Account' },
-  { value: 'current', label: 'Current Account' },
+  { value: 'current', label: 'Account' },
   { value: 'fixed_deposit', label: 'Fixed Deposit' },
   { value: 'investment', label: 'Investment / Stocks' },
   { value: 'other', label: 'Other' },
@@ -130,7 +130,7 @@ export default function Savings() {
             <label className="label">Account last four digits</label>
             <input type="text" inputMode="numeric" maxLength={4} className="input" value={form.lastFourDigits}
               onChange={(e) => setForm({ ...form, lastFourDigits: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="e.g. 8002" />
-            <p className="mt-1 text-xs text-slate-400">Used to match masked bank notifications.</p>
+            <p className="mt-1 text-xs text-slate-400">Used to match masked transaction notifications.</p>
           </div>
         </div>
       );
@@ -220,7 +220,7 @@ export default function Savings() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Savings Accounts</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track balances across all your bank accounts</p>
+          <p className="text-sm text-slate-500 mt-0.5">Track balances across all your financial accounts</p>
         </div>
         <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={15} /> Add Account
@@ -319,7 +319,7 @@ export default function Savings() {
         <div className="card text-center py-14">
           <Building2 size={40} className="text-slate-200 mx-auto mb-3" />
           <p className="font-medium text-slate-500">No savings accounts yet</p>
-          <p className="text-sm text-slate-400 mt-1">Add your bank accounts to track balances in one place</p>
+          <p className="text-sm text-slate-400 mt-1">Add your accounts to track balances in one place</p>
           <button onClick={openAdd} className="btn-primary mt-4 w-full justify-center sm:w-auto">
             <Plus size={15} /> Add Account
           </button>

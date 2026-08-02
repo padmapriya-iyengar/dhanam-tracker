@@ -67,7 +67,7 @@ export default function MessageImport() {
         }).catch(() => null);
       } else {
         await incomeApi.create({
-          memberId: draft.memberId, amount: Number(draft.amount), source: draft.merchant || (draft.classification === 'refund' ? 'Refund' : 'Bank credit'),
+          memberId: draft.memberId, amount: Number(draft.amount), source: draft.merchant || (draft.classification === 'refund' ? 'Refund' : 'Transaction credit'),
           description: draft.description, date: draft.transactionDate,
           savingsAccountId: draft.accountType === 'savings' ? draft.accountId : null,
         });
@@ -83,21 +83,22 @@ export default function MessageImport() {
     <div className="max-w-4xl mx-auto space-y-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">AI-assisted entry</p>
-        <h1 className="text-2xl font-bold text-slate-800 mt-1">Import a bank message</h1>
-        <p className="text-sm text-slate-500 mt-1">Paste a bank or card notification. Dhanam will prepare a draft; nothing is saved without your confirmation.</p>
+        <h1 className="text-2xl font-bold text-slate-800 mt-1">Import transaction text</h1>
+        <p className="text-sm text-slate-500 mt-1">Paste a transaction notification or payment message. Dhanam will prepare a draft; nothing is saved without your confirmation.</p>
+        <p className="text-xs leading-relaxed text-slate-400 mt-2">Dhanam Tracker only processes text that you manually paste or explicitly share. No SMS messages are automatically read. No bank accounts are accessed.</p>
       </div>
 
       <section className="bg-white border border-slate-100 rounded-xl shadow-sm p-4 sm:p-5">
         <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
         <textarea value={message} onChange={(event) => setMessage(event.target.value)} rows={7} maxLength={4000}
-          placeholder="Paste the complete SMS or bank notification here…"
+          placeholder="Paste the complete transaction notification or payment message here…"
           className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 resize-y" />
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs text-slate-400">{message.length}/4000</span>
           <button onClick={analyze} disabled={analyzing || message.trim().length < 8}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
             {analyzing ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
-            {analyzing ? 'Analyzing…' : 'Analyze message'}
+            {analyzing ? 'Extracting…' : 'Extract transaction'}
           </button>
         </div>
       </section>

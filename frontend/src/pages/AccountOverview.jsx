@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import CollapsibleSection from '../components/CollapsibleSection';
 import { accountsApi, fmt } from '../services/api';
 
-const groups = { current: 'Current Accounts', savings: 'Savings & Investments', credit_card: 'Credit Cards' };
+const groups = { current: 'Accounts', savings: 'Savings Overview', credit_card: 'Credit Cards' };
 
 function localDateValue(date) {
   const year = date.getFullYear();

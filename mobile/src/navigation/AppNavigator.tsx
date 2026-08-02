@@ -81,10 +81,10 @@ export function AppNavigator() {
       <Stack.Screen name="Add" component={AddMenuScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExpenseForm" component={ExpenseFormScreen} options={{ title: 'Expense' }} />
       <Stack.Screen name="IncomeForm" component={IncomeFormScreen} options={{ title: 'Income' }} />
-      <Stack.Screen name="TransferForm" component={TransferFormScreen} options={{ title: 'Transfer' }} />
+      <Stack.Screen name="TransferForm" component={TransferFormScreen} options={{ title: 'Record transfer' }} />
       <Stack.Screen name="RecoveryPicker" component={RecoveryPickerScreen} options={{ title: 'Recovery' }} />
       <Stack.Screen name="RecoveryForm" component={RecoveryFormScreen} options={{ title: 'Recovery' }} />
-      <Stack.Screen name="MessageImport" component={MessageImportScreen} options={{ title: 'Import message' }} />
+      <Stack.Screen name="MessageImport" component={MessageImportScreen} options={{ title: 'Import transaction text' }} />
       <Stack.Screen name="ImportReview" component={ImportReviewScreen} options={{ title: 'Review import' }} />
       <Stack.Screen name="ImportInbox" component={ImportInboxScreen} options={{ title: 'Import inbox' }} />
     </Stack.Navigator>

@@ -8,7 +8,7 @@ import { useApp } from '../context/AppContext';
 import { creditCardsApi, fmt, savingsApi, subscriptionsApi } from '../services/api';
 
 const PAYMENT_METHODS = [
-  { value: 'current_account', label: 'Current Account' },
+  { value: 'current_account', label: 'Account' },
   { value: 'credit_card', label: 'Credit Card' },
   { value: 'savings', label: 'Savings' },
   { value: 'cash', label: 'Cash' },

@@ -57,7 +57,7 @@ export type HomeData = {
     goalCommitments: number; categories: Array<{ categoryId: string; name: string; color: string; total: number; count: number; goal: number | null; goalPercent: number | null }>;
   };
   funding: {
-    incomeAvailable: number; accountExpenses: number; transferExpenses: number; pendingRecurring: number; cardsDue: number;
+    incomeAvailable: number; accountExpenses: number; transferExpenses: number; pendingRecurring: number; cardsDue: number; upcomingCardBill: number;
     plannedOutflow: number; salaryRemaining: number; savingsRequired: number;
     cardDues: Array<{ creditCardId: string; name: string; dueDate: string; amount: number; paid: number; remaining: number; estimated: boolean }>;
   };

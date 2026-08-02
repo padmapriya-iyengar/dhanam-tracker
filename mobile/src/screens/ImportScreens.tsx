@@ -50,20 +50,20 @@ export function MessageImportScreen({ navigation, route }: any) {
     } catch (cause) {
       const error = errorMessage(cause);
       await saveImportInboxItem({ id: inboxId, createdAt: Date.now(), updatedAt: Date.now(), status: 'failed', source: sharedText ? 'share' : 'paste', message, error });
-      Alert.alert('Could not analyze message', error);
+      Alert.alert('Could not extract transaction', error);
     } finally { setBusy(false); }
   }
 
   return <Screen>
-    <Title subtitle="Dhanam analyzes only what you submit. The original text is removed after a successful save.">Import bank message</Title>
+    <Title subtitle="Dhanam processes only what you submit. The original text is removed after a successful save.">Import transaction text</Title>
     <Card>
-      <View style={{ flexDirection: 'row', gap: 12 }}><MessageSquareText color={colors.primary} /><Text style={{ color: colors.text, flex: 1 }}>Paste an SMS or bank notification, or share text using a Dhanam deep link.</Text></View>
+      <View style={{ flexDirection: 'row', gap: 12 }}><MessageSquareText color={colors.primary} /><Text style={{ color: colors.text, flex: 1 }}>Paste a transaction notification or payment message, or share text using a Dhanam deep link.</Text></View>
       <Button label="Open import inbox" variant="secondary" onPress={() => navigation.navigate('ImportInbox')} icon={<Inbox size={17} color={colors.text} />} />
     </Card>
-    <Field label="Bank message" value={message} onChangeText={setMessage} multiline numberOfLines={9} placeholder="Paste the complete notification here…" />
-    <Button label={busy ? 'Analyzing…' : 'Analyze securely'} disabled={busy || message.trim().length < 8} onPress={analyze} />
-    <Button label="Import notification screenshot" variant="secondary" onPress={() => Alert.alert('OCR is not available in this build', 'Screenshot OCR will require an explicit image picker and on-device OCR dependency. No image has been accessed.')} icon={<Camera size={17} color={colors.text} />} />
-    <Text style={{ color: colors.textMuted, lineHeight: 21 }}>Automatic notification access is intentionally disabled. A future Android listener will require explicit opt-in and granular controls.</Text>
+    <Field label="Transaction message" value={message} onChangeText={setMessage} multiline numberOfLines={9} placeholder="Paste the complete notification here…" />
+    <Button label={busy ? 'Extracting…' : 'Extract transaction'} disabled={busy || message.trim().length < 8} onPress={analyze} />
+    <Button label="Import transaction screenshot" variant="secondary" onPress={() => Alert.alert('OCR is not available in this build', 'Screenshot OCR will require an explicit image picker and on-device OCR dependency. No image has been accessed.')} icon={<Camera size={17} color={colors.text} />} />
+    <Text style={{ color: colors.textMuted, lineHeight: 21 }}>Dhanam Tracker only processes text that you manually paste or explicitly share. No SMS messages are automatically read. No bank accounts are accessed.</Text>
   </Screen>;
 }
 
@@ -136,7 +136,7 @@ export function ImportInboxScreen({ navigation }: any) {
     {!!selected.length && <Button label={`Dismiss ${selected.length} selected`} variant="danger" onPress={dismissSelected} icon={<Trash2 size={17} color={colors.danger} />} />}
     {items.length === 0 && <StateView kind="empty" message="No pending or previous imports." />}
     {items.map((item) => <Pressable key={item.id} onLongPress={() => setSelected((value) => value.includes(item.id) ? value.filter((id) => id !== item.id) : [...value, item.id])} onPress={() => item.draft && navigation.navigate('ImportReview', { item })} style={{ borderRadius: radius.lg }}>
-      <Card><View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{item.draft?.description || item.error || 'Bank message'}</Text><Text style={{ color: colors.textMuted }}>{label(item.status)} · {new Date(item.createdAt).toLocaleString()}</Text></View>{selected.includes(item.id) ? <CheckCircle2 color={colors.primary} /> : <Share2 color={colors.textMuted} />}</View></Card>
+      <Card><View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: '900' }}>{item.draft?.description || item.error || 'Transaction message'}</Text><Text style={{ color: colors.textMuted }}>{label(item.status)} · {new Date(item.createdAt).toLocaleString()}</Text></View>{selected.includes(item.id) ? <CheckCircle2 color={colors.primary} /> : <Share2 color={colors.textMuted} />}</View></Card>
     </Pressable>)}
     <Button label="Clear learned merchant mappings" variant="secondary" onPress={() => Alert.alert('Clear learned mappings?', 'Future imports will no longer use your confirmed merchant categories.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: async () => { try { await api.clearMessageLearnings(); Alert.alert('Mappings cleared'); } catch (cause) { Alert.alert('Could not clear mappings', errorMessage(cause)); } } }])} />
   </Screen>;

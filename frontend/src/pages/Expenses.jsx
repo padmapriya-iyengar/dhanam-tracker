@@ -10,7 +10,7 @@ import { useApp } from '../context/AppContext';
 import { creditCardsApi, expensesApi, fmt, savingsApi } from '../services/api';
 
 const PAYMENT_METHODS = [
-  { value: 'current_account', label: 'Current Account' },
+  { value: 'current_account', label: 'Account' },
   { value: 'credit_card', label: 'Credit Card' },
   { value: 'savings', label: 'Savings' },
   { value: 'cash', label: 'Cash' },
@@ -18,19 +18,19 @@ const PAYMENT_METHODS = [
 ];
 
 const PAYMENT_LABELS = {
-  current_account: 'Current Account',
-  upi: 'Current Account',
-  debit_card: 'Current Account',
+  current_account: 'Account',
+  upi: 'Account',
+  debit_card: 'Account',
   credit_card: 'Credit Card',
   savings: 'Savings',
   cash: 'Cash',
-  netbanking: 'Current Account',
+  netbanking: 'Account',
   other: 'Other',
   card: 'Card',
 };
 
 const RECOVERY_SOURCES = [
-  { value: 'bank_reimbursement', label: 'Bank Reimbursement' },
+  { value: 'bank_reimbursement', label: 'Payment Reimbursement' },
   { value: 'family_transfer', label: 'Family Transfer' },
   { value: 'employer', label: 'Employer' },
   { value: 'friend', label: 'Friend' },
@@ -437,7 +437,7 @@ export default function Expenses() {
         <div className="space-y-3">
           <div>
             <p className="text-sm font-semibold text-slate-800">How did you pay?</p>
-            <p className="mt-1 text-xs text-slate-400">Current Account is selected by default.</p>
+            <p className="mt-1 text-xs text-slate-400">Account is selected by default.</p>
           </div>
           <div className="grid grid-cols-1 gap-2">
             {PAYMENT_METHODS.map((method) => (
@@ -970,7 +970,7 @@ export default function Expenses() {
               rows={2}
               value={recoveryForm.notes}
               onChange={(e) => setRecoveryForm({ ...recoveryForm, notes: e.target.value })}
-              placeholder="Bank reimbursement, shared expense, etc."
+              placeholder="Payment reimbursement, shared expense, etc."
             />
           </div>
 

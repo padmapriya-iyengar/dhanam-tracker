@@ -172,9 +172,9 @@ export function HomeScreen({ navigation }: any) {
     </Section>;
     if (id === 'accounts' && accountSummary) return <Section key={id} id={id} title="Accounts" subtitle="Cash, savings, and card liability" collapsed={collapsed} toggle={toggleSection}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        <Metric label="Combined cash" amount={money(accountSummary.combinedCash)} hint="Current accounts" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
-        <Metric label="Savings & investments" amount={money(accountSummary.savingsInvestments)} hint="All savings assets" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
-        <Metric label="Card outstanding" amount={money(accountSummary.cardOutstanding)} hint="Recorded purchases less payments" tone={moneyTone(colors, 'liability')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Recorded cash" amount={money(accountSummary.combinedCash)} hint="Recorded account balances" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Savings overview" amount={money(accountSummary.savingsInvestments)} hint="All recorded savings assets" tone={moneyTone(colors, 'asset')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
+        <Metric label="Recorded card balance" amount={money(accountSummary.cardOutstanding)} hint="Recorded purchases less payments" tone={moneyTone(colors, 'liability')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Accounts')} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={224} contentContainerStyle={{ gap: 10, paddingHorizontal: 2, paddingVertical: 2 }}>
         {accountSummary.accounts.map((account: HomeAccount) => {
@@ -218,6 +218,7 @@ export function HomeScreen({ navigation }: any) {
     </View>
     {!online && <Card><Text accessibilityRole="alert" style={{ color: colors.warning, fontWeight: '900' }}>Offline snapshot</Text><Text style={{ color: colors.textMuted }}>Showing the last Home data saved on this device.</Text></Card>}
     {user?.isDemo && <Card><Text style={{ color: colors.warning, fontWeight: '900' }}>Demo workspace</Text><Text style={{ color: colors.textMuted }}>Shared sample data only—do not enter private financial information.</Text></Card>}
+    <Card><Text style={{ color: colors.text, fontWeight: '900' }}>Personal record keeping</Text><Text style={{ color: colors.textMuted, lineHeight: 20 }}>Dhanam Tracker is a personal record-keeping application. It does not provide banking, payment processing, lending, investment, or money transfer services.</Text></Card>
     {summary && <View style={{ gap: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}><View><Text style={{ color: colors.text, fontSize: 20, fontWeight: '900' }}>Monthly snapshot</Text><Text style={{ color: colors.textMuted }}>{scopeName} · Updated {relativeTime(data?.generatedAt || '')}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Customize Home" onPress={() => navigation.navigate('HomeSettings', { members })} style={{ padding: 9 }}><Settings2 size={21} color={colors.primary} /></Pressable></View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -225,7 +226,7 @@ export function HomeScreen({ navigation }: any) {
         <Metric label="Net expenses" amount={money(summary.netExpense)} hint="After recoveries" tone={moneyTone(colors, 'expense')} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'expense' })} />
         <Metric label="Net savings" amount={money(summary.netSavings)} hint={`${summary.savingsRate}% savings rate${summary.savingsChange === null ? '' : ` · ${summary.savingsChange >= 0 ? '+' : ''}${summary.savingsChange}%`}`} tone={moneyTone(colors, 'net', summary.netSavings)} privacy={prefs.privacyMode} onPress={() => navigation.navigate('Activity', { filter: 'all' })} />
       </View>
-      <Card><View style={{ flexDirection: 'row', gap: 12 }}><ArrowLeftRight size={21} color={colors.primary} /><Text style={{ color: colors.textMuted, lineHeight: 20, flex: 1 }}>Credit-card purchases count as expenses when made. Card payments are transfers, so they are not counted again.</Text></View></Card>
+      <Card><View style={{ flexDirection: 'row', gap: 12 }}><ArrowLeftRight size={21} color={colors.primary} /><Text style={{ color: colors.textMuted, lineHeight: 20, flex: 1 }}>Credit-card purchases count as expenses when made. Card payments are recorded as transfers to avoid duplicate expense records.</Text></View></Card>
     </View>}
     {prefs.homeSections.map(renderSection)}
   </Screen>;

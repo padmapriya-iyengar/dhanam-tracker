@@ -169,7 +169,7 @@ export default function Dashboard() {
     {
       label: 'Available funds as of period end',
       value: availableFunds,
-      detail: 'Current account plus savings balances as of the selected month-end, or today for the current month.',
+      detail: 'Account plus savings balances as of the selected month-end, or today for the current month.',
       tone: availableFunds >= 0 ? 'text-emerald-700' : 'text-rose-700',
     },
   ];
@@ -205,6 +205,11 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+        <p className="text-sm font-semibold text-slate-700">Personal record keeping</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">Dhanam Tracker is a personal record-keeping application. It does not provide banking, payment processing, lending, investment, or money transfer services.</p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Salary left to use</p><p className="mt-2 text-2xl font-bold text-emerald-700"><Money value={funding.salaryRemaining} /></p><p className="mt-1 text-xs text-emerald-600">After account expenses, planned transfers and card statements</p></div>
         <div className={`rounded-lg border p-4 ${(funding.savingsRequired || 0) > 0 ? 'border-rose-100 bg-rose-50' : 'border-slate-100 bg-white'}`}><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Borrow from savings</p><p className={`mt-2 text-2xl font-bold ${(funding.savingsRequired || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}><Money value={funding.savingsRequired} /></p><p className="mt-1 text-xs text-slate-400">Shortfall after this month's obligations</p></div>
@@ -213,13 +218,13 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-slate-100 bg-white p-4">
+        <div className="rounded-lg border border-violet-100 bg-violet-50 p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Month Result</p>
-            {monthResult >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-500" />}
+            <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Upcoming card bill</p>
+            <CreditCard size={16} className="text-violet-500" />
           </div>
-          <p className={`text-2xl font-bold mt-2 ${monthResult >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}><Money value={monthResult} /></p>
-          <p className="text-xs text-slate-400 mt-1">Income minus net expenses</p>
+          <p className="mt-2 text-2xl font-bold text-violet-700"><Money value={funding.upcomingCardBill} /></p>
+          <p className="mt-1 text-xs text-violet-500">Purchases in each card's upcoming statement cycle</p>
         </div>
         <div className="rounded-lg border border-slate-100 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
@@ -227,7 +232,7 @@ export default function Dashboard() {
             <Wallet size={16} className="text-indigo-500" />
           </div>
           <p className={`text-2xl font-bold mt-2 ${availableFunds >= 0 ? 'text-indigo-700' : 'text-rose-700'}`}><Money value={availableFunds} /></p>
-          <p className="text-xs text-slate-400 mt-1">Current + savings balance</p>
+          <p className="text-xs text-slate-400 mt-1">Account + savings balance</p>
         </div>
         <div className="rounded-lg border border-violet-100 bg-violet-50 p-4">
           <div className="flex items-center justify-between gap-3">
@@ -402,7 +407,7 @@ export default function Dashboard() {
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className={`rounded-lg px-3 py-2 ${balance.currentBalance < 0 ? 'bg-rose-50' : 'bg-indigo-50'}`}>
-                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${balance.currentBalance < 0 ? 'text-rose-500' : 'text-indigo-500'}`}>Current Account</p>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${balance.currentBalance < 0 ? 'text-rose-500' : 'text-indigo-500'}`}>Account</p>
                     <p className={`mt-1 text-sm font-bold ${balance.currentBalance < 0 ? 'text-rose-700' : 'text-indigo-700'}`}><Money value={balance.currentBalance} /></p>
                   </div>
                   <div className="rounded-lg bg-slate-50 px-3 py-2">
@@ -433,7 +438,7 @@ export default function Dashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['Owner', 'Current Account', 'Carry Forward', 'Opening Balance', 'Savings Accounts'].map((heading) => (
+                {['Owner', 'Account', 'Carry Forward', 'Opening Balance', 'Savings Accounts'].map((heading) => (
                   <th key={heading} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{heading}</th>
                 ))}
               </tr>

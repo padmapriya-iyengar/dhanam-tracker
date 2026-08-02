@@ -37,7 +37,7 @@ function accountLabel(account) {
 }
 
 function currentAccountLabel(member) {
-  return member ? `${member.name} Current Account` : 'Unknown current account';
+  return member ? `${member.name} Account` : 'Unknown account';
 }
 
 export default function Transfers() {
@@ -167,7 +167,7 @@ export default function Transfers() {
 
   const total = records.reduce((sum, transfer) => sum + transfer.amount, 0);
   const transferWizardSteps = ['Amount', 'From', 'To', 'Details'];
-  const accountTypeLabel = { current: 'Current Account', savings: 'Savings Account', credit_card: 'Credit Card' };
+  const accountTypeLabel = { current: 'Account', savings: 'Savings Account', credit_card: 'Credit Card' };
   const accountOptionsFor = (type) => {
     if (type === 'current') return members.map((member) => ({ id: member._id, label: currentAccountLabel(member), color: member.color }));
     if (type === 'savings') return savingsAccounts.map((account) => ({ id: account._id, label: accountLabel(account), color: account.color }));
@@ -210,7 +210,7 @@ export default function Transfers() {
     return (
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-semibold text-slate-800">{side === 'from' ? 'Move money from where?' : 'Move money to where?'}</p>
+          <p className="text-sm font-semibold text-slate-800">{side === 'from' ? 'Which account did it come from?' : 'Which account received it?'}</p>
           <p className="mt-1 text-xs text-slate-400">Choose account type, then the specific account.</p>
         </div>
         <div className="grid grid-cols-1 gap-2">
@@ -282,10 +282,10 @@ export default function Transfers() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Transfers</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Move money between accounts without changing income or expense reports</p>
+          <p className="text-sm text-slate-500 mt-0.5">Record movements between accounts without changing income or expense reports</p>
         </div>
         <button onClick={openAdd} className="btn-primary w-full justify-center sm:w-auto">
-          <Plus size={15} /> Add Transfer
+          <Plus size={15} /> Record Transfer
         </button>
       </div>
 
@@ -319,7 +319,7 @@ export default function Transfers() {
         <div className="card text-center py-12">
           <ArrowRightLeft size={40} className="text-slate-200 mx-auto mb-3" />
           <p className="text-slate-400 text-sm">No transfers found for this period.</p>
-          <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Add Transfer</button>
+          <button onClick={openAdd} className="btn-primary mt-4"><Plus size={15} /> Record Transfer</button>
         </div>
       )}
 
@@ -401,7 +401,7 @@ export default function Transfers() {
         </>
       )}
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transfer' : 'Add Transfer'} size="lg">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transfer Record' : 'Record Transfer'} size="lg">
         <form
           onSubmit={(event) => {
             if (event.nativeEvent.submitter?.dataset.allowSubmit !== 'true') {
@@ -435,7 +435,7 @@ export default function Transfers() {
                 {wizardStep === 0 ? 'Cancel' : 'Back'}
               </button>
               {wizardStep === transferWizardSteps.length - 1 ? (
-                <button type="button" onClick={handleSubmit} className="btn-primary flex-1" disabled={saving || !transferCanContinue()}>{saving ? 'Saving...' : editing ? 'Update' : 'Save Transfer'}</button>
+                <button type="button" onClick={handleSubmit} className="btn-primary flex-1" disabled={saving || !transferCanContinue()}>{saving ? 'Saving...' : editing ? 'Update Record' : 'Save Record'}</button>
               ) : (
                 <button type="button" onClick={() => setWizardStep((step) => Math.min(step + 1, transferWizardSteps.length - 1))} className="btn-primary flex-1" disabled={!transferCanContinue()}>Next</button>
               )}
@@ -458,13 +458,13 @@ export default function Transfers() {
             <div className="rounded-xl border border-slate-100 p-3 space-y-3">
               <label className="label">From Account</label>
               <select className="input" value={form.fromAccountType} onChange={(e) => handleAccountTypeChange('from', e.target.value)}>
-                <option value="current">Current Account</option>
+                <option value="current">Account</option>
                 <option value="savings">Savings Account</option>
                 <option value="credit_card">Credit Card</option>
               </select>
               {form.fromAccountType === 'current' ? (
                 <select className="input" value={form.fromMemberId} onChange={(e) => setForm({ ...form, fromMemberId: e.target.value })} required>
-                  <option value="">Select current account owner</option>
+                  <option value="">Select account owner</option>
                   {members.map((member) => <option key={member._id} value={member._id}>{currentAccountLabel(member)}</option>)}
                 </select>
               ) : form.fromAccountType === 'savings' ? (
@@ -488,12 +488,12 @@ export default function Transfers() {
               <label className="label">To Account</label>
               <select className="input" value={form.toAccountType} onChange={(e) => handleAccountTypeChange('to', e.target.value)}>
                 <option value="credit_card">Credit Card</option>
-                <option value="current">Current Account</option>
+                <option value="current">Account</option>
                 <option value="savings">Savings Account</option>
               </select>
               {form.toAccountType === 'current' ? (
                 <select className="input" value={form.toMemberId} onChange={(e) => setForm({ ...form, toMemberId: e.target.value })} required>
-                  <option value="">Select current account owner</option>
+                  <option value="">Select account owner</option>
                   {members.map((member) => <option key={member._id} value={member._id}>{currentAccountLabel(member)}</option>)}
                 </select>
               ) : form.toAccountType === 'savings' ? (
@@ -542,7 +542,7 @@ export default function Transfers() {
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" data-allow-submit="true" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Add Transfer'}</button>
+            <button type="submit" data-allow-submit="true" className="btn-primary flex-1" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update Record' : 'Save Record'}</button>
           </div>
           </div>
         </form>
