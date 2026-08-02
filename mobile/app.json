@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.dhanam.tracker",
-      "versionCode": 3,
+      "versionCode": 4,
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
