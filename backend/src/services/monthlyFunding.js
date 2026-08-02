@@ -8,6 +8,57 @@ const Subscription = require('../models/Subscription');
 require('../models/Member');
 
 const amount = (rows) => rows.reduce((total, row) => total + Number(row.amount || 0), 0);
+const outstandingCardDue = (rows) => rows.reduce((total, row) => total + Number(row.remaining || 0), 0);
+const paymentsForStatement = (rows, cardId, cycleEnd, through) => amount(rows.filter((row) => {
+  const paidAt = new Date(row.date);
+  return String(row.toCreditCardId) === String(cardId) && paidAt > cycleEnd && paidAt <= through;
+}));
+const sameStatementCycle = (row, cycleStart, cycleEnd) => (
+  Math.abs(new Date(row.cycleStart).getTime() - cycleStart.getTime()) < 60_000
+  && Math.abs(new Date(row.cycleEnd).getTime() - cycleEnd.getTime()) < 60_000
+);
+const isCycleClosed = (cycleEnd, cutoff) => cycleEnd <= cutoff;
+const projectedCardBill = (purchases, paid) => Math.max(Number(purchases || 0) - Number(paid || 0), 0);
+const debitItemsForMethods = (expenses, recoveries, methods) => {
+  const recoveryByExpense = recoveries.reduce((map, row) => {
+    const key = String(row.expenseId);
+    map.set(key, (map.get(key) || 0) + Number(row.amount || 0));
+    return map;
+  }, new Map());
+  return expenses.filter((row) => methods.includes(row.paymentMethod)).map((row) => ({
+    id: `expense-${row._id}`,
+    expenseId: row._id,
+    description: row.description || 'Expense',
+    date: row.date,
+    member: row.memberId?.name || '',
+    account: row.savingsAccountId?.name || '',
+    grossAmount: Number(row.amount || 0),
+    recoveries: recoveryByExpense.get(String(row._id)) || 0,
+    amount: Math.max(Number(row.amount || 0) - (recoveryByExpense.get(String(row._id)) || 0), 0),
+  }));
+};
+const cardPaymentDebitItems = (transfers, accountType) => transfers
+  .filter((row) => row.fromAccountType === accountType)
+  .map((row) => ({
+    id: `card-payment-${row._id}`,
+    transferId: row._id,
+    description: row.description || `Payment to ${row.toCreditCardId?.name || 'credit card'}`,
+    date: row.date,
+    member: row.fromMemberId?.name || '',
+    account: row.fromSavingsAccountId?.name || '',
+    card: row.toCreditCardId?.name || '',
+    grossAmount: Number(row.amount || 0),
+    recoveries: 0,
+    amount: Number(row.amount || 0),
+    type: 'card_payment',
+  }));
+const transferAccountName = (row, side) => {
+  const type = row[`${side}AccountType`];
+  if (type === 'current') return row[`${side}MemberId`]?.name || 'Account';
+  if (type === 'savings') return row[`${side}SavingsAccountId`]?.name || 'Savings';
+  if (type === 'credit_card') return row[`${side}CreditCardId`]?.name || 'Credit card';
+  return 'Account';
+};
 const monthMatch = (monthField, yearField, fallbackMonth, fallbackYear, month, year) => ({
   $or: [
     { [monthField]: month, [yearField]: year },
@@ -16,6 +67,12 @@ const monthMatch = (monthField, yearField, fallbackMonth, fallbackYear, month, y
   ],
 });
 const atDay = (year, zeroMonth, day) => new Date(year, zeroMonth, Math.min(day, new Date(year, zeroMonth + 1, 0).getDate()), 23, 59, 59, 999);
+const cycleStartForEnd = (cycleEnd, startDay, endDay) => {
+  const startMonthOffset = startDay <= endDay ? 0 : -1;
+  const cycleStart = atDay(cycleEnd.getFullYear(), cycleEnd.getMonth() + startMonthOffset, startDay);
+  cycleStart.setHours(0, 0, 0, 0);
+  return cycleStart;
+};
 
 function upcomingCycle(card, anchor) {
   const endDay = card.cycleEndDay || card.statementDay || 14;
@@ -31,6 +88,9 @@ function upcomingCycle(card, anchor) {
 async function monthlyFunding(userId, month, year, memberId = null) {
   const member = memberId ? { memberId } : {};
   const previous = new Date(year, month - 2, 1);
+  const now = new Date();
+  const selectedIsCurrent = now.getMonth() + 1 === month && now.getFullYear() === year;
+  const paymentCutoff = selectedIsCurrent ? now : atDay(year, month - 1, new Date(year, month, 0).getDate());
   const incomeFundingMatch = {
     $or: [
       { fundingOverride: true, fundingMonth: month, fundingYear: year },
@@ -38,21 +98,49 @@ async function monthlyFunding(userId, month, year, memberId = null) {
       { fundingOverride: { $ne: true }, source: { $not: /^salary$/i }, month, year },
     ],
   };
-  const [incomes, directExpenses, expenseTransfers, cards, statements, cardPayments, recurringRules, generatedRecurring] = await Promise.all([
-    Income.find({ userId, ...member, ...incomeFundingMatch }).lean(),
-    Expense.find({ userId, ...member, paymentMethod: { $ne: 'credit_card' }, ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) }).lean(),
-    Transfer.find({ userId, budgetTreatment: 'monthly_expense', ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) }).lean(),
+  const [incomes, directExpenses, expenseTransfers, cards, statements, cardPayments, monthlyCardPayments, recurringRules, generatedRecurring] = await Promise.all([
+    Income.find({ userId, ...member, ...incomeFundingMatch }).populate('memberId', 'name').lean(),
+    Expense.find({ userId, ...member, paymentMethod: { $ne: 'credit_card' }, ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) }).populate('memberId', 'name').populate('savingsAccountId', 'name').lean(),
+    Transfer.find({ userId, budgetTreatment: 'monthly_expense', ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) })
+      .populate('fromMemberId', 'name').populate('fromSavingsAccountId', 'name').populate('fromCreditCardId', 'name')
+      .populate('toMemberId', 'name').populate('toSavingsAccountId', 'name').populate('toCreditCardId', 'name').lean(),
     CreditCard.find({ userId, isActive: true, ...member }).lean(),
     CreditCardStatement.find({ userId }).lean(),
-    Transfer.find({ userId, toAccountType: 'credit_card', ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) }).lean(),
+    Transfer.find({ userId, toAccountType: 'credit_card', date: { $lte: paymentCutoff } }).lean(),
+    Transfer.find({ userId, toAccountType: 'credit_card', date: { $lte: paymentCutoff }, ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) })
+      .populate('fromMemberId', 'name').populate('fromSavingsAccountId', 'name').populate('toCreditCardId', 'name').lean(),
     Subscription.find({ userId, isActive: true, ...member }).populate('memberId', 'name').lean(),
     Expense.find({ userId, ...member, subscriptionId: { $ne: null }, month, year }).select('subscriptionId').lean(),
   ]);
 
   const recoveries = directExpenses.length ? await ExpenseRecovery.find({ expenseId: { $in: directExpenses.map((row) => row._id) }, budgetTreatment: 'reduce_expense' }).lean() : [];
-  const incomeAvailable = amount(incomes);
-  const accountExpenses = Math.max(amount(directExpenses) - amount(recoveries), 0);
-  const transferExpenses = amount(expenseTransfers);
+  const salaryItems = incomes.filter((row) => /^salary$/i.test(row.source || '')).map((row) => ({ incomeId: row._id, source: row.source, description: row.description || 'Salary', date: row.date, member: row.memberId?.name || '', amount: Number(row.amount || 0) }));
+  const incomeAvailable = amount(salaryItems);
+  const currentDebitItems = [
+    ...debitItemsForMethods(directExpenses, recoveries, ['current_account', 'debit_card', 'upi', 'netbanking', 'card']),
+    ...cardPaymentDebitItems(monthlyCardPayments, 'current'),
+  ];
+  const savingsDebitItems = [
+    ...debitItemsForMethods(directExpenses, recoveries, ['savings']),
+    ...cardPaymentDebitItems(monthlyCardPayments, 'savings'),
+  ];
+  const currentAccountDebits = amount(currentDebitItems);
+  const savingsDebits = amount(savingsDebitItems);
+  const accountExpenses = currentAccountDebits + savingsDebits;
+  const transferExpenseItems = expenseTransfers
+    .map((row) => ({
+      transferId: row._id,
+      description: row.description || 'Expense transfer',
+      notes: row.notes || '',
+      date: row.date,
+      planningMonth: row.planningMonth || row.month,
+      planningYear: row.planningYear || row.year,
+      from: transferAccountName(row, 'from'),
+      to: transferAccountName(row, 'to'),
+      amount: Number(row.amount || 0),
+    }))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  const transferExpenses = amount(transferExpenseItems);
   const generatedSubscriptionIds = new Set(generatedRecurring.map((row) => String(row.subscriptionId)));
   const pendingRecurringItems = recurringRules
     .filter((rule) => !generatedSubscriptionIds.has(String(rule._id)))
@@ -60,48 +148,65 @@ async function monthlyFunding(userId, month, year, memberId = null) {
   const pendingRecurring = amount(pendingRecurringItems);
   const cardDues = [];
   const upcomingCardBills = [];
-  const now = new Date();
-  const selectedIsCurrent = now.getMonth() + 1 === month && now.getFullYear() === year;
   const cycleAnchor = selectedIsCurrent ? now : new Date(year, month, 0, 12, 0, 0);
 
   for (const card of cards) {
     const dueDate = atDay(year, month - 1, card.paymentDueDay || 5);
+    const endDay = card.cycleEndDay || card.statementDay || 14;
+    const endMonthOffset = endDay <= dueDate.getDate() ? 0 : -1;
+    const expectedCycleEnd = atDay(year, month - 1 + endMonthOffset, endDay);
+    const startDay = card.cycleStartDay || (endDay === 31 ? 1 : endDay + 1);
+    const expectedCycleStart = cycleStartForEnd(expectedCycleEnd, startDay, endDay);
+    // An open cycle is still accumulating purchases and belongs to the upcoming
+    // bill. It must not be reserved as a payable statement until it closes.
+    if (!isCycleClosed(expectedCycleEnd, paymentCutoff)) {
+      const upcoming = upcomingCycle(card, cycleAnchor);
+      const upcomingPurchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: upcoming.cycleStart, $lte: upcoming.cycleEnd } }).lean();
+      const purchases = amount(upcomingPurchases);
+      const paid = paymentsForStatement(cardPayments, card._id, new Date(upcoming.cycleStart.getTime() - 1), paymentCutoff);
+      const remaining = projectedCardBill(purchases, paid);
+      upcomingCardBills.push({ creditCardId: card._id, name: card.name, cycleStart: upcoming.cycleStart, cycleEnd: upcoming.cycleEnd, amount: remaining, purchases, paid, remaining, transactionCount: upcomingPurchases.length });
+      continue;
+    }
     const saved = statements
       .filter((row) => String(row.creditCardId) === String(card._id))
-      .filter((row) => {
-        const cycleEnd = new Date(row.cycleEnd);
-        const statementDate = row.statementDate ? new Date(row.statementDate) : atDay(cycleEnd.getFullYear(), cycleEnd.getMonth(), card.statementDay || cycleEnd.getDate());
-        const dueDay = card.paymentDueDay || 5;
-        const date = row.dueDate ? new Date(row.dueDate) : atDay(statementDate.getFullYear(), statementDate.getMonth() + (dueDay > statementDate.getDate() ? 0 : 1), dueDay);
-        return date && date.getMonth() + 1 === month && date.getFullYear() === year;
-      })
-      .sort((a, b) => new Date(b.cycleEnd) - new Date(a.cycleEnd))[0];
+      .filter((row) => sameStatementCycle(row, expectedCycleStart, expectedCycleEnd))
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))[0];
     let cycleEnd; let cycleStart; let dueAmount; let estimated = false;
     if (saved) {
       cycleEnd = new Date(saved.cycleEnd); cycleStart = new Date(saved.cycleStart); dueAmount = Number(saved.statementAmount || 0);
     } else {
-      const endDay = card.cycleEndDay || card.statementDay || 14;
-      const endMonthOffset = endDay <= dueDate.getDate() ? 0 : -1;
-      cycleEnd = atDay(year, month - 1 + endMonthOffset, endDay);
-      const startDay = card.cycleStartDay || (endDay === 31 ? 1 : endDay + 1);
-      cycleStart = atDay(cycleEnd.getFullYear(), cycleEnd.getMonth() - 1, startDay);
-      cycleStart.setHours(0, 0, 0, 0);
+      cycleEnd = expectedCycleEnd;
+      cycleStart = expectedCycleStart;
       const purchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: cycleStart, $lte: cycleEnd } }).lean();
       dueAmount = amount(purchases); estimated = true;
     }
-    const paid = amount(cardPayments.filter((row) => String(row.toCreditCardId) === String(card._id)));
+    // An official saved statement already includes payments made before it closed.
+    // An estimated statement is built from recorded cycle purchases, so payments
+    // made during that same cycle must also reduce its pending amount.
+    const paymentWindowStart = saved ? cycleEnd : new Date(cycleStart.getTime() - 1);
+    const paid = paymentsForStatement(cardPayments, card._id, paymentWindowStart, paymentCutoff);
     if (dueAmount || paid) cardDues.push({ creditCardId: card._id, name: card.name, dueDate, cycleStart, cycleEnd, amount: dueAmount, paid, remaining: Math.max(dueAmount - paid, 0), estimated });
 
     const upcoming = upcomingCycle(card, cycleAnchor);
     const upcomingPurchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: upcoming.cycleStart, $lte: upcoming.cycleEnd } }).lean();
-    upcomingCardBills.push({ creditCardId: card._id, name: card.name, cycleStart: upcoming.cycleStart, cycleEnd: upcoming.cycleEnd, amount: amount(upcomingPurchases), transactionCount: upcomingPurchases.length });
+    const purchases = amount(upcomingPurchases);
+    upcomingCardBills.push({ creditCardId: card._id, name: card.name, cycleStart: upcoming.cycleStart, cycleEnd: upcoming.cycleEnd, amount: purchases, purchases, paid: 0, remaining: purchases, transactionCount: upcomingPurchases.length });
   }
 
-  const cardsDue = cardDues.reduce((total, row) => total + row.amount, 0);
+  const cardsDue = outstandingCardDue(cardDues);
   const upcomingCardBill = upcomingCardBills.reduce((total, row) => total + row.amount, 0);
   const plannedOutflow = accountExpenses + transferExpenses + cardsDue + pendingRecurring;
   const balance = incomeAvailable - plannedOutflow;
-  return { incomeAvailable, accountExpenses, transferExpenses, pendingRecurring, pendingRecurringItems, cardsDue, upcomingCardBill, upcomingCardBills, plannedOutflow, salaryRemaining: Math.max(balance, 0), savingsRequired: Math.max(-balance, 0), cardDues };
+  return { incomeAvailable, salaryFunding: incomeAvailable, salaryItems, accountExpenses, currentAccountDebits, currentDebitItems, savingsDebits, savingsDebitItems, transferExpenses, transferExpenseItems, pendingRecurring, pendingRecurringItems, cardsDue, upcomingCardBill, upcomingCardBills, plannedOutflow, salaryRemaining: Math.max(balance, 0), savingsRequired: Math.max(-balance, 0), cardDues };
 }
 
 module.exports = monthlyFunding;
+module.exports.outstandingCardDue = outstandingCardDue;
+module.exports.paymentsForStatement = paymentsForStatement;
+module.exports.sameStatementCycle = sameStatementCycle;
+module.exports.cycleStartForEnd = cycleStartForEnd;
+module.exports.isCycleClosed = isCycleClosed;
+module.exports.projectedCardBill = projectedCardBill;
+module.exports.debitItemsForMethods = debitItemsForMethods;
+module.exports.cardPaymentDebitItems = cardPaymentDebitItems;

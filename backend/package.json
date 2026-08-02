@@ -4,6 +4,7 @@
   "description": "Backend for Dhanam Tracker - Personal Finance Manager",
   "main": "src/index.js",
   "scripts": {
+    "test": "node --test",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/seed.js",
