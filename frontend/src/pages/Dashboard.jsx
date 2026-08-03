@@ -513,7 +513,8 @@ export default function Dashboard() {
               ))}
               {!funding.transferExpenseItems?.length && <p className="py-1 text-slate-400">No expense-type transfers assigned to this month.</p>}
             </div>
-            <div className="flex justify-between gap-4 py-1"><span className="text-slate-500">Pending recurring commitments</span><span className="font-semibold text-rose-700">− <Money value={funding.pendingRecurring} /></span></div>
+            <div className="flex justify-between gap-4 py-1"><span className="text-slate-500">Pending account-funded recurring commitments</span><span className="font-semibold text-rose-700">− <Money value={funding.pendingSalaryRecurring ?? funding.pendingRecurring} /></span></div>
+            {(funding.pendingRecurring || 0) > (funding.pendingSalaryRecurring ?? funding.pendingRecurring ?? 0) && <p className="pb-1 text-xs text-slate-400">Credit-card commitments are excluded here and flow into upcoming card bills.</p>}
             <div className="flex justify-between gap-4 py-1"><span className="text-slate-500">Closed card payments pending</span><span className="font-semibold text-rose-700">− <Money value={funding.cardsDue} /></span></div>
           </div>
 
@@ -566,10 +567,20 @@ export default function Dashboard() {
       <Modal isOpen={detailModal === 'recurring'} onClose={() => setDetailModal(null)} title={`Pending recurring transfers · ${selectedLabel}`} size="lg">
         <div className="space-y-3">
           {!funding.pendingRecurringItems?.length && <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No recurring commitments are pending in this month.</p>}
-          {(funding.pendingRecurringItems || []).map((item) => (
-            <div key={item.subscriptionId} className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 p-4">
-              <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{item.name}</p><p className="mt-1 text-xs text-slate-400">{item.member || 'Household'} · Due day {item.dayOfMonth} · {String(item.paymentMethod || 'account').replaceAll('_', ' ')}</p></div>
-              <p className="shrink-0 font-bold text-amber-700"><Money value={item.amount} /></p>
+          {(funding.pendingRecurringGroups || []).map((group) => (
+            <div key={group.key} className="overflow-hidden rounded-xl border border-slate-100">
+              <div className="flex items-start justify-between gap-4 bg-amber-50 px-4 py-3">
+                <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{group.source}</p><p className="mt-0.5 text-xs text-slate-500">{group.member} · {group.sourceType}</p></div>
+                <p className="shrink-0 font-bold text-amber-700"><Money value={group.amount} /></p>
+              </div>
+              <div className="divide-y divide-slate-100 px-4">
+                {group.items.map((item) => (
+                  <div key={item.subscriptionId} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0"><p className="truncate font-medium text-slate-700">{item.name}</p><p className="mt-0.5 text-xs text-slate-400">Due day {item.dayOfMonth}</p></div>
+                    <p className="shrink-0 font-semibold text-slate-600"><Money value={item.amount} /></p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
           <div className="flex items-center justify-between border-t border-slate-100 pt-4"><span className="font-semibold text-slate-700">Total reserved</span><span className="text-xl font-bold text-amber-700"><Money value={funding.pendingRecurring} /></span></div>

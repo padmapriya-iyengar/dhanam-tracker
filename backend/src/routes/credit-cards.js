@@ -68,14 +68,21 @@ async function purchaseTotal(userId, cardId, cycleStart, cycleEnd) {
   return { purchases: result[0]?.purchases || 0, count: result[0]?.count || 0 };
 }
 
-async function paymentTotal(userId, cardId, cycleStart, cycleEnd) {
+function statementPaymentWindow(card, cycleEnd) {
+  const nextCycle = cycleFor(card, cycleEnd, 1);
+  return { paymentStart: cycleEnd, paymentEnd: nextCycle.cycleEnd };
+}
+
+async function paymentTotal(userId, cardId, paymentStart, paymentEnd) {
   const result = await Transfer.aggregate([
     {
       $match: {
         userId,
         toCreditCardId: cardId,
         toAccountType: 'credit_card',
-        date: { $gte: cycleStart, $lte: cycleEnd },
+        // Payments made after a statement closes settle that closed statement.
+        // They must not appear as credits in the following purchase cycle.
+        date: { $gt: paymentStart, $lte: paymentEnd },
       },
     },
     { $group: { _id: null, payments: { $sum: '$amount' }, count: { $sum: 1 } } },
@@ -345,9 +352,10 @@ router.get('/cycles', async (req, res) => {
       const cycles = [];
       for (let i = 0; i < parseInt(count); i++) {
         const cycle = cycleFor(card, new Date(), -i);
+        const paymentWindow = statementPaymentWindow(card, cycle.cycleEnd);
         const [purchase, payment] = await Promise.all([
           purchaseTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
-          paymentTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
+          paymentTotal(req.user._id, card._id, paymentWindow.paymentStart, paymentWindow.paymentEnd),
         ]);
         cycles.push({
           ...cycle,
@@ -375,9 +383,10 @@ router.get('/reconciliation', async (req, res) => {
     const defaultCycle = cycleFor(card);
     const cycleStart = normalizeCycleDate(req.query.cycleStart) || defaultCycle.cycleStart;
     const cycleEnd = normalizeCycleDate(req.query.cycleEnd, true) || defaultCycle.cycleEnd;
+    const paymentWindow = statementPaymentWindow(card, cycleEnd);
     const [{ purchases, count }, { payments, count: paymentCount }, statement, expenses, transfers] = await Promise.all([
       purchaseTotal(req.user._id, card._id, cycleStart, cycleEnd),
-      paymentTotal(req.user._id, card._id, cycleStart, cycleEnd),
+      paymentTotal(req.user._id, card._id, paymentWindow.paymentStart, paymentWindow.paymentEnd),
       CreditCardStatement.findOne({ userId: req.user._id, creditCardId: card._id, cycleStart, cycleEnd }),
       Expense.find({
         userId: req.user._id,
@@ -393,7 +402,7 @@ router.get('/reconciliation', async (req, res) => {
         userId: req.user._id,
         toCreditCardId: card._id,
         toAccountType: 'credit_card',
-        date: { $gte: cycleStart, $lte: cycleEnd },
+        date: { $gt: paymentWindow.paymentStart, $lte: paymentWindow.paymentEnd },
       })
         .populate('fromMemberId', 'name color role')
         .populate('fromSavingsAccountId', 'name bankName')
@@ -510,9 +519,10 @@ router.get('/summary', async (req, res) => {
     const summary = await Promise.all(
       cards.map(async (card) => {
         const cycle = cycleFor(card);
+        const paymentWindow = statementPaymentWindow(card, cycle.cycleEnd);
         const [purchase, payment] = await Promise.all([
           purchaseTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
-          paymentTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
+          paymentTotal(req.user._id, card._id, paymentWindow.paymentStart, paymentWindow.paymentEnd),
         ]);
         const outstanding = purchase.purchases - payment.payments;
         return {

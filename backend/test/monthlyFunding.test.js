@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cardPaymentDebitItems, cycleStartForEnd, debitItemsForMethods, isCycleClosed, outstandingCardDue, paymentsForStatement, projectedCardBill, sameStatementCycle } = require('../src/services/monthlyFunding');
+const { cardPaymentDebitItems, cycleStartForEnd, debitItemsForMethods, groupPendingRecurringItems, isCycleClosed, outstandingCardDue, paymentsForStatement, projectedCardBill, salaryFundedRecurringItems, sameStatementCycle } = require('../src/services/monthlyFunding');
 
 test('card payments reduce cards due to the unpaid remainder', () => {
   const cards = [
@@ -110,4 +110,28 @@ test('credit-card payment transfers are salary debits from their source account'
   assert.equal(current[0].card, 'FAB');
   assert.equal(savings.length, 1);
   assert.equal(savings[0].amount, 400);
+});
+
+test('pending recurring items are grouped by person and payment source', () => {
+  const groups = groupPendingRecurringItems([
+    { subscriptionId: '1', name: 'Codex', memberId: 'kiran', member: 'Kiran', sourceId: 'card-1', source: 'Noon', sourceType: 'Credit card', paymentMethod: 'credit_card', dayOfMonth: 15, amount: 401 },
+    { subscriptionId: '2', name: 'Noon One', memberId: 'kiran', member: 'Kiran', sourceId: 'card-1', source: 'Noon', sourceType: 'Credit card', paymentMethod: 'credit_card', dayOfMonth: 6, amount: 15 },
+    { subscriptionId: '3', name: 'Mortgage', memberId: 'padma', member: 'Padmapriya', sourceId: 'padma', source: 'Padmapriya Account', sourceType: 'Account', paymentMethod: 'current_account', dayOfMonth: 5, amount: 7711 },
+  ]);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].source, 'Padmapriya Account');
+  assert.equal(groups[1].source, 'Noon');
+  assert.equal(groups[1].amount, 416);
+  assert.deepEqual(groups[1].items.map((item) => item.dayOfMonth), [6, 15]);
+});
+
+test('credit-card recurring commitments do not reduce salary left to use', () => {
+  const items = [
+    { name: 'Mortgage', paymentMethod: 'current_account', amount: 7711 },
+    { name: 'Savings plan', paymentMethod: 'savings', amount: 500 },
+    { name: 'Spotify', paymentMethod: 'credit_card', amount: 24 },
+  ];
+
+  assert.deepEqual(salaryFundedRecurringItems(items).map((item) => item.name), ['Mortgage', 'Savings plan']);
 });

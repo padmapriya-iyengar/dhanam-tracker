@@ -59,6 +59,27 @@ const transferAccountName = (row, side) => {
   if (type === 'credit_card') return row[`${side}CreditCardId`]?.name || 'Credit card';
   return 'Account';
 };
+const recurringSource = (rule) => {
+  if (rule.paymentMethod === 'credit_card') return { id: String(rule.creditCardId?._id || rule.creditCardId || 'unassigned-card'), name: rule.creditCardId?.name || 'Credit card', type: 'Credit card' };
+  if (rule.paymentMethod === 'savings') return { id: String(rule.savingsAccountId?._id || rule.savingsAccountId || 'unassigned-savings'), name: rule.savingsAccountId?.name || 'Savings account', type: 'Savings account' };
+  if (rule.paymentMethod === 'current_account') return { id: String(rule.memberId?._id || rule.memberId || 'household'), name: `${rule.memberId?.name || 'Household'} Account`, type: 'Account' };
+  const label = String(rule.paymentMethod || 'other').replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+  return { id: `${rule.memberId?._id || rule.memberId || 'household'}-${rule.paymentMethod}`, name: label, type: label };
+};
+const groupPendingRecurringItems = (items) => {
+  const groups = new Map();
+  items.forEach((item) => {
+    const key = `${item.memberId || 'household'}:${item.sourceId}:${item.paymentMethod}`;
+    if (!groups.has(key)) groups.set(key, { key, member: item.member, source: item.source, sourceType: item.sourceType, amount: 0, items: [] });
+    const group = groups.get(key);
+    group.items.push(item);
+    group.amount += Number(item.amount || 0);
+  });
+  return [...groups.values()]
+    .map((group) => ({ ...group, items: group.items.sort((a, b) => (a.dayOfMonth - b.dayOfMonth) || a.name.localeCompare(b.name)), nextDueDay: Math.min(...group.items.map((item) => item.dayOfMonth)) }))
+    .sort((a, b) => (a.nextDueDay - b.nextDueDay) || a.member.localeCompare(b.member) || a.source.localeCompare(b.source));
+};
+const salaryFundedRecurringItems = (items) => items.filter((item) => item.paymentMethod !== 'credit_card');
 const monthMatch = (monthField, yearField, fallbackMonth, fallbackYear, month, year) => ({
   $or: [
     { [monthField]: month, [yearField]: year },
@@ -109,7 +130,7 @@ async function monthlyFunding(userId, month, year, memberId = null) {
     Transfer.find({ userId, toAccountType: 'credit_card', date: { $lte: paymentCutoff } }).lean(),
     Transfer.find({ userId, toAccountType: 'credit_card', date: { $lte: paymentCutoff }, ...monthMatch('planningMonth', 'planningYear', 'month', 'year', month, year) })
       .populate('fromMemberId', 'name').populate('fromSavingsAccountId', 'name').populate('toCreditCardId', 'name').lean(),
-    Subscription.find({ userId, isActive: true, ...member }).populate('memberId', 'name').lean(),
+    Subscription.find({ userId, isActive: true, ...member }).populate('memberId', 'name').populate('creditCardId', 'name bankName lastFourDigits').populate('savingsAccountId', 'name bankName').lean(),
     Expense.find({ userId, ...member, subscriptionId: { $ne: null }, month, year }).select('subscriptionId').lean(),
   ]);
 
@@ -144,8 +165,15 @@ async function monthlyFunding(userId, month, year, memberId = null) {
   const generatedSubscriptionIds = new Set(generatedRecurring.map((row) => String(row.subscriptionId)));
   const pendingRecurringItems = recurringRules
     .filter((rule) => !generatedSubscriptionIds.has(String(rule._id)))
-    .map((rule) => ({ subscriptionId: rule._id, name: rule.name, member: rule.memberId?.name || '', amount: Number(rule.amount || 0), dayOfMonth: rule.dayOfMonth, paymentMethod: rule.paymentMethod }));
+    .map((rule) => {
+      const source = recurringSource(rule);
+      return { subscriptionId: rule._id, name: rule.name, memberId: rule.memberId?._id || rule.memberId, member: rule.memberId?.name || 'Household', sourceId: source.id, source: source.name, sourceType: source.type, amount: Number(rule.amount || 0), dayOfMonth: rule.dayOfMonth, paymentMethod: rule.paymentMethod };
+    })
+    .sort((a, b) => (a.dayOfMonth - b.dayOfMonth) || a.name.localeCompare(b.name));
+  const pendingRecurringGroups = groupPendingRecurringItems(pendingRecurringItems);
   const pendingRecurring = amount(pendingRecurringItems);
+  const pendingSalaryRecurringItems = salaryFundedRecurringItems(pendingRecurringItems);
+  const pendingSalaryRecurring = amount(pendingSalaryRecurringItems);
   const cardDues = [];
   const upcomingCardBills = [];
   const cycleAnchor = selectedIsCurrent ? now : new Date(year, month, 0, 12, 0, 0);
@@ -196,9 +224,9 @@ async function monthlyFunding(userId, month, year, memberId = null) {
 
   const cardsDue = outstandingCardDue(cardDues);
   const upcomingCardBill = upcomingCardBills.reduce((total, row) => total + row.amount, 0);
-  const plannedOutflow = accountExpenses + transferExpenses + cardsDue + pendingRecurring;
+  const plannedOutflow = accountExpenses + transferExpenses + cardsDue + pendingSalaryRecurring;
   const balance = incomeAvailable - plannedOutflow;
-  return { incomeAvailable, salaryFunding: incomeAvailable, salaryItems, accountExpenses, currentAccountDebits, currentDebitItems, savingsDebits, savingsDebitItems, transferExpenses, transferExpenseItems, pendingRecurring, pendingRecurringItems, cardsDue, upcomingCardBill, upcomingCardBills, plannedOutflow, salaryRemaining: Math.max(balance, 0), savingsRequired: Math.max(-balance, 0), cardDues };
+  return { incomeAvailable, salaryFunding: incomeAvailable, salaryItems, accountExpenses, currentAccountDebits, currentDebitItems, savingsDebits, savingsDebitItems, transferExpenses, transferExpenseItems, pendingRecurring, pendingRecurringItems, pendingRecurringGroups, pendingSalaryRecurring, pendingSalaryRecurringItems, cardsDue, upcomingCardBill, upcomingCardBills, plannedOutflow, salaryRemaining: Math.max(balance, 0), savingsRequired: Math.max(-balance, 0), cardDues };
 }
 
 module.exports = monthlyFunding;
@@ -210,3 +238,5 @@ module.exports.isCycleClosed = isCycleClosed;
 module.exports.projectedCardBill = projectedCardBill;
 module.exports.debitItemsForMethods = debitItemsForMethods;
 module.exports.cardPaymentDebitItems = cardPaymentDebitItems;
+module.exports.groupPendingRecurringItems = groupPendingRecurringItems;
+module.exports.salaryFundedRecurringItems = salaryFundedRecurringItems;
