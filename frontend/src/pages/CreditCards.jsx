@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarDays, CreditCard, Edit2, Plus, Save, Target, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronDown, CreditCard, Edit2, Plus, Save, Target, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import {
@@ -54,6 +54,7 @@ export default function CreditCards() {
   const [reconciliation, setReconciliation] = useState(null);
   const [statementForm, setStatementForm] = useState(emptyStatementForm);
   const [statementSaving, setStatementSaving] = useState(false);
+  const [expandedCardId, setExpandedCardId] = useState(null);
 
   const loadBudgets = async (month = budgetMonth, year = budgetYear) => {
     const { data } = await creditCardsApi.getBudgets({ month, year });
@@ -373,47 +374,40 @@ export default function CreditCards() {
       {/* Current statement-cycle totals per card */}
       {summary.length > 0 && (
         <CollapsibleSection storageKey="credit-cards-active-cards" title="Active cards" subtitle="Current statement-cycle position for every card" icon={CreditCard} summary={`${summary.length} cards · Outstanding ${fmt(outstandingTotal)}`} defaultOpen>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(7rem,0.8fr)_2rem] gap-4 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 md:grid">
+            <span>Card</span><span>Owner</span><span>Cycle</span><span className="text-right">Pending</span><span />
+          </div>
           {summary.map((card) => (
-            <div key={card._id} className="card hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: card.color + '20' }}>
-                    <CreditCard size={18} style={{ color: card.color }} />
+            <div key={card._id} className="border-b border-slate-100 last:border-b-0">
+              <button type="button" onClick={() => setExpandedCardId((current) => current === card._id ? null : card._id)} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-100 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(7rem,0.8fr)_2rem] md:gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: card.color + '20' }}>
+                    <CreditCard size={16} style={{ color: card.color }} />
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">{card.bankName}</p>
-                    <p className="text-xs text-slate-500">{card.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-2 h-2 rounded-full" style={{ background: card.memberId?.color }} />
-                      <span className="text-xs text-slate-400">{card.memberId?.name}</span>
-                      {card.lastFourDigits && <span className="text-xs text-slate-400 font-mono">••••&nbsp;{card.lastFourDigits}</span>}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">Cycle {card.cycleStartDay || ((card.cycleEndDay || card.statementDay || 14) === 31 ? 1 : (card.cycleEndDay || card.statementDay || 14) + 1)}-{card.cycleEndDay || card.statementDay || 14} · Due {card.paymentDueDay || 5}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-800">{card.bankName} · {card.name}</p>
+                    <p className="truncate text-xs text-slate-400 md:hidden">{card.memberId?.name}{card.lastFourDigits ? ` · •••• ${card.lastFourDigits}` : ''} · {card.cycleLabel || 'Current cycle'}</p>
                   </div>
                 </div>
-                <div className="flex gap-0.5">
-                  <button onClick={() => openEdit(card)} className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
-                  <button onClick={() => handleDelete(card._id)} className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
+                <div className="hidden min-w-0 items-center gap-2 text-sm text-slate-500 md:flex"><span className="h-2 w-2 rounded-full" style={{ background: card.memberId?.color }} /><span className="truncate">{card.memberId?.name}</span></div>
+                <div className="hidden min-w-0 md:block"><p className="truncate text-sm text-slate-600">{card.cycleLabel || 'Current cycle'}</p><p className="text-xs text-slate-400">Due day {card.paymentDueDay || 5}</p></div>
+                <div className="flex items-center justify-end gap-2 text-right"><div><p className={`font-bold ${(card.cycleOutstanding || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(card.cycleOutstanding || 0)}</p><p className="text-xs text-slate-400 md:hidden">Pending</p></div><ChevronDown size={16} className={`text-slate-400 transition-transform md:hidden ${expandedCardId === card._id ? 'rotate-180' : ''}`} /></div>
+                <ChevronDown size={16} className={`hidden text-slate-400 transition-transform md:block ${expandedCardId === card._id ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedCardId === card._id && (
+                <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><p className="text-xs text-slate-400">Spend</p><p className="font-bold text-violet-700"><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(card.cyclePurchases || 0)}</p><p className="text-xs text-slate-400">{card.cycleTransactionCount || 0} txn{card.cycleTransactionCount !== 1 ? 's' : ''}</p></div>
+                    <div><p className="text-xs text-slate-400">Paid</p><p className="font-semibold text-emerald-600"><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(card.cyclePayments || 0)}</p><p className="text-xs text-slate-400">Matched statement</p></div>
+                    <div><p className="text-xs text-slate-400">Card</p><p className="truncate font-medium text-slate-700">{card.lastFourDigits ? `•••• ${card.lastFourDigits}` : 'No digits'}</p><p className="text-xs text-slate-400">Cycle {card.cycleStartDay || ((card.cycleEndDay || card.statementDay || 14) === 31 ? 1 : (card.cycleEndDay || card.statementDay || 14) + 1)}–{card.cycleEndDay || card.statementDay || 14}</p></div>
+                  </div>
+                  <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                    <button type="button" onClick={() => openEdit(card)} className="btn-secondary px-3 py-1.5 text-xs"><Edit2 size={13} /> Edit</button>
+                    <button type="button" onClick={() => handleDelete(card._id)} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-50"><Trash2 size={13} /> Delete</button>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-xs text-slate-400">Spend</p>
-                  <p className="text-lg font-bold text-violet-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cyclePurchases || 0)}</p>
-                  <p className="text-xs text-slate-400">{card.cycleTransactionCount || 0} txn{card.cycleTransactionCount !== 1 ? 's' : ''}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Paid</p>
-                  <p className="text-lg font-semibold text-emerald-600"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cyclePayments || 0)}</p>
-                  <p className="text-xs text-slate-400">This cycle</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Outstanding</p>
-                  <p className="text-lg font-semibold text-slate-700"><DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(card.cycleOutstanding || 0)}</p>
-                  <p className="truncate text-xs text-slate-400" title={card.cycleLabel}>{card.cycleLabel || 'Current cycle'}</p>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>

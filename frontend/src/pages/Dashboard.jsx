@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import {
-  ArrowLeft, ArrowRight, CalendarDays, ChevronRight, CreditCard, Edit2, RefreshCw,
+  ArrowLeft, ArrowRight, CalendarDays, ChevronDown, ChevronRight, CreditCard, Edit2, RefreshCw,
   Scale, TrendingDown, TrendingUp, Wallet,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -60,6 +60,9 @@ export default function Dashboard() {
   const [savingBalance, setSavingBalance] = useState(false);
   const [balanceError, setBalanceError] = useState('');
   const [detailModal, setDetailModal] = useState(null);
+  const [expandedUpcomingCardId, setExpandedUpcomingCardId] = useState(null);
+  const [expandedRecurringGroupKey, setExpandedRecurringGroupKey] = useState(null);
+  const [expandedSalarySection, setExpandedSalarySection] = useState(null);
 
   const selectedDate = useMemo(() => monthDate(month, year), [month, year]);
   const selectedLabel = format(selectedDate, 'MMMM yyyy');
@@ -477,25 +480,28 @@ export default function Dashboard() {
 
       <Modal isOpen={detailModal === 'salary'} onClose={() => setDetailModal(null)} title={`Salary left to use · ${selectedLabel}`} size="lg">
         <div className="space-y-5">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-            <div className="flex items-center justify-between gap-4"><span className="font-semibold text-emerald-800">Salary funding</span><span className="text-xl font-bold text-emerald-700"><Money value={funding.salaryFunding ?? funding.incomeAvailable} /></span></div>
-            <p className="mt-1 text-xs text-emerald-600">Salary allocated from the previous month, including explicit funding overrides.</p>
-            <div className="mt-3 border-t border-emerald-100 pt-2">
+          <div className="overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50">
+            <button type="button" onClick={() => setExpandedSalarySection((current) => current === 'funding' ? null : 'funding')} className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-emerald-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-200"><div className="min-w-0"><p className="font-semibold text-emerald-800">Salary funding</p><p className="mt-0.5 text-xs text-emerald-600">{funding.salaryItems?.length || 0} salary record{funding.salaryItems?.length === 1 ? '' : 's'} from the previous month</p></div><div className="flex shrink-0 items-center gap-2"><span className="text-xl font-bold text-emerald-700"><Money value={funding.salaryFunding ?? funding.incomeAvailable} /></span><ChevronDown size={16} className={`text-emerald-500 transition-transform ${expandedSalarySection === 'funding' ? 'rotate-180' : ''}`} /></div></button>
+            {expandedSalarySection === 'funding' && <div className="border-t border-emerald-100 px-4 py-2">
               {(funding.salaryItems || []).map((item) => <div key={item.incomeId} className="flex items-center justify-between gap-4 py-1 text-sm"><div className="min-w-0"><p className="truncate text-emerald-800">{item.description}</p><p className="text-xs text-emerald-600">{format(new Date(item.date), 'dd MMM yyyy')}{item.member ? ` · ${item.member}` : ''}</p></div><span className="shrink-0 font-semibold text-emerald-700"><Money value={item.amount} /></span></div>)}
               {!funding.salaryItems?.length && <p className="text-sm text-emerald-600">No salary funding is assigned to this month.</p>}
-            </div>
+            </div>}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-700">Account debits</span><span className="font-bold text-rose-700">− <Money value={funding.currentAccountDebits} /></span></div>
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <button type="button" onClick={() => setExpandedSalarySection((current) => current === 'account' ? null : 'account')} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"><div><p className="font-semibold text-slate-700">Account debits</p><p className="text-xs text-slate-400">{funding.currentDebitItems?.length || 0} recorded debit{funding.currentDebitItems?.length === 1 ? '' : 's'}</p></div><div className="flex items-center gap-2"><span className="font-bold text-rose-700">− <Money value={funding.currentAccountDebits} /></span><ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedSalarySection === 'account' ? 'rotate-180' : ''}`} /></div></button>
+            {expandedSalarySection === 'account' && <div className="border-t border-slate-100 px-4 py-2">
             {(funding.currentDebitItems || []).map((item) => <div key={item.id || item.expenseId} className="flex items-center justify-between gap-4 py-1 text-sm"><div className="min-w-0"><p className="truncate text-slate-700">{item.description}</p><p className="text-xs text-slate-400">{format(new Date(item.date), 'dd MMM yyyy')}{item.member ? ` · ${item.member}` : ''}{item.card ? ` · ${item.card}` : ''}{item.type === 'card_payment' ? ' · Card payment' : ''}</p></div><span className="shrink-0 text-slate-600"><Money value={item.amount} /></span></div>)}
             {!funding.currentDebitItems?.length && <p className="text-sm text-slate-400">No account debits assigned to this month.</p>}
+            </div>}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-700">Savings debits</span><span className="font-bold text-rose-700">− <Money value={funding.savingsDebits} /></span></div>
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <button type="button" onClick={() => setExpandedSalarySection((current) => current === 'savings' ? null : 'savings')} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"><div><p className="font-semibold text-slate-700">Savings debits</p><p className="text-xs text-slate-400">{funding.savingsDebitItems?.length || 0} recorded debit{funding.savingsDebitItems?.length === 1 ? '' : 's'}</p></div><div className="flex items-center gap-2"><span className="font-bold text-rose-700">− <Money value={funding.savingsDebits} /></span><ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedSalarySection === 'savings' ? 'rotate-180' : ''}`} /></div></button>
+            {expandedSalarySection === 'savings' && <div className="border-t border-slate-100 px-4 py-2">
             {(funding.savingsDebitItems || []).map((item) => <div key={item.id || item.expenseId} className="flex items-center justify-between gap-4 py-1 text-sm"><div className="min-w-0"><p className="truncate text-slate-700">{item.description}</p><p className="text-xs text-slate-400">{format(new Date(item.date), 'dd MMM yyyy')}{item.account ? ` · ${item.account}` : ''}{item.member ? ` · ${item.member}` : ''}{item.card ? ` · ${item.card}` : ''}{item.type === 'card_payment' ? ' · Card payment' : ''}</p></div><span className="shrink-0 text-slate-600"><Money value={item.amount} /></span></div>)}
             {!funding.savingsDebitItems?.length && <p className="text-sm text-slate-400">No savings debits assigned to this month.</p>}
+            </div>}
           </div>
 
           <div className="rounded-xl bg-slate-50 p-4 text-sm">
@@ -549,16 +555,26 @@ export default function Dashboard() {
       <Modal isOpen={detailModal === 'upcoming'} onClose={() => setDetailModal(null)} title={`Upcoming card bills · ${selectedLabel}`} size="lg">
         <div className="space-y-3">
           {!funding.upcomingCardBills?.length && <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No purchases are recorded in upcoming card cycles.</p>}
-          {(funding.upcomingCardBills || []).map((card) => (
-            <div key={card.creditCardId} className="rounded-xl border border-slate-100 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{card.name}</p><p className="mt-1 text-xs text-slate-400">Cycle {format(new Date(card.cycleStart), 'dd MMM')}–{format(new Date(card.cycleEnd), 'dd MMM yyyy')} · {card.transactionCount} recorded transaction{card.transactionCount === 1 ? '' : 's'}</p></div>
-                <p className="shrink-0 font-bold text-violet-700"><Money value={card.remaining ?? card.amount} /></p>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_6rem_8rem_2rem] gap-4 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 sm:grid"><span>Card</span><span>Cycle</span><span className="text-right">Txns</span><span className="text-right">Projected</span><span /></div>
+            {(funding.upcomingCardBills || []).map((card) => (
+              <div key={card.creditCardId} className="border-b border-slate-100 last:border-b-0">
+                <button type="button" onClick={() => setExpandedUpcomingCardId((current) => current === card.creditCardId ? null : card.creditCardId)} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-100 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_6rem_8rem_2rem] sm:gap-4">
+                  <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{card.name}</p><p className="truncate text-xs text-slate-400 sm:hidden">{format(new Date(card.cycleStart), 'dd MMM')}–{format(new Date(card.cycleEnd), 'dd MMM yyyy')} · {card.transactionCount} txn{card.transactionCount === 1 ? '' : 's'}</p></div>
+                  <p className="hidden truncate text-sm text-slate-500 sm:block">{format(new Date(card.cycleStart), 'dd MMM')}–{format(new Date(card.cycleEnd), 'dd MMM yyyy')}</p>
+                  <p className="hidden text-right text-sm text-slate-500 sm:block">{card.transactionCount}</p>
+                  <div className="flex items-center justify-end gap-2"><p className="font-bold text-violet-700"><Money value={card.remaining ?? card.amount} /></p><ChevronDown size={16} className={`text-slate-400 transition-transform sm:hidden ${expandedUpcomingCardId === card.creditCardId ? 'rotate-180' : ''}`} /></div>
+                  <ChevronDown size={16} className={`hidden text-slate-400 transition-transform sm:block ${expandedUpcomingCardId === card.creditCardId ? 'rotate-180' : ''}`} />
+                </button>
+                {expandedUpcomingCardId === card.creditCardId && (
+                  <div className="border-t border-slate-100 bg-violet-50/40 px-4 py-3">
+                    <div className="grid grid-cols-3 gap-3 text-sm"><div><p className="text-xs text-slate-400">Purchases</p><p className="mt-1 font-semibold text-slate-700"><Money value={card.purchases ?? card.amount} /></p></div><div><p className="text-xs text-slate-400">Payments</p><p className="mt-1 font-semibold text-emerald-700"><Money value={card.paid} /></p></div><div><p className="text-xs text-slate-400">Projected</p><p className="mt-1 font-bold text-violet-700"><Money value={card.remaining ?? card.amount} /></p></div></div>
+                    <p className="mt-3 text-xs text-violet-500">Projected from purchases less applicable payments recorded in this open cycle. The final statement may change until the cycle closes.</p>
+                  </div>
+                )}
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-sm"><div><p className="text-xs text-slate-400">Purchases</p><p className="mt-1 font-semibold text-slate-700"><Money value={card.purchases ?? card.amount} /></p></div><div><p className="text-xs text-slate-400">Payments</p><p className="mt-1 font-semibold text-emerald-700"><Money value={card.paid} /></p></div><div><p className="text-xs text-slate-400">Projected</p><p className="mt-1 font-bold text-violet-700"><Money value={card.remaining ?? card.amount} /></p></div></div>
-              <p className="mt-3 text-xs text-violet-500">Projected from purchases less applicable payments recorded in this open cycle. The final statement may change until the cycle closes.</p>
-            </div>
-          ))}
+            ))}
+          </div>
           <div className="flex items-center justify-between border-t border-slate-100 pt-4"><span className="font-semibold text-slate-700">Projected total</span><span className="text-xl font-bold text-violet-700"><Money value={funding.upcomingCardBill} /></span></div>
           <Link to="/credit-cards" onClick={() => setDetailModal(null)} className="btn-secondary w-full justify-center">Open credit cards</Link>
         </div>
@@ -569,18 +585,20 @@ export default function Dashboard() {
           {!funding.pendingRecurringItems?.length && <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No recurring commitments are pending in this month.</p>}
           {(funding.pendingRecurringGroups || []).map((group) => (
             <div key={group.key} className="overflow-hidden rounded-xl border border-slate-100">
-              <div className="flex items-start justify-between gap-4 bg-amber-50 px-4 py-3">
-                <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{group.source}</p><p className="mt-0.5 text-xs text-slate-500">{group.member} · {group.sourceType}</p></div>
-                <p className="shrink-0 font-bold text-amber-700"><Money value={group.amount} /></p>
-              </div>
-              <div className="divide-y divide-slate-100 px-4">
-                {group.items.map((item) => (
-                  <div key={item.subscriptionId} className="flex items-center justify-between gap-4 py-3">
-                    <div className="min-w-0"><p className="truncate font-medium text-slate-700">{item.name}</p><p className="mt-0.5 text-xs text-slate-400">Due day {item.dayOfMonth}</p></div>
-                    <p className="shrink-0 font-semibold text-slate-600"><Money value={item.amount} /></p>
-                  </div>
-                ))}
-              </div>
+              <button type="button" onClick={() => setExpandedRecurringGroupKey((current) => current === group.key ? null : group.key)} className="flex w-full items-center justify-between gap-4 bg-amber-50 px-4 py-3 text-left transition hover:bg-amber-100/60 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-200">
+                <div className="min-w-0"><p className="truncate font-semibold text-slate-800">{group.source}</p><p className="mt-0.5 truncate text-xs text-slate-500">{group.member} · {group.sourceType} · Next due day {group.nextDueDay} · {group.items.length} item{group.items.length === 1 ? '' : 's'}</p></div>
+                <div className="flex shrink-0 items-center gap-2"><p className="font-bold text-amber-700"><Money value={group.amount} /></p><ChevronDown size={16} className={`text-amber-500 transition-transform ${expandedRecurringGroupKey === group.key ? 'rotate-180' : ''}`} /></div>
+              </button>
+              {expandedRecurringGroupKey === group.key && (
+                <div className="divide-y divide-slate-100 px-4">
+                  {group.items.map((item) => (
+                    <div key={item.subscriptionId} className="flex items-center justify-between gap-4 py-3">
+                      <div className="min-w-0"><p className="truncate font-medium text-slate-700">{item.name}</p><p className="mt-0.5 text-xs text-slate-400">Due day {item.dayOfMonth}</p></div>
+                      <p className="shrink-0 font-semibold text-slate-600"><Money value={item.amount} /></p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           <div className="flex items-center justify-between border-t border-slate-100 pt-4"><span className="font-semibold text-slate-700">Total reserved</span><span className="text-xl font-bold text-amber-700"><Money value={funding.pendingRecurring} /></span></div>
