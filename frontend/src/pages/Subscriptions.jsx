@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { BellRing, CheckCircle2, Clock3, CreditCard, Edit2, Plus, Trash2 } from 'lucide-react';
+import { BellRing, CheckCircle2, ChevronDown, Clock3, CreditCard, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -50,6 +50,7 @@ export default function Subscriptions() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [generatingId, setGeneratingId] = useState('');
+  const [expandedSubscriptionId, setExpandedSubscriptionId] = useState(null);
 
   const subCategories = categories.find((c) => c._id === form.categoryId)?.subCategories || [];
   const totalMonthly = records.reduce((sum, record) => sum + (record.amount || 0), 0);
@@ -392,7 +393,7 @@ export default function Subscriptions() {
             const created = Boolean(record.generatedExpenseId);
             return (
               <div key={record._id} className="card hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between gap-3">
+                <button type="button" onClick={() => setExpandedSubscriptionId((current) => current === record._id ? null : record._id)} className="flex w-full items-start justify-between gap-3 text-left">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: record.categoryId?.color || '#6366f1' }} />
@@ -403,12 +404,10 @@ export default function Subscriptions() {
                       {record.subCategoryId ? ` / ${record.subCategoryId.name}` : ''}
                     </p>
                   </div>
-                  <div className="flex gap-0.5 flex-shrink-0">
-                    <button onClick={() => openEdit(record)} className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
-                    <button onClick={() => deleteSubscription(record)} className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
-                  </div>
-                </div>
+                  <div className="flex flex-shrink-0 items-center gap-2"><p className="font-bold text-rose-600"><DirhamSymbol className="mr-0.5 inline h-[0.85em] w-auto align-middle" />{fmt(record.amount)}</p><ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedSubscriptionId === record._id ? 'rotate-180' : ''}`} /></div>
+                </button>
 
+                {expandedSubscriptionId === record._id && <>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-2xl font-bold text-rose-600">
@@ -430,6 +429,8 @@ export default function Subscriptions() {
                 </div>
 
                 {record.description && <p className="text-sm text-slate-500 mt-3 truncate">{record.description}</p>}
+                <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3"><button onClick={() => openEdit(record)} className="btn-secondary px-3 py-1.5 text-xs"><Edit2 size={13} /> Edit</button><button onClick={() => deleteSubscription(record)} className="inline-flex items-center gap-1 rounded-lg border border-rose-100 px-3 py-1.5 text-xs text-rose-600"><Trash2 size={13} /> Delete</button></div>
+                </>}
               </div>
             );
           })}

@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { ArrowRight, ArrowRightLeft, Edit2, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, ChevronDown, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import DirhamSymbol from '../components/DirhamSymbol';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -54,6 +54,7 @@ export default function Transfers() {
   const [saveError, setSaveError] = useState('');
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [expandedTransferId, setExpandedTransferId] = useState(null);
 
   const loadAccounts = async () => {
     const [savings, cards] = await Promise.all([
@@ -328,16 +329,17 @@ export default function Transfers() {
         <div className="md:hidden space-y-3">
           {records.map((transfer) => (
             <div key={transfer._id} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+              <button type="button" onClick={() => setExpandedTransferId((current) => current === transfer._id ? null : transfer._id)} className="flex w-full items-start justify-between gap-3 text-left">
                 <div>
                   <p className="text-xs font-medium text-slate-400">{format(new Date(transfer.date), 'dd MMM yyyy')}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-800">{transfer.description || transfer.notes || 'Transfer'}</p>
                 </div>
-                <p className="flex-shrink-0 text-base font-bold text-indigo-700">
+                <div className="flex flex-shrink-0 items-center gap-2"><p className="text-base font-bold text-indigo-700">
                   <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(transfer.amount)}
-                </p>
-              </div>
+                </p><ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedTransferId === transfer._id ? 'rotate-180' : ''}`} /></div>
+              </button>
 
+              {expandedTransferId === transfer._id && <>
               <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">From</p>
@@ -360,6 +362,7 @@ export default function Transfers() {
                   <Trash2 size={13} className="inline align-text-bottom mr-1" /> Delete
                 </button>
               </div>
+              </>}
             </div>
           ))}
         </div>

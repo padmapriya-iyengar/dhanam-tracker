@@ -63,6 +63,8 @@ export default function Dashboard() {
   const [expandedUpcomingCardId, setExpandedUpcomingCardId] = useState(null);
   const [expandedRecurringGroupKey, setExpandedRecurringGroupKey] = useState(null);
   const [expandedSalarySection, setExpandedSalarySection] = useState(null);
+  const [expandedBudgetCardId, setExpandedBudgetCardId] = useState(null);
+  const [expandedBalanceMemberId, setExpandedBalanceMemberId] = useState(null);
 
   const selectedDate = useMemo(() => monthDate(month, year), [month, year]);
   const selectedLabel = format(selectedDate, 'MMMM yyyy');
@@ -303,8 +305,8 @@ export default function Dashboard() {
             {budgetRows.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-slate-400">No active cards found.</div>
             ) : budgetRows.map((card) => (
-              <div key={card._id} className="px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
+              <div key={card._id} className="px-4 py-3">
+                <button type="button" onClick={() => setExpandedBudgetCardId((current) => current === card._id ? null : card._id)} className="flex w-full items-start justify-between gap-3 text-left">
                   <div className="flex min-w-0 items-start gap-2">
                     <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: card.color }} />
                     <div className="min-w-0">
@@ -312,9 +314,10 @@ export default function Dashboard() {
                       <p className="truncate text-xs text-slate-400">{card.name}</p>
                     </div>
                   </div>
-                  <span className={`badge flex-shrink-0 border ${statusClass(card.status)}`}>{statusLabel(card.status)}</span>
-                </div>
+                  <div className="flex flex-shrink-0 items-center gap-2"><div className="text-right"><p className={`font-bold ${card.balance < 0 ? 'text-rose-700' : 'text-slate-700'}`}><Money value={card.balance} /></p><span className={`badge border ${statusClass(card.status)}`}>{statusLabel(card.status)}</span></div><ChevronDown size={16} className={`mt-1 text-slate-400 transition-transform ${expandedBudgetCardId === card._id ? 'rotate-180' : ''}`} /></div>
+                </button>
 
+                {expandedBudgetCardId === card._id && (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="rounded-lg bg-slate-50 px-3 py-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Budget</p>
@@ -336,6 +339,7 @@ export default function Dashboard() {
                     <p className={`mt-1 text-sm font-bold ${card.balance < 0 ? 'text-rose-700' : 'text-slate-800'}`}><Money value={card.balance} /></p>
                   </div>
                 </div>
+                )}
               </div>
             ))}
           </div>
@@ -403,12 +407,13 @@ export default function Dashboard() {
             const memberSavings = savingsAccounts.filter((account) => account.memberId?._id === balance.memberId);
             const memberSavingsTotal = memberSavings.reduce((sum, account) => sum + (account.balance || 0), 0);
             return (
-              <div key={balance.memberId} className="px-4 py-4">
-                <div className="flex items-center gap-2">
+              <div key={balance.memberId} className="px-4 py-3">
+                <button type="button" onClick={() => setExpandedBalanceMemberId((current) => current === balance.memberId ? null : balance.memberId)} className="flex w-full items-center justify-between gap-3 text-left"><div className="flex min-w-0 items-center gap-2">
                   <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: balance.memberColor }} />
                   <p className="min-w-0 truncate text-sm font-semibold text-slate-800">{balance.memberName}</p>
-                </div>
+                </div><div className="flex items-center gap-2"><p className={`font-bold ${balance.currentBalance < 0 ? 'text-rose-700' : 'text-indigo-700'}`}><Money value={balance.currentBalance} /></p><ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedBalanceMemberId === balance.memberId ? 'rotate-180' : ''}`} /></div></button>
 
+                {expandedBalanceMemberId === balance.memberId && <>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className={`rounded-lg px-3 py-2 ${balance.currentBalance < 0 ? 'bg-rose-50' : 'bg-indigo-50'}`}>
                     <p className={`text-[11px] font-semibold uppercase tracking-wide ${balance.currentBalance < 0 ? 'text-rose-500' : 'text-indigo-500'}`}>Account</p>
@@ -434,6 +439,7 @@ export default function Dashboard() {
                     <p className="mt-1 text-xs leading-relaxed text-slate-500">{memberSavings.map((account) => account.name).join(', ')}</p>
                   </div>
                 )}
+                </>}
               </div>
             );
           })}
