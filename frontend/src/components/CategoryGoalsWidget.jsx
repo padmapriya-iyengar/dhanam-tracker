@@ -1,4 +1,4 @@
-import { Pencil, RefreshCw, X, Check } from 'lucide-react';
+import { Check, ChevronDown, Pencil, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import DirhamSymbol from './DirhamSymbol';
 import { categoryGoalsApi, fmt } from '../services/api';
@@ -152,6 +152,7 @@ function CategoryRow({ category, goalFromDB, onGoalSaved }) {
 export default function CategoryGoalsWidget({ expenseByCategory }) {
   const [goalsMap, setGoalsMap] = useState({});
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [expanded, setExpanded] = useState(false);
   const categories = expenseByCategory || [];
 
   const loadGoals = async () => {
@@ -179,7 +180,7 @@ export default function CategoryGoalsWidget({ expenseByCategory }) {
   return (
     <div className="card">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-5">
+      <div className={`flex items-start justify-between gap-3 ${expanded ? 'mb-5' : ''}`}>
         <div>
           <h3 className="font-semibold text-slate-700">Category Goals</h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -201,9 +202,11 @@ export default function CategoryGoalsWidget({ expenseByCategory }) {
           >
             <RefreshCw size={14} />
           </button>
+          <button type="button" onClick={() => setExpanded((value) => !value)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label={expanded ? 'Collapse category goals' : 'Expand category goals'}><ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} /></button>
         </div>
       </div>
 
+      {expanded && <>
       {/* Legend */}
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400 mb-5">
         <span className="flex items-center gap-1.5">
@@ -242,6 +245,7 @@ export default function CategoryGoalsWidget({ expenseByCategory }) {
         <RefreshCw size={11} />
         Last updated: {lastUpdated.toLocaleTimeString()}
       </div>
+      </>}
     </div>
   );
 }

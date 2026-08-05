@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { CreditCard, Edit2, Filter, List, Plus, ScanText, Trash2, WalletCards } from 'lucide-react';
+import { ChevronDown, CreditCard, Edit2, Filter, List, Plus, ScanText, Trash2, WalletCards } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -84,6 +84,7 @@ export default function Expenses() {
   const [savingRecovery, setSavingRecovery] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [recoveryError, setRecoveryError] = useState('');
+  const [expandedExpenseId, setExpandedExpenseId] = useState(null);
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterMember, setFilterMember] = useState('');
@@ -727,7 +728,7 @@ export default function Expenses() {
                 : PAYMENT_LABELS[rec.paymentMethod] || rec.paymentMethod;
               return (
                 <div key={rec._id} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
+                  <button type="button" onClick={() => setExpandedExpenseId((current) => current === rec._id ? null : rec._id)} className="flex w-full items-start justify-between gap-3 text-left">
                     <div className="flex min-w-0 items-start gap-2">
                       <span className="mt-1 h-3 w-3 flex-shrink-0 rounded-full" style={{ background: rec.categoryId?.color }} />
                       <div className="min-w-0">
@@ -737,7 +738,8 @@ export default function Expenses() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex-shrink-0 text-right">
+                    <div className="flex flex-shrink-0 items-center gap-2 text-right">
+                      <div>
                       <p className="text-base font-bold" style={{ color: isCreditCard ? '#7c3aed' : '#f43f5e' }}>
                         <DirhamSymbol className="h-[0.85em] w-auto inline align-middle mr-0.5" />{fmt(rec.amount)}
                       </p>
@@ -746,9 +748,12 @@ export default function Expenses() {
                           Net <DirhamSymbol className="h-[0.75em] w-auto inline align-middle mr-0.5" />{fmt(netAmount)}
                         </p>
                       )}
+                      </div>
+                      <ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedExpenseId === rec._id ? 'rotate-180' : ''}`} />
                     </div>
-                  </div>
+                  </button>
 
+                  {expandedExpenseId === rec._id && <>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-lg bg-slate-50 px-2 py-1.5">
                       <p className="font-semibold text-slate-400 uppercase tracking-wide text-[10px]">Date</p>
@@ -795,6 +800,7 @@ export default function Expenses() {
                     <button onClick={() => openEdit(rec)} className="rounded-lg bg-indigo-50 px-2 py-2 text-xs font-semibold text-indigo-700">Edit</button>
                     <button onClick={() => handleDelete(rec._id)} className="rounded-lg bg-rose-50 px-2 py-2 text-xs font-semibold text-rose-700">Delete</button>
                   </div>
+                  </>}
                 </div>
               );
             })}
