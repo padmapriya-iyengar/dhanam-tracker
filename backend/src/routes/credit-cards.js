@@ -5,6 +5,7 @@ const CreditCardBudget = require('../models/CreditCardBudget');
 const CreditCardStatement = require('../models/CreditCardStatement');
 const Expense = require('../models/Expense');
 const Transfer = require('../models/Transfer');
+const { allocateOpenCycleEvents } = require('../services/cardPaymentAllocation');
 
 function daysInMonth(year, monthIndex) {
   return new Date(year, monthIndex + 1, 0).getDate();
@@ -519,27 +520,34 @@ router.get('/summary', async (req, res) => {
     const summary = await Promise.all(
       cards.map(async (card) => {
         const cycle = cycleFor(card);
-        const paymentWindow = statementPaymentWindow(card, cycle.cycleEnd);
-        const [purchase, payment] = await Promise.all([
+        const previousCycle = cycleFor(card, cycle.cycleStart, -1);
+        const [purchase, currentPayment, previousPurchase, previousPayment, currentPurchases, currentPayments] = await Promise.all([
           purchaseTotal(req.user._id, card._id, cycle.cycleStart, cycle.cycleEnd),
-          paymentTotal(req.user._id, card._id, paymentWindow.paymentStart, paymentWindow.paymentEnd),
+          paymentTotal(req.user._id, card._id, new Date(cycle.cycleStart.getTime() - 1), cycle.cycleEnd),
+          purchaseTotal(req.user._id, card._id, previousCycle.cycleStart, previousCycle.cycleEnd),
+          paymentTotal(req.user._id, card._id, new Date(previousCycle.cycleStart.getTime() - 1), previousCycle.cycleEnd),
+          Expense.find({ userId: req.user._id, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: cycle.cycleStart, $lte: cycle.cycleEnd } }).select('date amount').lean(),
+          Transfer.find({ userId: req.user._id, toCreditCardId: card._id, toAccountType: 'credit_card', date: { $gte: cycle.cycleStart, $lte: cycle.cycleEnd } }).select('date amount').lean(),
         ]);
-        const outstanding = purchase.purchases - payment.payments;
+        const previousOutstanding = Math.max(previousPurchase.purchases - previousPayment.payments, 0);
+        const allocation = allocateOpenCycleEvents(previousOutstanding, currentPurchases, currentPayments);
+        const payments = allocation.appliedToCurrent;
+        const outstanding = allocation.currentOutstanding;
         return {
           ...card.toObject(),
           cycleStart: cycle.cycleStart,
           cycleEnd: cycle.cycleEnd,
           cycleLabel: cycleLabel(cycle),
           cyclePurchases: purchase.purchases,
-          cyclePayments: payment.payments,
+          cyclePayments: payments,
           cycleOutstanding: outstanding,
           cycleTransactionCount: purchase.count,
-          cyclePaymentCount: payment.count,
+          cyclePaymentCount: currentPayment.count,
           // Compatibility aliases for the existing charts/totals while the card
           // summary UI consumes the explicit cycle fields above.
           totalThisMonth: purchase.purchases,
           countThisMonth: purchase.count,
-          paymentsAllTime: payment.payments,
+          paymentsAllTime: payments,
           outstandingAllTime: outstanding,
         };
       })

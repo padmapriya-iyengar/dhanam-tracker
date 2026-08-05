@@ -5,6 +5,7 @@ const Transfer = require('../models/Transfer');
 const CreditCard = require('../models/CreditCard');
 const CreditCardStatement = require('../models/CreditCardStatement');
 const Subscription = require('../models/Subscription');
+const { allocateOpenCycleEvents } = require('./cardPaymentAllocation');
 require('../models/Member');
 
 const amount = (rows) => rows.reduce((total, row) => total + Number(row.amount || 0), 0);
@@ -191,8 +192,13 @@ async function monthlyFunding(userId, month, year, memberId = null) {
       const upcoming = upcomingCycle(card, cycleAnchor);
       const upcomingPurchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: upcoming.cycleStart, $lte: upcoming.cycleEnd } }).lean();
       const purchases = amount(upcomingPurchases);
-      const paid = paymentsForStatement(cardPayments, card._id, new Date(upcoming.cycleStart.getTime() - 1), paymentCutoff);
-      const remaining = projectedCardBill(purchases, paid);
+      const previous = upcomingCycle(card, new Date(upcoming.cycleStart.getTime() - 1));
+      const previousPurchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: previous.cycleStart, $lte: previous.cycleEnd } }).lean();
+      const previousPayments = paymentsForStatement(cardPayments, card._id, new Date(previous.cycleStart.getTime() - 1), previous.cycleEnd);
+      const currentPaymentRows = cardPayments.filter((row) => String(row.toCreditCardId) === String(card._id) && new Date(row.date) >= upcoming.cycleStart && new Date(row.date) <= paymentCutoff);
+      const allocation = allocateOpenCycleEvents(Math.max(amount(previousPurchases) - previousPayments, 0), upcomingPurchases, currentPaymentRows);
+      const paid = allocation.appliedToCurrent;
+      const remaining = allocation.currentOutstanding;
       upcomingCardBills.push({ creditCardId: card._id, name: card.name, cycleStart: upcoming.cycleStart, cycleEnd: upcoming.cycleEnd, amount: remaining, purchases, paid, remaining, transactionCount: upcomingPurchases.length });
       continue;
     }
@@ -209,11 +215,9 @@ async function monthlyFunding(userId, month, year, memberId = null) {
       const purchases = await Expense.find({ userId, creditCardId: card._id, paymentMethod: 'credit_card', date: { $gte: cycleStart, $lte: cycleEnd } }).lean();
       dueAmount = amount(purchases); estimated = true;
     }
-    // An official saved statement already includes payments made before it closed.
-    // An estimated statement is built from recorded cycle purchases, so payments
-    // made during that same cycle must also reduce its pending amount.
-    const paymentWindowStart = saved ? cycleEnd : new Date(cycleStart.getTime() - 1);
-    const paid = paymentsForStatement(cardPayments, card._id, paymentWindowStart, paymentCutoff);
+    // A payment settles this statement only when it occurs after the cycle closes.
+    // Payments inside the purchase cycle belong to the preceding statement.
+    const paid = paymentsForStatement(cardPayments, card._id, cycleEnd, paymentCutoff);
     if (dueAmount || paid) cardDues.push({ creditCardId: card._id, name: card.name, dueDate, cycleStart, cycleEnd, amount: dueAmount, paid, remaining: Math.max(dueAmount - paid, 0), estimated });
 
     const upcoming = upcomingCycle(card, cycleAnchor);

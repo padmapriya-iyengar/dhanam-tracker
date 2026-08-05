@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { cardPaymentDebitItems, cycleStartForEnd, debitItemsForMethods, groupPendingRecurringItems, isCycleClosed, outstandingCardDue, paymentsForStatement, projectedCardBill, salaryFundedRecurringItems, sameStatementCycle } = require('../src/services/monthlyFunding');
+const { allocateOpenCycleEvents, allocateOpenCyclePayment } = require('../src/services/cardPaymentAllocation');
 
 test('card payments reduce cards due to the unpaid remainder', () => {
   const cards = [
@@ -35,7 +36,7 @@ test('payments are applied after the statement cycle closes, independent of plan
   );
 });
 
-test('an estimated statement includes payments made during its cycle', () => {
+test('an estimated statement only uses payments made after its cycle closes', () => {
   const payments = [
     { toCreditCardId: 'cbd-card', amount: 81, date: '2026-07-22T00:00:00.000Z' },
     { toCreditCardId: 'cbd-card', amount: 81, date: '2026-06-21T00:00:00.000Z' },
@@ -83,6 +84,21 @@ test('payments within an open cycle reduce its projected upcoming bill', () => {
   assert.equal(projectedCardBill(81, 81), 0);
   assert.equal(projectedCardBill(680, 100), 580);
   assert.equal(projectedCardBill(50, 75), 0);
+});
+
+test('open-cycle payments clear the preceding balance before current purchases', () => {
+  assert.deepEqual(allocateOpenCyclePayment(81, 81, 81), { previousOutstanding: 0, appliedToCurrent: 81 });
+  assert.deepEqual(allocateOpenCyclePayment(2361, 2361, 0), { previousOutstanding: 2361, appliedToCurrent: 0 });
+  assert.deepEqual(allocateOpenCyclePayment(2500, 2361, 0), { previousOutstanding: 2361, appliedToCurrent: 139 });
+});
+
+test('open-cycle allocation respects transaction order', () => {
+  const cbd = allocateOpenCycleEvents(0, [{ date: '2026-07-09', amount: 81 }], [{ date: '2026-07-22', amount: 81 }]);
+  assert.equal(cbd.currentOutstanding, 0);
+  const fab = allocateOpenCycleEvents(2361, [{ date: '2026-08-03', amount: 180 }], [{ date: '2026-08-02', amount: 2361 }]);
+  assert.equal(fab.currentOutstanding, 180);
+  const noPrepay = allocateOpenCycleEvents(0, [{ date: '2026-08-03', amount: 100 }], [{ date: '2026-08-02', amount: 100 }]);
+  assert.equal(noPrepay.currentOutstanding, 100);
 });
 
 test('salary debit breakdown separates account and savings expenses after recoveries', () => {
