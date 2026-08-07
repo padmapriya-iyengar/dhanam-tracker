@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cardPaymentDebitItems, cycleStartForEnd, debitItemsForMethods, groupPendingRecurringItems, isCycleClosed, outstandingCardDue, paymentsForStatement, projectedCardBill, salaryFundedRecurringItems, sameStatementCycle } = require('../src/services/monthlyFunding');
+const { allocatePaymentsToStatements, cardPaymentDebitItems, cycleStartForEnd, debitItemsForMethods, groupPendingRecurringItems, isCycleClosed, outstandingCardDue, paymentsForEstimatedStatement, paymentsForStatement, projectedCardBill, salaryFundedRecurringItems, sameStatementCycle } = require('../src/services/monthlyFunding');
 const { allocateOpenCycleEvents, allocateOpenCyclePayment } = require('../src/services/cardPaymentAllocation');
 
 test('card payments reduce cards due to the unpaid remainder', () => {
@@ -46,6 +46,50 @@ test('an estimated statement only uses payments made after its cycle closes', ()
     paymentsForStatement(payments, 'cbd-card', new Date('2026-07-05T19:59:59.999Z'), new Date('2026-08-31T19:59:59.999Z')),
     81
   );
+});
+
+test('an estimated statement includes matching payments made during its cycle', () => {
+  const payments = [
+    { toCreditCardId: 'cbd-card', amount: 81, date: '2026-07-22T00:00:00.000Z' },
+    { toCreditCardId: 'cbd-card', amount: 81, date: '2026-06-21T00:00:00.000Z' },
+  ];
+
+  assert.equal(
+    paymentsForEstimatedStatement(payments, 'cbd-card', new Date('2026-07-05T20:00:00.000Z'), new Date('2026-08-07T23:59:59.999Z')),
+    81
+  );
+});
+
+test('payments are allocated once to the oldest eligible closed cycle', () => {
+  const rows = [
+    { cycleStart: new Date('2026-06-07'), cycleEnd: new Date('2026-07-06T23:59:59.999Z'), dueDate: new Date('2026-08-02T23:59:59.999Z'), amount: 1809, paid: 0, remaining: 1809 },
+    { cycleStart: new Date('2026-07-07'), cycleEnd: new Date('2026-08-06T23:59:59.999Z'), dueDate: new Date('2026-09-02T23:59:59.999Z'), amount: 632, paid: 0, remaining: 632 },
+  ];
+  const allocated = allocatePaymentsToStatements(rows, [{ date: '2026-07-09', amount: 1791 }], new Date('2026-08-07'));
+
+  assert.equal(allocated[0].remaining, 18);
+  assert.equal(allocated[1].remaining, 632);
+});
+
+test('a credit recorded after a cycle due date does not reduce that cycle', () => {
+  const rows = [{ cycleStart: new Date('2026-06-07'), cycleEnd: new Date('2026-07-06T23:59:59.999Z'), dueDate: new Date('2026-08-02T23:59:59.999Z'), amount: 100, paid: 0, remaining: 100 }];
+  const allocated = allocatePaymentsToStatements(rows, [{ date: '2026-08-03', amount: 100 }], new Date('2026-08-07'));
+
+  assert.equal(allocated[0].paid, 0);
+  assert.equal(allocated[0].remaining, 100);
+});
+
+test('the full credit is shown without carrying an overpayment into the next cycle', () => {
+  const rows = [
+    { cycleStart: new Date('2026-07-01'), cycleEnd: new Date('2026-07-31T23:59:59.999Z'), dueDate: new Date('2026-08-25T23:59:59.999Z'), amount: 8658.61, paid: 0, remaining: 8658.61 },
+    { cycleStart: new Date('2026-08-01'), cycleEnd: new Date('2026-08-31T23:59:59.999Z'), dueDate: new Date('2026-09-25T23:59:59.999Z'), amount: 500, paid: 0, remaining: 500 },
+  ];
+  const allocated = allocatePaymentsToStatements(rows, [{ date: '2026-08-02', amount: 8663 }], new Date('2026-08-07'));
+
+  assert.equal(allocated[0].paid, 8663);
+  assert.equal(allocated[0].remaining, 0);
+  assert.equal(allocated[1].paid, 0);
+  assert.equal(allocated[1].remaining, 500);
 });
 
 test('a stale overlapping statement is not used for a configured cycle', () => {

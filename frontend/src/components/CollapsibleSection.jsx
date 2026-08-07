@@ -11,6 +11,7 @@ export default function CollapsibleSection({
   children,
   className = '',
   contentClassName = '',
+  allowOverflow = false,
 }) {
   const contentId = useId();
   const key = `dhanam.section.${storageKey}`;
@@ -27,7 +28,7 @@ export default function CollapsibleSection({
   };
 
   return (
-    <section className={`overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm ${className}`}>
+    <section className={`${allowOverflow ? 'overflow-visible' : 'overflow-hidden'} rounded-xl border border-slate-100 bg-white shadow-sm ${className}`}>
       <button
         type="button"
         onClick={toggle}

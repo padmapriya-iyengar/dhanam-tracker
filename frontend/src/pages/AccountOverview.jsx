@@ -114,7 +114,7 @@ export default function AccountOverview() {
   return (
     <div className="space-y-4">
       <div><h1 className="page-title">Account Overview</h1><p className="mt-0.5 text-sm text-slate-500">Every income, expense and transfer in one account ledger</p></div>
-      <CollapsibleSection storageKey="account-overview-filters" title="Account and date filters" subtitle="Choose the ledger scope and reporting period" icon={CalendarRange} defaultOpen>
+      <CollapsibleSection storageKey="account-overview-filters" title="Account and date filters" subtitle="Choose the ledger scope and reporting period" icon={CalendarRange} defaultOpen allowOverflow className="relative z-20">
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_170px_170px_auto] md:items-end">
           <div className="min-w-0 sm:col-span-2 md:col-span-1"><label className="label">Account or card</label><AccountSelect accounts={accounts} value={filters.account} onChange={selectAccount} /></div>
           <div className="min-w-0"><label className="label">From date</label><input className="input min-w-0" type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(e) => updateFilter('startDate', e.target.value)} /></div>
